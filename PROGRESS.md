@@ -9,11 +9,15 @@
 - [x] フロントエンド (SolidJS) に接続状態と再生情報を表示
 - [x] パーサーのユニットテスト (実WSA出力で検証済み)
 
-## Phase 2: Discord RPC Core — TODO
+## Phase 2: Discord RPC Core — 最小サンプル表示 ✅
 
-- [ ] Discord Social SDK (C++) を cxx 経由で呼び出す FFI 層
-- [ ] DiscordRpc::connect / update_presence / disconnect の実装
-- [ ] MediaInfo を Discord アクティビティに反映
+- [x] `discord-rich-presence` crate を導入 (Pure Rust, IPC経由)
+- [x] DiscordRpc::connect / update_presence / disconnect の実装 (専用IPCスレッド)
+- [x] MediaInfo を Discord アクティビティに反映 (details=title, state=artist, timestamps=位置)
+- [x] Tauri コマンド: connect_discord, disconnect_discord, update_discord_presence, get_discord_status
+- [x] `get_adb_status` のバグ修正 (誤って discord の状態を見ていた)
+- [x] フロントエンド: Discord 接続状態インジケータ、メディア取得時に自動で presence 更新
+- [x] アプリ起動時に Discord IPC へ自動接続を試行
 
 ## Phase 3: 統合・UI完成 — TODO
 

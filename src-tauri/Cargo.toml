@@ -26,3 +26,4 @@ anyhow = "1"
 regex = "1"
 adb_client = { version = "3", default-features = false }
 cxx = "1.0"
+discord-rich-presence = "1.1"

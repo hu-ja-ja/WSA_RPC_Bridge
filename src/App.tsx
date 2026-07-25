@@ -19,7 +19,8 @@ function formatTime(ms: number): string {
 }
 
 function App() {
-  const [connected, setConnected] = createSignal(false)
+  const [adbConnected, setAdbConnected] = createSignal(false)
+  const [discordConnected, setDiscordConnected] = createSignal(false)
   const [media, setMedia] = createSignal<MediaInfo | null>(null)
   const [error, setError] = createSignal<string | null>(null)
   const [loading, setLoading] = createSignal(false)
@@ -41,28 +42,46 @@ function App() {
     return lf.pos + elapsed
   })
 
+  async function checkStatus() {
+    try {
+      const [adb, dc] = await Promise.all([
+        invoke<boolean>('get_adb_status'),
+        invoke<boolean>('get_discord_status'),
+      ])
+      setAdbConnected(adb)
+      setDiscordConnected(dc)
+    } catch (e) {
+      console.error('status check failed', e)
+    }
+  }
+
   async function fetchMediaInfo() {
     setLoading(true)
     setError(null)
     try {
       const result = await invoke<MediaInfo>('get_media_info')
       setMedia(result)
-      setConnected(true)
+      setAdbConnected(true)
       if (result.position !== null) {
         setLastFetch({ pos: result.position, time: Date.now() })
       }
+      await invoke('update_discord_presence', { info: result })
     } catch (e) {
       setMedia(null)
-      setConnected(false)
+      setAdbConnected(false)
       setError(String(e))
     } finally {
       setLoading(false)
     }
   }
 
-  onMount(() => {
-    fetchMediaInfo()
-    const interval = setInterval(fetchMediaInfo, 5000)
+  onMount(async () => {
+    await checkStatus()
+    await fetchMediaInfo()
+    const interval = setInterval(async () => {
+      await checkStatus()
+      await fetchMediaInfo()
+    }, 5000)
     onCleanup(() => clearInterval(interval))
   })
 
@@ -75,8 +94,13 @@ function App() {
       <section id="status">
         <div class="status-row">
           <span class="label">ADB</span>
-          <span class={`dot ${connected() ? 'connected' : 'disconnected'}`} />
-          <span class="value">{connected() ? 'Connected' : 'Disconnected'}</span>
+          <span class={`dot ${adbConnected() ? 'connected' : 'disconnected'}`} />
+          <span class="value">{adbConnected() ? 'Connected' : 'Disconnected'}</span>
+        </div>
+        <div class="status-row">
+          <span class="label">Discord</span>
+          <span class={`dot ${discordConnected() ? 'connected' : 'disconnected'}`} />
+          <span class="value">{discordConnected() ? 'Connected' : 'Disconnected'}</span>
         </div>
       </section>
 
