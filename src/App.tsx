@@ -6,6 +6,8 @@ interface MediaInfo {
   title: string
   artist: string
   album: string
+  package_name: string
+  thumbnail_url: string | null
   position: number | null
   duration: number | null
   is_playing: boolean
@@ -114,19 +116,26 @@ function App() {
           }>
             {(m) => (
               <div class="media-info">
-                <div class="track-title">
-                  <span class={`play-indicator ${m().is_playing ? 'playing' : 'paused'}`} />
-                  {m().title}
-                </div>
-                <div class="artist">{m().artist}</div>
-                <div class="album">{m().album}</div>
-                <div class="position">
-                  <Show when={displayPosition() !== null}>
-                    <span>{formatTime(displayPosition()!)}</span>
+                <div class="media-main">
+                  <Show when={m().thumbnail_url}>
+                    <img src={m().thumbnail_url!} alt="album art" class="thumbnail" />
                   </Show>
-                  <Show when={m().duration !== null}>
-                    <span> / {formatTime(m().duration!)}</span>
-                  </Show>
+                  <div class="media-text">
+                    <div class="track-title">
+                      <span class={`play-indicator ${m().is_playing ? 'playing' : 'paused'}`} />
+                      {m().title}
+                    </div>
+                    <div class="artist">{m().artist}</div>
+                    <div class="album">{m().album}</div>
+                    <div class="position">
+                      <Show when={displayPosition() !== null}>
+                        <span>{formatTime(displayPosition()!)}</span>
+                      </Show>
+                      <Show when={m().duration !== null}>
+                        <span> / {formatTime(m().duration!)}</span>
+                      </Show>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

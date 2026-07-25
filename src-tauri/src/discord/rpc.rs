@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use discord_rich_presence::{
-    activity::{Activity, ActivityType, Timestamps},
+    activity::{Activity, ActivityType, Assets, Timestamps},
     DiscordIpc, DiscordIpcClient,
 };
 
@@ -63,6 +63,16 @@ impl DiscordRpc {
                                 .details(&info.title)
                                 .state(&info.artist)
                                 .activity_type(ActivityType::Listening);
+                            if let Some(ref thumb) = info.thumbnail_url {
+                                let img = crate::artwork::discord_image_url(thumb);
+                                log::info!("Discord presence: large_image={}", img);
+                                let assets = Assets::new()
+                                    .large_image(img)
+                                    .large_text(&info.artist);
+                                activity = activity.assets(assets);
+                            } else {
+                                log::debug!("Discord presence: no thumbnail_url");
+                            }
                             if info.is_playing {
                                 if let Some(pos) = info.position {
                                     let now = std::time::SystemTime::now()
@@ -76,6 +86,10 @@ impl DiscordRpc {
                                     }
                                     activity = activity.timestamps(ts);
                                 }
+                            }
+                            match serde_json::to_string(&activity) {
+                                Ok(json) => log::info!("Discord presence payload: {}", json),
+                                Err(e) => log::warn!("Discord presence serialize failed: {e}"),
                             }
                             if let Err(e) = c.set_activity(activity) {
                                 log::error!("Discord set_activity failed: {e}");

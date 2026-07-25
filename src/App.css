@@ -56,6 +56,27 @@ header h1 {
   gap: 6px;
 }
 
+.media-main {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.media-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.thumbnail {
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .track-title {
   font-size: 20px;
   font-weight: 600;

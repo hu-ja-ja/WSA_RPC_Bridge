@@ -2,12 +2,14 @@ use tauri::State;
 use tokio::sync::Mutex;
 
 use crate::adb::AdbClient;
+use crate::artwork::ArtworkRegistry;
 use crate::discord::DiscordRpc;
 use crate::models::MediaInfo;
 
 pub struct AppState {
     pub adb: Mutex<AdbClient>,
     pub discord: DiscordRpc,
+    pub artwork: Mutex<ArtworkRegistry>,
 }
 
 #[tauri::command]
@@ -21,15 +23,25 @@ pub async fn get_adb_status(state: State<'_, AppState>) -> Result<bool, String> 
 pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
     log::info!("get_media_info: invoked by frontend");
     let mut adb = state.adb.lock().await;
-    let result = adb.get_media_info().await;
-    match &result {
-        Ok(info) => log::info!(
-            "get_media_info: success title={:?}, artist={:?}",
+    let mut result = adb.get_media_info().await;
+    drop(adb);
+
+    if let Ok(ref mut info) = result {
+        log::info!(
+            "get_media_info: success title={:?}, artist={:?}, package={}",
             info.title,
             info.artist,
-        ),
-        Err(e) => log::error!("get_media_info: failed: {e:#}"),
+            info.package_name,
+        );
+
+        let mut registry = state.artwork.lock().await;
+        if let Some(url) = registry.resolve(info).await {
+            info.thumbnail_url = Some(url);
+        }
+    } else if let Err(e) = &result {
+        log::error!("get_media_info: failed: {e:#}");
     }
+
     result.map_err(|e| e.to_string())
 }
 

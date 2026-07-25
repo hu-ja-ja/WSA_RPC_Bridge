@@ -78,6 +78,8 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                 title,
                 artist,
                 album,
+                package_name: package,
+                thumbnail_url: None,
                 position,
                 duration: None,
                 is_playing,
@@ -147,6 +149,8 @@ Media session config:
         assert_eq!(info.title, "BRIGHTNESS / Mwk feat.初音ミク");
         assert_eq!(info.artist, "Mwk");
         assert_eq!(info.album, "");
+        assert_eq!(info.package_name, "jp.nicovideo.nicobox");
+        assert_eq!(info.thumbnail_url, None);
         assert!(info.is_playing);
         assert!(info.position.is_some());
         assert!(info.position.unwrap() > 0);

@@ -1,20 +1,46 @@
 mod adb;
+mod artwork;
 mod commands;
 mod discord;
 mod models;
+
+use std::path::PathBuf;
 
 use commands::AppState;
 use tauri::Manager;
 use tokio::sync::Mutex;
 
+use crate::artwork::ArtworkRegistry;
+
 const DISCORD_CLIENT_ID: &str = "1530562506513449120";
+
+fn default_cache_dir() -> PathBuf {
+    let base = std::env::var("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs_data_local()
+        });
+    base.join("wsa-rpc-bridge").join("Cache")
+}
+
+fn dirs_data_local() -> PathBuf {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_else(|_| ".".into());
+    PathBuf::from(home).join("AppData").join("Local").join("wsa-rpc-bridge").join("Cache")
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let cache_dir = default_cache_dir();
+    let mut artwork_registry = ArtworkRegistry::new(cache_dir);
+    artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver));
+
     tauri::Builder::default()
         .manage(AppState {
             adb: Mutex::new(adb::AdbClient::new()),
             discord: discord::DiscordRpc::new(DISCORD_CLIENT_ID),
+            artwork: Mutex::new(artwork_registry),
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_adb_status,
