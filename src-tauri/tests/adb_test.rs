@@ -7,6 +7,7 @@ fn test_adb_connect_and_dumpsys() {
     let server_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 5037);
     let ws_addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 58526);
 
+
     let mut server = ADBServer::new(server_addr);
     match server.connect_device(ws_addr) {
         Ok(()) => eprintln!("connect_device: OK"),

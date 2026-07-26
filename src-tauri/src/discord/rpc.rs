@@ -28,7 +28,7 @@ impl DiscordRpc {
         let connected = Arc::new(AtomicBool::new(false));
         let connected_clone = connected.clone();
 
-        std::thread::Builder::new()
+        match std::thread::Builder::new()
             .name("discord-ipc".into())
             .spawn(move || {
                 let mut client: Option<DiscordIpcClient> = None;
@@ -68,10 +68,9 @@ impl DiscordRpc {
                                 .state(&info.title)
                                 .activity_type(ActivityType::Listening);
                             if let Some(ref thumb) = info.thumbnail_url {
-                                let img = crate::artwork::discord_image_url(thumb);
-                                log::info!("Discord presence: large_image={}", img);
+                                log::info!("Discord presence: large_image={}", thumb);
                                 let assets = Assets::new()
-                                    .large_image(img)
+                                    .large_image(thumb.clone())
                                     .large_text(&info.artist);
                                 activity = activity.assets(assets);
                             } else {
@@ -81,7 +80,7 @@ impl DiscordRpc {
                                 if let Some(pos) = info.position {
                                     let now = std::time::SystemTime::now()
                                         .duration_since(std::time::UNIX_EPOCH)
-                                        .unwrap_or_default()
+                                        .unwrap_or(std::time::Duration::ZERO)
                                         .as_secs() as i64;
                                     let start = now - (pos as i64 / 1000);
                                     let mut ts = Timestamps::new().start(start);
@@ -114,8 +113,10 @@ impl DiscordRpc {
                     let _ = c.close();
                 }
                 connected_clone.store(false, Ordering::Relaxed);
-            })
-            .expect("failed to spawn discord-ipc thread");
+            }) {
+            Ok(_) => log::info!("Discord IPC thread spawned"),
+            Err(e) => log::error!("Failed to spawn Discord IPC thread: {e}"),
+        }
 
         Self { tx, connected }
     }

@@ -1,11 +1,17 @@
 use crate::models::MediaInfo;
 use regex::Regex;
 
+const PLAYBACK_STATE_PLAYING: u8 = 3;
+
 pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
-    let session_re = Regex::new(r"^\s{4}\S+\s+(\S+?)/").ok()?;
-    let active_re = Regex::new(r"^\s*active\s*=\s*true").ok()?;
-    let state_re = Regex::new(r"state=PlaybackState\s*\{state=(\d),\s*position=(\d+)").ok()?;
-    let metadata_re = Regex::new(r"metadata:\s*size=\d+,\s*description=(.+)").ok()?;
+    let session_re = Regex::new(r"^\s{4}\S+\s+(\S+?)/")
+        .expect("invalid regex: session_re");
+    let active_re = Regex::new(r"^\s*active\s*=\s*true")
+        .expect("invalid regex: active_re");
+    let state_re = Regex::new(r"state=PlaybackState\s*\{state=(\d),\s*position=(\d+)")
+        .expect("invalid regex: state_re");
+    let metadata_re = Regex::new(r"metadata:\s*size=\d+,\s*description=(.+)")
+        .expect("invalid regex: metadata_re");
 
     let lines: Vec<&str> = output.lines().collect();
     let mut i = 0;
@@ -52,7 +58,7 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
 
             if let Some(c) = state_re.captures(trimmed) {
                 let state_val: u8 = c[1].parse().unwrap_or(0);
-                is_playing = state_val == 3;
+                is_playing = state_val == PLAYBACK_STATE_PLAYING;
                 position = c[2].parse::<u64>().ok();
                 log::debug!(
                     "ADB parser: state={}, position={:?}",
@@ -102,6 +108,23 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
     None
 }
 
+fn parse_description(desc: &str) -> Option<(String, String, String)> {
+    let parts: Vec<&str> = desc.rsplitn(3, ", ").collect();
+    let n = parts.len();
+    let title = parts.last()?.trim().to_string();
+    let artist = (n >= 2)
+        .then(|| parts[n - 2].trim())
+        .filter(|s| *s != "null")
+        .unwrap_or("")
+        .to_string();
+    let album = (n >= 3)
+        .then(|| parts[n - 3].trim())
+        .filter(|s| *s != "null")
+        .unwrap_or("")
+        .to_string();
+    Some((title, artist, album))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,9 +138,9 @@ Global priority session is null
 User Records:
 Record for full_user=0
   Volume key long-press listener: null
-  Volume key long-press listener package: 
+  Volume key long-press listener package: null
   Media key listener: null
-  Media key listener package: 
+  Media key listener package: null
   OnMediaKeyEventDispatchedListener: added 0 listener(s)
   OnMediaKeyEventSessionChangedListener: added 0 listener(s)
   Last MediaButtonReceiver: null
@@ -200,21 +223,4 @@ Media session config:
         assert_eq!(artist, "");
         assert_eq!(album, "");
     }
-}
-
-fn parse_description(desc: &str) -> Option<(String, String, String)> {
-    let parts: Vec<&str> = desc.rsplitn(3, ", ").collect();
-    let n = parts.len();
-    let title = parts.last()?.trim().to_string();
-    let artist = (n >= 2)
-        .then(|| parts[n - 2].trim())
-        .filter(|s| *s != "null")
-        .unwrap_or("")
-        .to_string();
-    let album = (n >= 3)
-        .then(|| parts[n - 3].trim())
-        .filter(|s| *s != "null")
-        .unwrap_or("")
-        .to_string();
-    Some((title, artist, album))
 }

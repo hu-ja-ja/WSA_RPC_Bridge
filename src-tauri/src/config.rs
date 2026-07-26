@@ -24,7 +24,12 @@ impl Default for AppConfig {
 fn config_path() -> PathBuf {
     let base = std::env::var("APPDATA")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."));
+        .unwrap_or_else(|_| {
+            let home = std::env::var("USERPROFILE")
+                .or_else(|_| std::env::var("HOME"))
+                .unwrap_or_else(|_| String::from("."));
+            PathBuf::from(home).join("AppData").join("Roaming")
+        });
     base.join("wsa-rpc-bridge").join("config.json")
 }
 
@@ -43,7 +48,7 @@ impl ConfigManager {
     }
 
     pub fn get(&self) -> AppConfig {
-        let mut guard = self.inner.lock().unwrap();
+        let mut guard = self.inner.lock().expect("config mutex poisoned");
         if guard.is_none() {
             let config = fs::read_to_string(&self.path)
                 .ok()
@@ -51,13 +56,16 @@ impl ConfigManager {
                 .unwrap_or_default();
             *guard = Some(config);
         }
-        guard.as_ref().unwrap().clone()
+        guard.as_ref().expect("config not initialized").clone()
     }
 
     pub fn set(&self, config: AppConfig) {
-        let _ = fs::create_dir_all(self.path.parent().unwrap());
-        let json = serde_json::to_string_pretty(&config).unwrap();
-        let _ = fs::write(&self.path, &json);
-        *self.inner.lock().unwrap() = Some(config);
+        if let Some(parent) = self.path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        if let Ok(json) = serde_json::to_string_pretty(&config) {
+            let _ = fs::write(&self.path, &json);
+        }
+        *self.inner.lock().expect("config mutex poisoned") = Some(config);
     }
 }

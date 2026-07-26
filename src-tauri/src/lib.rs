@@ -5,45 +5,38 @@ mod commands;
 mod config;
 mod discord;
 mod models;
+mod tray;
 
 use std::path::PathBuf;
 
 use commands::AppState;
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, WindowEvent,
-};
+use tauri::{Manager, WindowEvent};
 use tokio::sync::Mutex;
 
 use crate::apk_label::ApkLabelResolver;
 use crate::artwork::ArtworkRegistry;
 
 const DISCORD_CLIENT_ID: &str = "1530562506513449120";
+const APP_DIR: &str = "wsa-rpc-bridge";
 
-fn default_cache_dir() -> PathBuf {
+fn wsa_data_dir() -> PathBuf {
     let base = std::env::var("LOCALAPPDATA")
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
-            dirs_data_local()
+            let home = std::env::var("USERPROFILE")
+                .or_else(|_| std::env::var("HOME"))
+                .unwrap_or_else(|_| ".".into());
+            PathBuf::from(home).join("AppData").join("Local")
         });
-    base.join("wsa-rpc-bridge").join("Cache")
+    base.join(APP_DIR)
+}
+
+fn default_cache_dir() -> PathBuf {
+    wsa_data_dir().join("Cache")
 }
 
 fn default_apk_cache_dir() -> PathBuf {
-    let base = std::env::var("LOCALAPPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs_data_local()
-        });
-    base.join("wsa-rpc-bridge").join("ApkCache")
-}
-
-fn dirs_data_local() -> PathBuf {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join("AppData").join("Local").join("wsa-rpc-bridge").join("Cache")
+    wsa_data_dir().join("ApkCache")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -92,58 +85,12 @@ pub fn run() {
                 )?;
             }
 
-            let open = MenuItem::with_id(app, "open", "開く", true, None::<&str>)?;
-            let settings = MenuItem::with_id(app, "settings", "設定", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open, &settings, &quit])?;
-
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .show_menu_on_left_click(false)
-                .menu(&menu)
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                })
-                .on_menu_event(|app, event| {
-                    match event.id().as_ref() {
-                        "open" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                        "settings" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                                let _ = window.emit("show-settings", ());
-                            }
-                        }
-                        "quit" => {
-                            std::process::exit(0);
-                        }
-                        _ => {}
-                    }
-                })
-                .build(app)?;
+            tray::setup_tray(app.handle())?;
 
             let state = app.state::<AppState>();
             let cfg = state.config.get();
             if cfg.start_in_tray {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.hide();
-                }
+                tray::hide_main_window(app.handle());
             }
 
             Ok(())

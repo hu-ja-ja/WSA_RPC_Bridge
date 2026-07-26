@@ -35,17 +35,17 @@ impl ApkLabelResolver {
     }
 
     async fn resolve_inner(&self, package_name: &str) -> Result<String> {
-        let apk_path = self.get_apk_path(package_name)?;
+        let apk_path = self.get_apk_path(package_name).await?;
         let local_path = self.cache_dir.join(format!("{}.apk", package_name));
 
         if let Some(parent) = local_path.parent() {
-            std::fs::create_dir_all(parent)?;
+            tokio::fs::create_dir_all(parent).await?;
         }
 
-        self.pull_apk(&apk_path, &local_path)?;
-        let label = self.parse_apk_label(&local_path)?;
+        self.pull_apk(&apk_path, &local_path).await?;
+        let label = self.parse_apk_label(&local_path).await?;
 
-        let _ = std::fs::remove_file(&local_path);
+        let _ = tokio::fs::remove_file(&local_path).await;
 
         if label.is_empty() {
             anyhow::bail!("empty application label in APK");
@@ -54,10 +54,11 @@ impl ApkLabelResolver {
         Ok(label)
     }
 
-    fn get_apk_path(&self, package_name: &str) -> Result<String> {
-        let output = std::process::Command::new("adb")
+    async fn get_apk_path(&self, package_name: &str) -> Result<String> {
+        let output = tokio::process::Command::new("adb")
             .args(["shell", "pm", "path", package_name])
-            .output()?;
+            .output()
+            .await?;
 
         if !output.status.success() {
             anyhow::bail!(
@@ -81,11 +82,12 @@ impl ApkLabelResolver {
         Ok(apk_path)
     }
 
-    fn pull_apk(&self, remote_path: &str, local_path: &PathBuf) -> Result<()> {
-        let output = std::process::Command::new("adb")
+    async fn pull_apk(&self, remote_path: &str, local_path: &PathBuf) -> Result<()> {
+        let output = tokio::process::Command::new("adb")
             .args(["pull", remote_path])
             .arg(local_path)
-            .output()?;
+            .output()
+            .await?;
 
         if !output.status.success() {
             anyhow::bail!(
@@ -98,14 +100,16 @@ impl ApkLabelResolver {
         Ok(())
     }
 
-    fn parse_apk_label(&self, path: &PathBuf) -> Result<String> {
-        let apk = apk_info::Apk::new(path)?;
-        let label = apk.get_application_label().unwrap_or_default();
-
-        if label.is_empty() {
-            anyhow::bail!("empty application label in APK");
-        }
-
-        Ok(label)
+    async fn parse_apk_label(&self, path: &PathBuf) -> Result<String> {
+        let path = path.clone();
+        tokio::task::spawn_blocking(move || {
+            let apk = apk_info::Apk::new(&path)?;
+            let label = apk.get_application_label().unwrap_or_default();
+            if label.is_empty() {
+                anyhow::bail!("empty application label in APK");
+            }
+            Ok(label)
+        })
+        .await?
     }
 }

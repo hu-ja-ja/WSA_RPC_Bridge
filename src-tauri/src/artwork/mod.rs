@@ -28,7 +28,9 @@ fn cache_filename(info: &MediaInfo) -> String {
 
 impl ArtworkRegistry {
     pub fn new(cache_dir: PathBuf) -> Self {
-        std::fs::create_dir_all(&cache_dir).ok();
+        if let Err(e) = std::fs::create_dir_all(&cache_dir) {
+            log::warn!("artwork: failed to create cache dir {:?}: {e}", cache_dir);
+        }
         Self {
             resolvers: Vec::new(),
             cache_dir,
@@ -74,12 +76,4 @@ impl ArtworkRegistry {
         None
     }
 
-    #[allow(dead_code)]
-    pub fn cache_path(&self, info: &MediaInfo) -> PathBuf {
-        self.cache_dir.join(cache_filename(info))
-    }
-}
-
-pub fn discord_image_url(url: &str) -> String {
-    url.to_string()
 }

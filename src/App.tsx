@@ -1,8 +1,10 @@
-import { createSignal, onCleanup, onMount, Show, createMemo } from 'solid-js'
+import { createSignal, onCleanup, onMount, createMemo, Show } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Tabs } from '@kobalte/core/tabs'
-import { Switch } from '@kobalte/core/switch'
+import { StatusBar } from './components/StatusBar'
+import { MediaCard } from './components/MediaCard'
+import { SettingsPanel } from './components/SettingsPanel'
 import './App.css'
 
 interface MediaInfo {
@@ -16,18 +18,16 @@ interface MediaInfo {
   is_playing: boolean
 }
 
-function formatTime(ms: number): string {
-  const totalSec = Math.floor(ms / 1000)
-  const min = Math.floor(totalSec / 60)
-  const sec = totalSec % 60
-  return `${min}:${sec.toString().padStart(2, '0')}`
-}
-
 interface AppSettings {
   start_in_tray: boolean
   minimize_to_tray: boolean
   close_to_tray: boolean
 }
+
+const POLL_INTERVAL = 5000
+const TICK_INTERVAL = 1000
+const STORAGE_RPC_KEY = 'rpcEnabled'
+const EVENT_SHOW_SETTINGS = 'show-settings'
 
 function App() {
   const [adbConnected, setAdbConnected] = createSignal(false)
@@ -39,7 +39,7 @@ function App() {
   const [now, setNow] = createSignal(Date.now())
   const [activeTab, setActiveTab] = createSignal('media')
 
-  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('rpcEnabled') : null
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_RPC_KEY) : null
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
 
   const [traySettings, setTraySettings] = createSignal<AppSettings>({
@@ -49,11 +49,6 @@ function App() {
   })
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
-
-  onMount(() => {
-    const tick = setInterval(() => setNow(Date.now()), 1000)
-    onCleanup(() => clearInterval(tick))
-  })
 
   const displayPosition = createMemo(() => {
     const m = media()
@@ -106,7 +101,7 @@ function App() {
 
   async function handleRpcChange(enabled: boolean) {
     setRpcEnabled(enabled)
-    localStorage.setItem('rpcEnabled', String(enabled))
+    localStorage.setItem(STORAGE_RPC_KEY, String(enabled))
     try {
       if (enabled) {
         await invoke('connect_discord')
@@ -142,9 +137,12 @@ function App() {
   }
 
   onMount(async () => {
+    const tick = setInterval(() => setNow(Date.now()), TICK_INTERVAL)
+    onCleanup(() => clearInterval(tick))
+
     await checkStatus()
 
-    const unlisten = await listen('show-settings', () => {
+    const unlisten = await listen(EVENT_SHOW_SETTINGS, () => {
       setActiveTab('settings')
     })
     onCleanup(unlisten)
@@ -162,7 +160,7 @@ function App() {
     pollingTimer = setInterval(async () => {
       await checkStatus()
       await fetchMediaInfo()
-    }, 5000)
+    }, POLL_INTERVAL)
     onCleanup(() => {
       if (pollingTimer) clearInterval(pollingTimer)
     })
@@ -174,19 +172,11 @@ function App() {
         <h1>WSA RPC Bridge</h1>
       </header>
 
-      <div id="status-bar">
-        <span class={`dot ${adbConnected() ? 'connected' : 'disconnected'}`} />
-        <span>ADB</span>
-        <span class="status-value">{adbConnected() ? '接続済み' : '切断'}</span>
-
-        <span class="status-sep">|</span>
-
-        <span class={`dot ${discordConnected() ? 'connected' : 'disconnected'}`} />
-        <span>Discord RPC</span>
-        <span class="status-value">
-          {discordConnected() ? '接続済み' : rpcEnabled() ? '待機中' : '切断'}
-        </span>
-      </div>
+      <StatusBar
+        adbConnected={adbConnected()}
+        discordConnected={discordConnected()}
+        rpcEnabled={rpcEnabled()}
+      />
 
       <Tabs value={activeTab()} onChange={setActiveTab} class="tabs">
         <Tabs.List class="tabs-list" aria-label="tabs">
@@ -196,42 +186,13 @@ function App() {
         </Tabs.List>
 
         <Tabs.Content class="tab-content" value="media">
-          <Show when={loading() && !media()} fallback={
-            <Show when={media()} fallback={
-              <div class="empty-state">
-                <p>{error() ?? '再生中のメディアはありません'}</p>
-                <button onClick={fetchMediaInfo} class="btn">再試行</button>
-              </div>
-            }>
-              {(m) => (
-                <div class="media-card">
-                  <Show when={m().thumbnail_url}>
-                    <img src={m().thumbnail_url!} alt="album art" class="thumb" />
-                  </Show>
-                  <div class="media-body">
-                    <div class="track-title">
-                      <span class={`play-icon ${m().is_playing ? 'playing' : 'paused'}`}>
-                        {m().is_playing ? '▶' : '⏸'}
-                      </span>
-                      {m().title}
-                    </div>
-                    <div class="artist">{m().artist}</div>
-                    <div class="album">{m().album}</div>
-                    <div class="position">
-                      <Show when={displayPosition() !== null}>
-                        <span>{formatTime(displayPosition()!)}</span>
-                      </Show>
-                      <Show when={m().duration !== null}>
-                        <span> / {formatTime(m().duration!)}</span>
-                      </Show>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Show>
-          }>
-            <div class="loading-msg">読み込み中...</div>
-          </Show>
+          <MediaCard
+            media={media()}
+            loading={loading()}
+            error={error()}
+            displayPosition={displayPosition()}
+            onRetry={fetchMediaInfo}
+          />
 
           <Show when={error() && media()}>
             <p class="error-toast">{error()}</p>
@@ -239,68 +200,12 @@ function App() {
         </Tabs.Content>
 
         <Tabs.Content class="tab-content" value="settings">
-          <div class="settings-card">
-            <Switch
-              checked={rpcEnabled()}
-              onChange={handleRpcChange}
-              class="rpc-switch"
-            >
-              <Switch.Label class="switch-label">
-                Discord Rich Presence を有効にする
-              </Switch.Label>
-              <Switch.Control class="switch-track">
-                <Switch.Thumb class="switch-thumb" />
-              </Switch.Control>
-            </Switch>
-            <p class="switch-desc">
-              再生中のメディア情報を Discord のアクティビティに表示します。
-            </p>
-          </div>
-
-          <div class="settings-divider" />
-
-          <h3 class="section-title">タスクトレイ設定</h3>
-
-          <div class="settings-card">
-            <Switch
-              checked={traySettings().start_in_tray}
-              onChange={(v) => updateSetting('start_in_tray', v)}
-              class="rpc-switch"
-            >
-              <Switch.Label class="switch-label">
-                起動時にタスクトレイに格納
-              </Switch.Label>
-              <Switch.Control class="switch-track">
-                <Switch.Thumb class="switch-thumb" />
-              </Switch.Control>
-            </Switch>
-
-            <Switch
-              checked={traySettings().minimize_to_tray}
-              onChange={(v) => updateSetting('minimize_to_tray', v)}
-              class="rpc-switch"
-            >
-              <Switch.Label class="switch-label">
-                最小化時にタスクトレイに収納
-              </Switch.Label>
-              <Switch.Control class="switch-track">
-                <Switch.Thumb class="switch-thumb" />
-              </Switch.Control>
-            </Switch>
-
-            <Switch
-              checked={traySettings().close_to_tray}
-              onChange={(v) => updateSetting('close_to_tray', v)}
-              class="rpc-switch"
-            >
-              <Switch.Label class="switch-label">
-                閉じる時にタスクトレイに収納
-              </Switch.Label>
-              <Switch.Control class="switch-track">
-                <Switch.Thumb class="switch-thumb" />
-              </Switch.Control>
-            </Switch>
-          </div>
+          <SettingsPanel
+            rpcEnabled={rpcEnabled()}
+            onRpcChange={handleRpcChange}
+            traySettings={traySettings()}
+            onUpdateSetting={updateSetting}
+          />
         </Tabs.Content>
       </Tabs>
     </div>

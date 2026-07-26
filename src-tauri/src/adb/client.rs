@@ -8,6 +8,8 @@ use super::parser::parse_media_session;
 use crate::models::MediaInfo;
 
 const WSA_PORT: u16 = 58526;
+const ADB_SERVER_PORT: u16 = 5037;
+const DEBUG_TRUNCATE_LEN: usize = 2000;
 
 pub struct AdbClient {
     device: Option<ADBServerDevice>,
@@ -36,7 +38,7 @@ impl AdbClient {
     }
 
     pub async fn connect(&mut self) -> Result<()> {
-        let server_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 5037);
+        let server_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, ADB_SERVER_PORT);
         let ws_addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), WSA_PORT);
 
         log::info!("ADB connect: server={server_addr}, target={ws_addr}");
@@ -110,7 +112,7 @@ impl AdbClient {
                     "ADB no active media session (dumpsys: {} chars)",
                     output_str.len()
                 );
-                log::debug!("ADB dumpsys output:\n{}", &output_str[..output_str.len().min(2000)]);
+                log::debug!("ADB dumpsys output:\n{}", &output_str[..output_str.len().min(DEBUG_TRUNCATE_LEN)]);
                 Err(anyhow::anyhow!("No active media session found"))
             }
         }
