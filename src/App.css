@@ -260,6 +260,19 @@ header h1 {
   padding: 0 20px;
 }
 
+.settings-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
 @media (prefers-color-scheme: dark) {
   .switch-track {
     background: #4b5563;

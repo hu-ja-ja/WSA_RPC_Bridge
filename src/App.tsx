@@ -1,5 +1,6 @@
 import { createSignal, onCleanup, onMount, Show, createMemo } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { Tabs } from '@kobalte/core/tabs'
 import { Switch } from '@kobalte/core/switch'
 import './App.css'
@@ -22,6 +23,12 @@ function formatTime(ms: number): string {
   return `${min}:${sec.toString().padStart(2, '0')}`
 }
 
+interface AppSettings {
+  start_in_tray: boolean
+  minimize_to_tray: boolean
+  close_to_tray: boolean
+}
+
 function App() {
   const [adbConnected, setAdbConnected] = createSignal(false)
   const [discordConnected, setDiscordConnected] = createSignal(false)
@@ -30,9 +37,16 @@ function App() {
   const [loading, setLoading] = createSignal(false)
   const [lastFetch, setLastFetch] = createSignal<{ pos: number; time: number } | null>(null)
   const [now, setNow] = createSignal(Date.now())
+  const [activeTab, setActiveTab] = createSignal('media')
 
   const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('rpcEnabled') : null
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
+
+  const [traySettings, setTraySettings] = createSignal<AppSettings>({
+    start_in_tray: true,
+    minimize_to_tray: true,
+    close_to_tray: true,
+  })
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
 
@@ -108,8 +122,35 @@ function App() {
     }
   }
 
+  async function loadSettings() {
+    try {
+      const s = await invoke<AppSettings>('get_settings')
+      setTraySettings(s)
+    } catch (e) {
+      console.error('failed to load settings', e)
+    }
+  }
+
+  async function updateSetting(key: keyof AppSettings, value: boolean) {
+    const next = { ...traySettings(), [key]: value }
+    setTraySettings(next)
+    try {
+      await invoke('update_settings', { config: next })
+    } catch (e) {
+      console.error('failed to save settings', e)
+    }
+  }
+
   onMount(async () => {
     await checkStatus()
+
+    const unlisten = await listen('show-settings', () => {
+      setActiveTab('settings')
+    })
+    onCleanup(unlisten)
+
+    await loadSettings()
+
     if (rpcEnabled()) {
       try {
         await invoke('connect_discord')
@@ -147,7 +188,7 @@ function App() {
         </span>
       </div>
 
-      <Tabs defaultValue="media" class="tabs">
+      <Tabs value={activeTab()} onChange={setActiveTab} class="tabs">
         <Tabs.List class="tabs-list" aria-label="tabs">
           <Tabs.Trigger class="tab-trigger" value="media">再生中</Tabs.Trigger>
           <Tabs.Trigger class="tab-trigger" value="settings">設定</Tabs.Trigger>
@@ -213,8 +254,52 @@ function App() {
             </Switch>
             <p class="switch-desc">
               再生中のメディア情報を Discord のアクティビティに表示します。
-              設定は自動的に保存され、次回起動時も維持されます。
             </p>
+          </div>
+
+          <div class="settings-divider" />
+
+          <h3 class="section-title">タスクトレイ設定</h3>
+
+          <div class="settings-card">
+            <Switch
+              checked={traySettings().start_in_tray}
+              onChange={(v) => updateSetting('start_in_tray', v)}
+              class="rpc-switch"
+            >
+              <Switch.Label class="switch-label">
+                起動時にタスクトレイに格納
+              </Switch.Label>
+              <Switch.Control class="switch-track">
+                <Switch.Thumb class="switch-thumb" />
+              </Switch.Control>
+            </Switch>
+
+            <Switch
+              checked={traySettings().minimize_to_tray}
+              onChange={(v) => updateSetting('minimize_to_tray', v)}
+              class="rpc-switch"
+            >
+              <Switch.Label class="switch-label">
+                最小化時にタスクトレイに収納
+              </Switch.Label>
+              <Switch.Control class="switch-track">
+                <Switch.Thumb class="switch-thumb" />
+              </Switch.Control>
+            </Switch>
+
+            <Switch
+              checked={traySettings().close_to_tray}
+              onChange={(v) => updateSetting('close_to_tray', v)}
+              class="rpc-switch"
+            >
+              <Switch.Label class="switch-label">
+                閉じる時にタスクトレイに収納
+              </Switch.Label>
+              <Switch.Control class="switch-track">
+                <Switch.Thumb class="switch-thumb" />
+              </Switch.Control>
+            </Switch>
           </div>
         </Tabs.Content>
       </Tabs>

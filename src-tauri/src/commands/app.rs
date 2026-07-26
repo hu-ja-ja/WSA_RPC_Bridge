@@ -4,6 +4,7 @@ use tokio::sync::Mutex;
 use crate::adb::AdbClient;
 use crate::apk_label::ApkLabelResolver;
 use crate::artwork::ArtworkRegistry;
+use crate::config::{AppConfig, ConfigManager};
 use crate::discord::DiscordRpc;
 use crate::models::MediaInfo;
 
@@ -12,6 +13,7 @@ pub struct AppState {
     pub discord: DiscordRpc,
     pub artwork: Mutex<ArtworkRegistry>,
     pub apk_label: Mutex<ApkLabelResolver>,
+    pub config: ConfigManager,
 }
 
 #[tauri::command]
@@ -29,20 +31,22 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
     drop(adb);
 
     if let Ok(ref mut info) = result {
-        log::info!(
-            "get_media_info: success title={:?}, artist={:?}, package={}",
-            info.title,
-            info.artist,
-            info.package_name,
-        );
-
         let display_name = state.apk_label.lock().await.resolve(&info.package_name).await;
         info.display_name = Some(display_name);
 
         let mut registry = state.artwork.lock().await;
-        if let Some(url) = registry.resolve(info).await {
-            info.thumbnail_url = Some(url);
+        let thumb = registry.resolve(info).await;
+        if let Some(ref url) = thumb {
+            info.thumbnail_url = Some(url.clone());
         }
+
+        log::info!(
+            "get_media_info: success title={:?}, artist={:?}, package={}, thumbnail={}",
+            info.title,
+            info.artist,
+            info.package_name,
+            if thumb.is_some() { "有" } else { "無" },
+        );
     } else if let Err(e) = &result {
         log::error!("get_media_info: failed: {e:#}");
     }
@@ -76,4 +80,16 @@ pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
     let connected = state.discord.is_connected();
     log::debug!("get_discord_status: discord_connected={}", connected);
     Ok(connected)
+}
+
+#[tauri::command]
+pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
+    Ok(state.config.get())
+}
+
+#[tauri::command]
+pub fn update_settings(state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
+    state.config.set(config);
+    log::info!("update_settings: settings updated");
+    Ok(())
 }

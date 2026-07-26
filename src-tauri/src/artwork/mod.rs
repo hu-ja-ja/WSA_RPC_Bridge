@@ -60,18 +60,18 @@ impl ArtworkRegistry {
             None => None,
         };
 
-        if url.is_some() {
+        if let Some(ref u) = url {
             log::info!(
                 "artwork: resolved for {} - {}",
                 info.package_name,
                 info.title
             );
-        } else {
-            log::debug!("artwork: no resolver found for {}", info.package_name);
+            self.in_memory.insert(key, Some(u.clone()));
+            return Some(u.clone());
         }
 
-        self.in_memory.insert(key, url.clone());
-        url
+        log::debug!("artwork: no resolver found for {}", info.package_name);
+        None
     }
 
     #[allow(dead_code)]
