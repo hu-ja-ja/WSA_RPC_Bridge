@@ -1,26 +1,68 @@
 use crate::models::MediaInfo;
-use regex::Regex;
 
 const PLAYBACK_STATE_PLAYING: u8 = 3;
 
-pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
-    let session_re = Regex::new(r"^\s{4}\S+\s+(\S+?)/")
-        .expect("invalid regex: session_re");
-    let active_re = Regex::new(r"^\s*active\s*=\s*true")
-        .expect("invalid regex: active_re");
-    let state_re = Regex::new(r"state=PlaybackState\s*\{state=(\d),\s*position=(\d+)")
-        .expect("invalid regex: state_re");
-    let metadata_re = Regex::new(r"metadata:\s*size=\d+,\s*description=(.+)")
-        .expect("invalid regex: metadata_re");
+fn normalize_whitespace(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
 
+fn extract_package(line: &str) -> Option<String> {
+    let b = line.as_bytes();
+    if b.len() < 5 { return None; }
+    if b[0] != b' ' || b[1] != b' ' || b[2] != b' ' || b[3] != b' ' { return None; }
+    if b[4] == b' ' { return None; }
+
+    let content = &line[4..];
+    let mut parts = content.split_whitespace();
+    let _first = parts.next()?;
+    let second = parts.next()?;
+    second.split('/').next().map(|s| s.to_string())
+}
+
+fn is_active_line(trimmed: &str) -> bool {
+    normalize_whitespace(trimmed) == "active=true"
+}
+
+fn extract_state_data(trimmed: &str) -> Option<(u8, u64)> {
+    let pos = trimmed.find("state=PlaybackState")?;
+    let after = &trimmed[pos + "state=PlaybackState".len()..];
+    let after_brace = after.trim_start().strip_prefix('{')?;
+
+    let mut state_val = None;
+    let mut pos_val = None;
+    for part in after_brace.split(',') {
+        let mut kv = part.trim().splitn(2, '=');
+        let key = kv.next()?.trim();
+        let val = kv.next()?.trim();
+        match key {
+            "state" => state_val = val.parse::<u8>().ok(),
+            "position" => pos_val = val.parse::<u64>().ok(),
+            _ => {}
+        }
+        if state_val.is_some() && pos_val.is_some() {
+            break;
+        }
+    }
+    Some((state_val?, pos_val?))
+}
+
+fn extract_description_raw(trimmed: &str) -> Option<String> {
+    if !trimmed.trim_start().starts_with("metadata:") {
+        return None;
+    }
+    let desc_start = trimmed.find("description=")?;
+    Some(trimmed[desc_start + "description=".len()..].to_string())
+}
+
+pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
     let lines: Vec<&str> = output.lines().collect();
     let mut i = 0;
 
     while i < lines.len() {
         let line = lines[i];
 
-        let package = match session_re.captures(line) {
-            Some(c) => c[1].to_string(),
+        let package = match extract_package(line) {
+            Some(p) => p,
             None => {
                 i += 1;
                 continue;
@@ -51,15 +93,14 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                 break;
             }
 
-            if active_re.is_match(trimmed) {
+            if is_active_line(trimmed) {
                 log::debug!("ADB parser: session {} is active", package);
                 is_active = true;
             }
 
-            if let Some(c) = state_re.captures(trimmed) {
-                let state_val: u8 = c[1].parse().unwrap_or(0);
+            if let Some((state_val, pos)) = extract_state_data(trimmed) {
                 is_playing = state_val == PLAYBACK_STATE_PLAYING;
-                position = c[2].parse::<u64>().ok();
+                position = Some(pos);
                 log::debug!(
                     "ADB parser: state={}, position={:?}",
                     state_val,
@@ -67,8 +108,8 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                 );
             }
 
-            if let Some(c) = metadata_re.captures(trimmed) {
-                if let Some(parsed) = parse_description(&c[1]) {
+            if let Some(raw_desc) = extract_description_raw(trimmed) {
+                if let Some(parsed) = parse_description(&raw_desc) {
                     title = parsed.0;
                     artist = parsed.1;
                     album = parsed.2;

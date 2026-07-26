@@ -90,9 +90,10 @@ impl DiscordRpc {
                                     activity = activity.timestamps(ts);
                                 }
                             }
-                            match serde_json::to_string(&activity) {
-                                Ok(json) => log::info!("Discord presence payload: {}", json),
-                                Err(e) => log::warn!("Discord presence serialize failed: {e}"),
+                            if log::log_enabled!(log::Level::Debug) {
+                                if let Ok(json) = serde_json::to_string(&activity) {
+                                    log::debug!("Discord presence payload: {}", json);
+                                }
                             }
                             if let Err(e) = c.set_activity(activity) {
                                 log::error!("Discord set_activity failed: {e}");

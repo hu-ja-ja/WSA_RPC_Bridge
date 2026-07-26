@@ -6,7 +6,15 @@ use reqwest::Client;
 use crate::artwork::{cache_filename, ArtworkResolver};
 use crate::models::MediaInfo;
 
-pub struct NicoboxResolver;
+pub struct NicoboxResolver {
+    client: Client,
+}
+
+impl NicoboxResolver {
+    pub fn new() -> Self {
+        Self { client: Client::new() }
+    }
+}
 
 #[async_trait]
 impl ArtworkResolver for NicoboxResolver {
@@ -26,8 +34,8 @@ impl ArtworkResolver for NicoboxResolver {
 
         log::debug!("nicobox: searching niconico API: {}", url);
 
-        let client = Client::new();
-        let resp = client
+        let resp = self
+            .client
             .get(&url)
             .header("User-Agent", "wsa_rpc_bridge/0.1.0")
             .send()
@@ -46,7 +54,7 @@ impl ArtworkResolver for NicoboxResolver {
 
         let local_path = cache_dir.join(cache_filename(info));
         if !local_path.exists() {
-            if let Err(e) = download_image(&thumbnail_url, &local_path).await {
+            if let Err(e) = download_image(&self.client, &thumbnail_url, &local_path).await {
                 log::warn!("nicobox: failed to cache thumbnail: {e}");
             }
         }
@@ -56,8 +64,7 @@ impl ArtworkResolver for NicoboxResolver {
     }
 }
 
-async fn download_image(url: &str, path: &PathBuf) -> Result<(), String> {
-    let client = Client::new();
+async fn download_image(client: &Client, url: &str, path: &PathBuf) -> Result<(), String> {
     let bytes = client
         .get(url)
         .send()

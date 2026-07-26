@@ -44,7 +44,7 @@ pub fn run() {
     let cache_dir = default_cache_dir();
     let apk_cache_dir = default_apk_cache_dir();
     let mut artwork_registry = ArtworkRegistry::new(cache_dir);
-    artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver));
+    artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver::new()));
 
     tauri::Builder::default()
         .manage(AppState {
