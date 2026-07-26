@@ -58,10 +58,14 @@ impl DiscordRpc {
                                     continue;
                                 }
                             };
+                            let app_name = info
+                                .display_name
+                                .as_deref()
+                                .unwrap_or(&info.package_name);
                             let mut activity = Activity::new()
                                 .name(&info.title)
-                                .details(&info.title)
-                                .state(&info.artist)
+                                .details(app_name)
+                                .state(&info.title)
                                 .activity_type(ActivityType::Listening);
                             if let Some(ref thumb) = info.thumbnail_url {
                                 let img = crate::artwork::discord_image_url(thumb);

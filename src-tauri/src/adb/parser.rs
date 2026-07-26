@@ -82,6 +82,7 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                 thumbnail_url: None,
                 position,
                 duration: None,
+                display_name: None,
                 is_playing,
             };
             if !result.title.is_empty() {
@@ -202,18 +203,16 @@ Media session config:
 }
 
 fn parse_description(desc: &str) -> Option<(String, String, String)> {
-    let parts: Vec<&str> = desc.splitn(4, ", ").collect();
-    let first = parts.first()?;
-    let title = first.trim().to_string();
-    let artist = parts
-        .get(1)
-        .map(|s| s.trim())
+    let parts: Vec<&str> = desc.rsplitn(3, ", ").collect();
+    let n = parts.len();
+    let title = parts.last()?.trim().to_string();
+    let artist = (n >= 2)
+        .then(|| parts[n - 2].trim())
         .filter(|s| *s != "null")
         .unwrap_or("")
         .to_string();
-    let album = parts
-        .get(2)
-        .map(|s| s.trim())
+    let album = (n >= 3)
+        .then(|| parts[n - 3].trim())
         .filter(|s| *s != "null")
         .unwrap_or("")
         .to_string();

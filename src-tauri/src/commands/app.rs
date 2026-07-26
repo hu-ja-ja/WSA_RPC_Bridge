@@ -2,6 +2,7 @@ use tauri::State;
 use tokio::sync::Mutex;
 
 use crate::adb::AdbClient;
+use crate::apk_label::ApkLabelResolver;
 use crate::artwork::ArtworkRegistry;
 use crate::discord::DiscordRpc;
 use crate::models::MediaInfo;
@@ -10,6 +11,7 @@ pub struct AppState {
     pub adb: Mutex<AdbClient>,
     pub discord: DiscordRpc,
     pub artwork: Mutex<ArtworkRegistry>,
+    pub apk_label: Mutex<ApkLabelResolver>,
 }
 
 #[tauri::command]
@@ -33,6 +35,9 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
             info.artist,
             info.package_name,
         );
+
+        let display_name = state.apk_label.lock().await.resolve(&info.package_name).await;
+        info.display_name = Some(display_name);
 
         let mut registry = state.artwork.lock().await;
         if let Some(url) = registry.resolve(info).await {

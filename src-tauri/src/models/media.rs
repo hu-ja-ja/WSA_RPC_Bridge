@@ -9,5 +9,6 @@ pub struct MediaInfo {
     pub thumbnail_url: Option<String>,
     pub position: Option<u64>,
     pub duration: Option<u64>,
+    pub display_name: Option<String>,
     pub is_playing: bool,
 }
