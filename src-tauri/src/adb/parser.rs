@@ -120,12 +120,12 @@ Record for full_user=0
   OnMediaKeyEventDispatchedListener: added 0 listener(s)
   OnMediaKeyEventSessionChangedListener: added 0 listener(s)
   Last MediaButtonReceiver: null
-  Media button session is jp.nicovideo.nicobox/androidx.media3.session.id. (userId=0)
+  Media button session is com.example.app/androidx.media3.session.id. (userId=0)
   Sessions Stack - have 1 sessions:
-    androidx.media3.session.id. jp.nicovideo.nicobox/androidx.media3.session.id. (userId=0)
+    androidx.media3.session.id. com.example.app/androidx.media3.session.id. (userId=0)
       ownerPid=1700, ownerUid=10084, userId=0
-      package=jp.nicovideo.nicobox
-      launchIntent=PendingIntent{4dc6dba: PendingIntentRecord{d1a36eb jp.nicovideo.nicobox startActivity (allowlist: f26c4f4:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
+      package=com.example.app
+      launchIntent=PendingIntent{4dc6dba: PendingIntentRecord{d1a36eb com.example.app startActivity (allowlist: f26c4f4:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
       mediaButtonReceiver=null
       active=true
       flags=7
@@ -134,10 +134,10 @@ Record for full_user=0
       state=PlaybackState {state=3, position=33026, buffered position=33026, speed=1.0, updated=4824263, actions=3141555, custom actions=[], active item id=6, error=null}
       audioAttrs=AudioAttributes: usage=USAGE_MEDIA content=CONTENT_TYPE_MUSIC flags=0x800 tags= bundle=null
       volumeType=1, controlType=2, max=0, current=0
-      metadata: size=15, description=BRIGHTNESS / Mwk feat.初音ミク, Mwk, null
+      metadata: size=15, description=楽曲タイトル / アーティストA, アーティストB, null
       queueTitle=null, size=338
 Audio playback (lastly played comes first)
-  uid=10084 packages=jp.nicovideo.nicobox 
+  uid=10084 packages=com.example.app 
 Media session config:
   media_button_receiver_fgs_allowlist_duration_ms: [cur: 10000, def: 10000]
   media_session_calback_fgs_allowlist_duration_ms: [cur: 10000, def: 10000]
@@ -146,10 +146,10 @@ Media session config:
         let result = parse_media_session(output);
         assert!(result.is_some(), "Should parse media info");
         let info = result.unwrap();
-        assert_eq!(info.title, "BRIGHTNESS / Mwk feat.初音ミク");
-        assert_eq!(info.artist, "Mwk");
+        assert_eq!(info.title, "楽曲タイトル / アーティストA");
+        assert_eq!(info.artist, "アーティストB");
         assert_eq!(info.album, "");
-        assert_eq!(info.package_name, "jp.nicovideo.nicobox");
+        assert_eq!(info.package_name, "com.example.app");
         assert_eq!(info.thumbnail_url, None);
         assert!(info.is_playing);
         assert!(info.position.is_some());
@@ -175,20 +175,20 @@ Media session config:
     #[test]
     fn test_parse_description_japanese() {
         let (title, artist, album) = parse_description(
-            "ぜったいだった！！！！ / IA × 初音ミク, 内緒の秘密, null",
+            "楽曲タイトル / アーティストA, アーティストB, null",
         )
         .unwrap();
-        assert_eq!(title, "ぜったいだった！！！！ / IA × 初音ミク");
-        assert_eq!(artist, "内緒の秘密");
+        assert_eq!(title, "楽曲タイトル / アーティストA");
+        assert_eq!(artist, "アーティストB");
         assert_eq!(album, "");
     }
 
     #[test]
     fn test_parse_description_without_slash() {
         let (title, artist, album) =
-            parse_description("MV「乙女辞表」是 feat.初音ミク, 是, null").unwrap();
-        assert_eq!(title, "MV「乙女辞表」是 feat.初音ミク");
-        assert_eq!(artist, "是");
+            parse_description("MV「タイトル」アーティストA feat.サンプル, アーティストA, null").unwrap();
+        assert_eq!(title, "MV「タイトル」アーティストA feat.サンプル");
+        assert_eq!(artist, "アーティストA");
         assert_eq!(album, "");
     }
 

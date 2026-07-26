@@ -19,12 +19,12 @@ fn test_adb_connect_and_dumpsys() {
 
     let mut buf = Vec::new();
     device
-        .shell_command(&"echo hello_adb", Some(&mut buf), None)
+        .shell_command(&"echo hello_test", Some(&mut buf), None)
         .expect("echo should succeed");
 
     let out = String::from_utf8_lossy(&buf);
     eprintln!("echo: {out:?}");
-    assert_eq!(out.trim(), "hello_adb");
+    assert_eq!(out.trim(), "hello_test");
 
     let mut buf2 = Vec::new();
     device
