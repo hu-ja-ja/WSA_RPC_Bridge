@@ -4,6 +4,12 @@
 
 WSA (Windows Subsystem for Android) 上で動作しているアプリケーションのメディア再生情報を ADB 経由で取得し、Discord Rich Presence に表示するデスクトップアプリ。
 
+## 注意
+
+WSA側で、開発者モードを有効にしている必要があります。
+
+![WSA_Config](public/WSA_Config.png)
+
 ## 機能
 
 - WSA 上のアプリの再生情報（曲タイトル、アーティスト、アルバム、再生位置）を自動取得

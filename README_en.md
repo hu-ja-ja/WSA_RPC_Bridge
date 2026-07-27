@@ -4,6 +4,12 @@
 
 A desktop app that retrieves media playback information from apps running on WSA (Windows Subsystem for Android) via ADB and displays it on Discord Rich Presence.
 
+## Notes
+
+Developer mode must be enabled on the WSA side.
+
+![WSA_Config](public/WSA_Config.png)
+
 ## Features
 
 - Auto-fetch playback info (song title, artist, album, playback position) from apps on WSA
