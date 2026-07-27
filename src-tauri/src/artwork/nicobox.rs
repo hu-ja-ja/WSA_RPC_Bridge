@@ -50,7 +50,14 @@ impl ArtworkResolver for NicoboxResolver {
 
         let json: serde_json::Value = resp.json().await.ok()?;
 
-        let thumbnail_url = json["data"][0]["thumbnailUrl"].as_str()?.to_string();
+        let data = &json["data"][0];
+        let title = data["title"].as_str()?;
+        if title != info.title {
+            log::debug!("nicobox: title mismatch: got \"{title}\", expected \"{}\"", info.title);
+            return None;
+        }
+
+        let thumbnail_url = data["thumbnailUrl"].as_str()?.to_string();
 
         let local_path = cache_dir.join(cache_filename(info));
         if !local_path.exists() {
