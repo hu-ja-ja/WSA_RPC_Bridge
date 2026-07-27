@@ -22,7 +22,7 @@ impl ArtworkResolver for NicoboxResolver {
         "jp.nicovideo.nicobox"
     }
 
-    async fn resolve(&self, info: &MediaInfo, cache_dir: &Path) -> Option<String> {
+    async fn resolve(&self, info: &MediaInfo, cache_dir: &Path, cache_enabled: bool) -> Option<String> {
         let query = format!("\"{}\"", info.title);
         let encoded = urlencoding::encode(&query);
 
@@ -59,10 +59,12 @@ impl ArtworkResolver for NicoboxResolver {
 
         let thumbnail_url = data["thumbnailUrl"].as_str()?.to_string();
 
-        let local_path = cache_dir.join(cache_filename(info));
-        if !local_path.exists() {
-            if let Err(e) = download_image(&self.client, &thumbnail_url, &local_path).await {
-                log::warn!("nicobox: failed to cache thumbnail: {e}");
+        if cache_enabled {
+            let local_path = cache_dir.join(cache_filename(info));
+            if !local_path.exists() {
+                if let Err(e) = download_image(&self.client, &thumbnail_url, &local_path).await {
+                    log::warn!("nicobox: failed to cache thumbnail: {e}");
+                }
             }
         }
 

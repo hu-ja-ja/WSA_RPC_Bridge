@@ -12,5 +12,10 @@
   "settings.tray_title": "タスクトレイ設定",
   "settings.start_in_tray": "起動時にタスクトレイに格納",
   "settings.minimize_to_tray": "最小化時にタスクトレイに収納",
-  "settings.close_to_tray": "閉じる時にタスクトレイに収納"
+  "settings.close_to_tray": "閉じる時にタスクトレイに収納",
+  "settings.thumbnail_cache_title": "サムネイルキャッシュ",
+  "settings.thumbnail_cache_enabled": "サムネイル画像をキャッシュする",
+  "settings.thumbnail_cache_description": "サムネイルキャッシュはこのウィンドウでの表示のみに使用され、Discord Rich Presence では使用されません。",
+  "settings.thumbnail_cache_path": "キャッシュ場所",
+  "settings.browse": "参照"
 }

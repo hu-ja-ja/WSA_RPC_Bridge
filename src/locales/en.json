@@ -12,5 +12,10 @@
   "settings.tray_title": "System Tray Settings",
   "settings.start_in_tray": "Start in system tray",
   "settings.minimize_to_tray": "Minimize to system tray",
-  "settings.close_to_tray": "Close to system tray"
+  "settings.close_to_tray": "Close to system tray",
+  "settings.thumbnail_cache_title": "Thumbnail Cache",
+  "settings.thumbnail_cache_enabled": "Cache thumbnail images",
+  "settings.thumbnail_cache_description": "Thumbnail cache is used only for display in this window, not for Discord Rich Presence.",
+  "settings.thumbnail_cache_path": "Cache location",
+  "settings.browse": "Browse"
 }

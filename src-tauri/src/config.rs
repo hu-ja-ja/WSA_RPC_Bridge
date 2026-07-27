@@ -9,6 +9,8 @@ pub struct AppConfig {
     pub start_in_tray: bool,
     pub minimize_to_tray: bool,
     pub close_to_tray: bool,
+    pub thumbnail_cache_enabled: bool,
+    pub thumbnail_cache_path: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -17,6 +19,8 @@ impl Default for AppConfig {
             start_in_tray: true,
             minimize_to_tray: true,
             close_to_tray: true,
+            thumbnail_cache_enabled: true,
+            thumbnail_cache_path: None,
         }
     }
 }

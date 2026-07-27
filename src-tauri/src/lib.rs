@@ -32,7 +32,7 @@ fn wsa_data_dir() -> PathBuf {
     base.join(APP_DIR)
 }
 
-fn default_cache_dir() -> PathBuf {
+pub fn default_cache_dir() -> PathBuf {
     wsa_data_dir().join("Cache")
 }
 
@@ -44,7 +44,7 @@ fn default_apk_cache_dir() -> PathBuf {
 pub fn run() {
     let cache_dir = default_cache_dir();
     let apk_cache_dir = default_apk_cache_dir();
-    let mut artwork_registry = ArtworkRegistry::new(cache_dir);
+    let mut artwork_registry = ArtworkRegistry::new(cache_dir, true);
     artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver::new()));
 
     tauri::Builder::default()
@@ -55,6 +55,7 @@ pub fn run() {
             apk_label: Mutex::new(ApkLabelResolver::new(apk_cache_dir)),
             config: config::ConfigManager::new(),
         })
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::get_adb_status,
             commands::get_media_info,
@@ -64,6 +65,7 @@ pub fn run() {
             commands::get_discord_status,
             commands::get_settings,
             commands::update_settings,
+            commands::get_default_cache_path,
         ])
         .on_window_event(|window, event| {
             let app = window.app_handle();
@@ -95,6 +97,11 @@ pub fn run() {
 
             let state = app.state::<AppState>();
             let cfg = state.config.get();
+            if let Some(ref path) = cfg.thumbnail_cache_path {
+                if !path.is_empty() {
+                    let _ = std::fs::create_dir_all(path);
+                }
+            }
             if cfg.start_in_tray {
                 tray::hide_main_window(app.handle());
             }

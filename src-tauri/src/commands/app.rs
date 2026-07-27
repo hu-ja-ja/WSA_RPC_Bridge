@@ -1,6 +1,8 @@
 use tauri::State;
 use tokio::sync::Mutex;
 
+use std::path::PathBuf;
+
 use crate::adb::AdbClient;
 use crate::apk_label::ApkLabelResolver;
 use crate::artwork::ArtworkRegistry;
@@ -35,6 +37,12 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
         info.display_name = Some(display_name);
 
         let mut registry = state.artwork.lock().await;
+        let cfg = state.config.get();
+        let cache_dir = cfg.thumbnail_cache_path
+            .as_ref()
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from);
+        registry.update_cache_settings(cfg.thumbnail_cache_enabled, cache_dir);
         let thumb = registry.resolve(info).await;
         if let Some(ref url) = thumb {
             info.thumbnail_url = Some(url.clone());
@@ -92,4 +100,9 @@ pub fn update_settings(state: State<'_, AppState>, config: AppConfig) -> Result<
     state.config.set(config);
     log::info!("update_settings: settings updated");
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_default_cache_path() -> String {
+    crate::default_cache_dir().to_string_lossy().to_string()
 }
