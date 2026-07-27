@@ -85,6 +85,11 @@ pub fn run() {
                 )?;
             }
 
+            std::fs::create_dir_all(wsa_data_dir())?;
+            std::fs::create_dir_all(default_cache_dir())?;
+            std::fs::create_dir_all(default_apk_cache_dir())?;
+            log::info!("data directories created");
+
             tray::setup_tray(app.handle())?;
 
             let state = app.state::<AppState>();

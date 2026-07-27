@@ -140,14 +140,14 @@ function App() {
     const tick = setInterval(() => setNow(Date.now()), TICK_INTERVAL)
     onCleanup(() => clearInterval(tick))
 
-    await checkStatus()
-
     const unlisten = await listen(EVENT_SHOW_SETTINGS, () => {
       setActiveTab('settings')
     })
     onCleanup(unlisten)
 
     await loadSettings()
+    await fetchMediaInfo()
+    await checkStatus()
 
     if (rpcEnabled()) {
       try {
@@ -156,7 +156,7 @@ function App() {
         console.error('initial connect_discord failed', e)
       }
     }
-    await fetchMediaInfo()
+
     pollingTimer = setInterval(async () => {
       await checkStatus()
       await fetchMediaInfo()

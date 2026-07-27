@@ -50,10 +50,20 @@ impl ConfigManager {
     pub fn get(&self) -> AppConfig {
         let mut guard = self.inner.lock().expect("config mutex poisoned");
         if guard.is_none() {
-            let config = fs::read_to_string(&self.path)
-                .ok()
-                .and_then(|s| serde_json::from_str(&s).ok())
-                .unwrap_or_default();
+            let config = match fs::read_to_string(&self.path) {
+                Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+                Err(_) => {
+                    let default = AppConfig::default();
+                    if let Some(parent) = self.path.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+                    if let Ok(json) = serde_json::to_string_pretty(&default) {
+                        let _ = fs::write(&self.path, &json);
+                        log::info!("config file created with defaults");
+                    }
+                    default
+                }
+            };
             *guard = Some(config);
         }
         guard.as_ref().expect("config not initialized").clone()

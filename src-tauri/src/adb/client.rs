@@ -63,7 +63,7 @@ impl AdbClient {
         let mut buf = Vec::new();
         device
             .shell_command(&"echo adb_ok", Some(&mut buf), None)
-            .context("ADB device not reachable. Try `adb connect 127.0.0.1:58526` manually.")?;
+            .context("Automatic ADB connection to WSA device (127.0.0.1:58526) failed. Ensure WSA is running with developer mode enabled.")?;
 
         let response = String::from_utf8_lossy(&buf);
         let trimmed = response.trim();
