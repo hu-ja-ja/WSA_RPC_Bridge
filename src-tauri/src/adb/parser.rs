@@ -120,7 +120,7 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
             i += 1;
         }
 
-        if is_active || (!title.is_empty() && !is_active) {
+        if is_active || !title.is_empty() {
             let result = MediaInfo {
                 title,
                 artist,

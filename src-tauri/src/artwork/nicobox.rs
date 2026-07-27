@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use reqwest::Client;
@@ -22,7 +22,7 @@ impl ArtworkResolver for NicoboxResolver {
         "jp.nicovideo.nicobox"
     }
 
-    async fn resolve(&self, info: &MediaInfo, cache_dir: &PathBuf) -> Option<String> {
+    async fn resolve(&self, info: &MediaInfo, cache_dir: &Path) -> Option<String> {
         let query = format!("\"{}\"", info.title);
         let encoded = urlencoding::encode(&query);
 

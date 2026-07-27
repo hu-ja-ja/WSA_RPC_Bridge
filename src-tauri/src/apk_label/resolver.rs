@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
@@ -100,8 +100,8 @@ impl ApkLabelResolver {
         Ok(())
     }
 
-    async fn parse_apk_label(&self, path: &PathBuf) -> Result<String> {
-        let path = path.clone();
+    async fn parse_apk_label(&self, path: &Path) -> Result<String> {
+        let path = path.to_path_buf();
         tokio::task::spawn_blocking(move || {
             let apk = apk_info::Apk::new(&path)?;
             let label = apk.get_application_label().unwrap_or_default();

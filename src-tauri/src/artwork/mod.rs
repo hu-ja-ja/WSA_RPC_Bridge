@@ -2,7 +2,7 @@ pub mod nicobox;
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 
@@ -11,7 +11,7 @@ use crate::models::MediaInfo;
 #[async_trait]
 pub trait ArtworkResolver: Send + Sync {
     fn package_name(&self) -> &str;
-    async fn resolve(&self, info: &MediaInfo, cache_dir: &PathBuf) -> Option<String>;
+    async fn resolve(&self, info: &MediaInfo, cache_dir: &Path) -> Option<String>;
 }
 
 pub struct ArtworkRegistry {
