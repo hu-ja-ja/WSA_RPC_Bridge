@@ -1,6 +1,9 @@
 import { Show } from 'solid-js'
 import { t } from '../i18n'
 
+const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#e5e4e7"/><g fill="none" stroke="#9ca3af" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="66" r="10"/><circle cx="66" cy="58" r="10"/><path d="M46 66 V30 L76 22 V58"/></g></svg>`
+const NOART_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(PLACEHOLDER_SVG)}`
+
 interface MediaInfo {
   title: string
   artist: string
@@ -39,7 +42,17 @@ export function MediaCard(props: MediaCardProps) {
         {(m) => (
           <div class="media-card">
             <Show when={m().thumbnail_url}>
-              <img src={m().thumbnail_url!} alt="album art" class="thumb" />
+              <img
+                src={m().thumbnail_url!}
+                alt="album art"
+                class="thumb"
+                onerror={(e) => {
+                  const img = e.currentTarget
+                  if (img.src !== NOART_URI) {
+                    img.src = NOART_URI
+                  }
+                }}
+              />
             </Show>
             <div class="media-body">
               <div class="track-title">

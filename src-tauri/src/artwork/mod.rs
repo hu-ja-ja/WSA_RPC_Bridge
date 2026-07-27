@@ -8,6 +8,8 @@ use async_trait::async_trait;
 
 use crate::models::MediaInfo;
 
+const PLACEHOLDER_URL: &str = "https://placehold.co/100x100/000000/000000.png";
+
 #[async_trait]
 pub trait ArtworkResolver: Send + Sync {
     fn package_name(&self) -> &str;
@@ -72,8 +74,9 @@ impl ArtworkRegistry {
             return Some(u.clone());
         }
 
-        log::debug!("artwork: no resolver found for {}", info.package_name);
-        None
+        log::debug!("artwork: no resolver found for {}, using placeholder", info.package_name);
+        self.in_memory.insert(key, Some(PLACEHOLDER_URL.to_string()));
+        Some(PLACEHOLDER_URL.to_string())
     }
 
 }
