@@ -1,5 +1,7 @@
 # WSA RPC Bridge
 
+[English](README_en.md) | [日本語](README.md)
+
 WSA (Windows Subsystem for Android) 上で動作しているアプリケーションのメディア再生情報を ADB 経由で取得し、Discord Rich Presence に表示するデスクトップアプリ。
 
 ## 機能

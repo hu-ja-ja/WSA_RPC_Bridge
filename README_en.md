@@ -1,0 +1,67 @@
+# WSA RPC Bridge
+
+[English](README_en.md) | [日本語](README.md)
+
+A desktop app that retrieves media playback information from apps running on WSA (Windows Subsystem for Android) via ADB and displays it on Discord Rich Presence.
+
+## Features
+
+- Auto-fetch playback info (song title, artist, album, playback position) from apps on WSA
+- Display playback status on Discord Rich Presence
+- Auto-resolve app name and app icon
+- System tray resident (can be minimized to tray)
+- Multi-language support (Japanese / English)
+
+## Screenshots
+
+![GUI](public/GUI.png)
+
+![RPC](public/RPC.png)
+
+## Tech Stack
+
+- **Frontend**: SolidJS + Kobalte + Vite
+- **Backend**: Rust / Tauri v2
+
+## Build
+
+```bash
+pnpm install
+pnpm tauri build
+```
+
+## Development
+
+```bash
+pnpm dev       # Vite dev server
+pnpm tauri dev # Tauri + Vite dev
+pnpm lint      # oxlint
+```
+
+## Testing
+
+```bash
+cd src-tauri
+cargo test                          # Unit tests (parser, etc.)
+cargo test -- --ignored             # Integration tests requiring a real WSA device
+```
+
+## Installation
+
+Download and run the latest installer from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases).
+
+## Acknowledgments
+
+### Inspiration
+
+- [Kizzy](https://github.com/dead8309/Kizzy)
+
+### Key Crates
+
+- [adb_client](https://github.com/cocool97/adb_client)
+- [discord-rich-presence](https://github.com/vionya/discord-rich-presence)
+- [apk-info](https://github.com/delvinru/apk-info)
+
+## License
+
+MPL-2.0 License
