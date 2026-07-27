@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use adb_client::ADBDeviceExt;
+use anyhow::Context;
 use anyhow::Result;
 
 pub struct ApkLabelResolver {
@@ -16,12 +18,12 @@ impl ApkLabelResolver {
         }
     }
 
-    pub async fn resolve(&mut self, package_name: &str) -> String {
+    pub async fn resolve<D: ADBDeviceExt + Send>(&mut self, package_name: &str, device: &mut D) -> String {
         if let Some(name) = self.cache.get(package_name) {
             return name.clone();
         }
 
-        match self.resolve_inner(package_name).await {
+        match self.resolve_inner(package_name, device).await {
             Ok(name) => {
                 log::info!("Resolved app label: {} -> {}", package_name, name);
                 self.cache.insert(package_name.to_string(), name.clone());
@@ -34,15 +36,15 @@ impl ApkLabelResolver {
         }
     }
 
-    async fn resolve_inner(&self, package_name: &str) -> Result<String> {
-        let apk_path = self.get_apk_path(package_name).await?;
+    async fn resolve_inner<D: ADBDeviceExt + Send>(&self, package_name: &str, device: &mut D) -> Result<String> {
+        let apk_path = self.get_apk_path(package_name, device).await?;
         let local_path = self.cache_dir.join(format!("{}.apk", package_name));
 
         if let Some(parent) = local_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        self.pull_apk(&apk_path, &local_path).await?;
+        self.pull_apk(&apk_path, &local_path, device).await?;
         let label = self.parse_apk_label(&local_path).await?;
 
         let _ = tokio::fs::remove_file(&local_path).await;
@@ -54,20 +56,14 @@ impl ApkLabelResolver {
         Ok(label)
     }
 
-    async fn get_apk_path(&self, package_name: &str) -> Result<String> {
-        let output = tokio::process::Command::new("adb")
-            .args(["shell", "pm", "path", package_name])
-            .output()
-            .await?;
+    async fn get_apk_path<D: ADBDeviceExt + Send>(&self, package_name: &str, device: &mut D) -> Result<String> {
+        let cmd = format!("pm path {}", package_name);
+        let mut stdout = Vec::new();
+        device
+            .shell_command(&cmd, Some(&mut stdout), None)
+            .context("pm path failed")?;
 
-        if !output.status.success() {
-            anyhow::bail!(
-                "pm path failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
-
-        let stdout = String::from_utf8(output.stdout)?;
+        let stdout = String::from_utf8(stdout)?;
 
         let apk_path = stdout
             .lines()
@@ -82,19 +78,18 @@ impl ApkLabelResolver {
         Ok(apk_path)
     }
 
-    async fn pull_apk(&self, remote_path: &str, local_path: &PathBuf) -> Result<()> {
-        let output = tokio::process::Command::new("adb")
-            .args(["pull", remote_path])
-            .arg(local_path)
-            .output()
-            .await?;
-
-        if !output.status.success() {
-            anyhow::bail!(
-                "adb pull failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
+    async fn pull_apk<D: ADBDeviceExt + Send>(
+        &self,
+        remote_path: &str,
+        local_path: &Path,
+        device: &mut D,
+    ) -> Result<()> {
+        let remote_path = remote_path.to_string();
+        let local_path = local_path.to_path_buf();
+        let mut file = std::fs::File::create(&local_path)?;
+        device
+            .pull(&remote_path, &mut file)
+            .context("adb pull failed")?;
 
         log::debug!("APK pulled to {:?}", local_path);
         Ok(())

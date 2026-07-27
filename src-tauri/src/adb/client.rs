@@ -37,6 +37,10 @@ impl AdbClient {
         self.connected
     }
 
+    pub fn device(&mut self) -> Option<&mut ADBServerDevice> {
+        self.device.as_mut()
+    }
+
     pub async fn connect(&mut self) -> Result<()> {
         let server_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, ADB_SERVER_PORT);
         let ws_addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), WSA_PORT);

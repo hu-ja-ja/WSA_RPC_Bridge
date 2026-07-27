@@ -3,6 +3,7 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use adb_client::{server::ADBServer, server_device::ADBServerDevice, ADBDeviceExt};
 
 #[test]
+#[ignore = "requires WSA (127.0.0.1:58526) to be running; run with `cargo test -- --ignored`"]
 fn test_adb_connect_and_dumpsys() {
     let server_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 5037);
     let ws_addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 58526);

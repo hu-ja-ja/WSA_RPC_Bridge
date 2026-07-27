@@ -28,10 +28,10 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
     log::info!("get_media_info: invoked by frontend");
     let mut adb = state.adb.lock().await;
     let mut result = adb.get_media_info().await;
-    drop(adb);
 
     if let Ok(ref mut info) = result {
-        let display_name = state.apk_label.lock().await.resolve(&info.package_name).await;
+        let device = adb.device().expect("device must be connected after successful get_media_info");
+        let display_name = state.apk_label.lock().await.resolve(&info.package_name, device).await;
         info.display_name = Some(display_name);
 
         let mut registry = state.artwork.lock().await;
