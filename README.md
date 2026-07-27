@@ -1,28 +1,65 @@
-## Usage
+# WSA RPC Bridge
+
+WSA (Windows Subsystem for Android) 上で動作しているアプリケーションのメディア再生情報を ADB 経由で取得し、Discord Rich Presence に表示するデスクトップアプリ。
+
+## 機能
+
+- WSA 上のアプリの再生情報（曲タイトル、アーティスト、アルバム、再生位置）を自動取得
+- Discord Rich Presence に再生状況を表示
+- アプリ名・アプリアイコンの自動解決
+- トレイ常駐（タスクトレイに格納可能）
+- マルチ言語対応（日本語 / English）
+
+## スクリーンショット
+
+![GUI](public/GUI.png)
+
+![RPC](public/RPC.png)
+
+## 技術スタック
+
+- **フロントエンド**: SolidJS + Kobalte + Vite
+- **バックエンド**: Rust / Tauri v2
+
+## ビルド
 
 ```bash
-$ npm install # or pnpm install or yarn install
+pnpm install
+pnpm tauri build
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## 開発
 
-## Available Scripts
+```bash
+pnpm dev       # Vite dev server
+pnpm tauri dev # Tauri + Vite dev
+pnpm lint      # oxlint
+```
 
-In the project directory, you can run:
+## テスト
 
-### `npm run dev`
+```bash
+cd src-tauri
+cargo test                          # ユニットテスト（パーサーなど）
+cargo test -- --ignored             # WSA 実機が必要な結合テスト
+```
 
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
+## インストール
 
-### `npm run build`
+[Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新のインストーラをダウンロードして実行してください。
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+## 謝辞
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+### アイデア
 
-## Deployment
+- [Kizzy](https://github.com/dead8309/Kizzy)
 
-Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)
+### 主要Crates
+
+- [adb_client](https://github.com/cocool97/adb_client)
+- [discord-rich-presence](https://github.com/vionya/discord-rich-presence)
+- [apk-info](https://github.com/delvinru/apk-info)
+
+## ライセンス
+
+MPL-2.0 License
