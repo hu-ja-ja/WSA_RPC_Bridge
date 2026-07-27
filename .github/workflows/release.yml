@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> src-tauri/target
+
+      - run: pnpm install
+
+      - run: pnpm tauri build --bundles msi
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $msiFiles = Get-ChildItem -Path src-tauri/target/release/bundle/msi/*.msi
+          foreach ($msi in $msiFiles) {
+            $hash = (Get-FileHash -Path $msi.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($msi.Name)" | Out-File -FilePath "$($msi.FullName).sha256" -Encoding ascii
+          }
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sha256
