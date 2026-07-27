@@ -4,10 +4,12 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
+use crate::i18n::tr;
+
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, "open", "開く", true, None::<&str>)?;
-    let settings = MenuItem::with_id(app, "settings", "設定", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", tr("tray.open"), true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", tr("tray.settings"), true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", tr("tray.quit"), true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &settings, &quit])?;
 
     let icon = app.default_window_icon().cloned()

@@ -1,4 +1,5 @@
 import { Show } from 'solid-js'
+import { t } from '../i18n'
 
 interface MediaInfo {
   title: string
@@ -31,8 +32,8 @@ export function MediaCard(props: MediaCardProps) {
     <Show when={props.loading && !props.media} fallback={
       <Show when={props.media} fallback={
         <div class="empty-state">
-          <p>{props.error ?? '再生中のメディアはありません'}</p>
-          <button onClick={props.onRetry} class="btn">再試行</button>
+          <p>{props.error ?? t("media.none")}</p>
+          <button onClick={props.onRetry} class="btn">{t("media.retry")}</button>
         </div>
       }>
         {(m) => (
@@ -62,7 +63,7 @@ export function MediaCard(props: MediaCardProps) {
         )}
       </Show>
     }>
-      <div class="loading-msg">読み込み中...</div>
+      <div class="loading-msg">{t("media.loading")}</div>
     </Show>
   )
 }

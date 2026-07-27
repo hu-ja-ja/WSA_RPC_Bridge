@@ -5,6 +5,7 @@ import { Tabs } from '@kobalte/core/tabs'
 import { StatusBar } from './components/StatusBar'
 import { MediaCard } from './components/MediaCard'
 import { SettingsPanel } from './components/SettingsPanel'
+import { t } from './i18n'
 import './App.css'
 
 interface MediaInfo {
@@ -180,8 +181,8 @@ function App() {
 
       <Tabs value={activeTab()} onChange={setActiveTab} class="tabs">
         <Tabs.List class="tabs-list" aria-label="tabs">
-          <Tabs.Trigger class="tab-trigger" value="media">再生中</Tabs.Trigger>
-          <Tabs.Trigger class="tab-trigger" value="settings">設定</Tabs.Trigger>
+          <Tabs.Trigger class="tab-trigger" value="media">{t("app.tab.media")}</Tabs.Trigger>
+          <Tabs.Trigger class="tab-trigger" value="settings">{t("app.tab.settings")}</Tabs.Trigger>
           <Tabs.Indicator class="tab-indicator" />
         </Tabs.List>
 

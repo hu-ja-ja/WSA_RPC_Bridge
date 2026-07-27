@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 interface StatusBarProps {
   adbConnected: boolean
   discordConnected: boolean
@@ -9,14 +11,14 @@ export function StatusBar(props: StatusBarProps) {
     <div id="status-bar">
       <span class={`dot ${props.adbConnected ? 'connected' : 'disconnected'}`} />
       <span>ADB</span>
-      <span class="status-value">{props.adbConnected ? '接続済み' : '切断'}</span>
+      <span class="status-value">{props.adbConnected ? t("status.connected") : t("status.disconnected")}</span>
 
       <span class="status-sep">|</span>
 
       <span class={`dot ${props.discordConnected ? 'connected' : 'disconnected'}`} />
       <span>Discord RPC</span>
       <span class="status-value">
-        {props.discordConnected ? '接続済み' : props.rpcEnabled ? '待機中' : '切断'}
+        {props.discordConnected ? t("status.connected") : props.rpcEnabled ? t("status.waiting") : t("status.disconnected")}
       </span>
     </div>
   )

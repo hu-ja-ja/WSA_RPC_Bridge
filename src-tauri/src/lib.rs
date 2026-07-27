@@ -4,6 +4,7 @@ mod artwork;
 mod commands;
 mod config;
 mod discord;
+mod i18n;
 mod models;
 mod tray;
 

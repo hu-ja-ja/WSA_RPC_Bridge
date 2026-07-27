@@ -1,0 +1,16 @@
+{
+  "app.tab.media": "Now Playing",
+  "app.tab.settings": "Settings",
+  "media.none": "No media is currently playing",
+  "media.retry": "Retry",
+  "media.loading": "Loading...",
+  "status.connected": "Connected",
+  "status.disconnected": "Disconnected",
+  "status.waiting": "Waiting",
+  "settings.enable_rpc": "Enable Discord Rich Presence",
+  "settings.rpc_description": "Display currently playing media information on Discord activity.",
+  "settings.tray_title": "System Tray Settings",
+  "settings.start_in_tray": "Start in system tray",
+  "settings.minimize_to_tray": "Minimize to system tray",
+  "settings.close_to_tray": "Close to system tray"
+}

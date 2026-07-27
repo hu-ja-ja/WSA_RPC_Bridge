@@ -5,6 +5,7 @@ use adb_client::{server::ADBServer, server_device::ADBServerDevice, ADBDeviceExt
 use anyhow::{Context, Result};
 
 use super::parser::parse_media_session;
+use crate::i18n::tr;
 use crate::models::MediaInfo;
 
 const WSA_PORT: u16 = 58526;
@@ -63,7 +64,7 @@ impl AdbClient {
         let mut buf = Vec::new();
         device
             .shell_command(&"echo adb_ok", Some(&mut buf), None)
-            .context("Automatic ADB connection to WSA device (127.0.0.1:58526) failed. Ensure WSA is running with developer mode enabled.")?;
+            .context(tr("adb.connect_failed"))?;
 
         let response = String::from_utf8_lossy(&buf);
         let trimmed = response.trim();
@@ -94,12 +95,12 @@ impl AdbClient {
         let start = Instant::now();
         device
             .shell_command(&"dumpsys media_session", Some(&mut raw), None)
-            .context("Failed to execute dumpsys media_session")?;
+            .context(tr("adb.dumpsys_failed"))?;
         let elapsed = start.elapsed();
         log::info!("ADB dumpsys returned {} bytes ({:?})", raw.len(), elapsed);
 
         let output_str =
-            String::from_utf8(raw).context("Failed to decode dumpsys output as UTF-8")?;
+            String::from_utf8(raw).context(tr("adb.utf8_decode_failed"))?;
 
         match parse_media_session(&output_str) {
             Some(info) => {
@@ -117,7 +118,7 @@ impl AdbClient {
                     output_str.len()
                 );
                 log::debug!("ADB dumpsys output:\n{}", &output_str[..output_str.len().min(DEBUG_TRUNCATE_LEN)]);
-                Err(anyhow::anyhow!("No active media session found"))
+                Err(anyhow::anyhow!("{}", tr("adb.no_session")))
             }
         }
     }

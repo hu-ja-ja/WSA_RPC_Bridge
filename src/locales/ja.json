@@ -1,0 +1,16 @@
+{
+  "app.tab.media": "再生中",
+  "app.tab.settings": "設定",
+  "media.none": "再生中のメディアはありません",
+  "media.retry": "再試行",
+  "media.loading": "読み込み中...",
+  "status.connected": "接続済み",
+  "status.disconnected": "切断",
+  "status.waiting": "待機中",
+  "settings.enable_rpc": "Discord Rich Presence を有効にする",
+  "settings.rpc_description": "再生中のメディア情報を Discord のアクティビティに表示します。",
+  "settings.tray_title": "タスクトレイ設定",
+  "settings.start_in_tray": "起動時にタスクトレイに格納",
+  "settings.minimize_to_tray": "最小化時にタスクトレイに収納",
+  "settings.close_to_tray": "閉じる時にタスクトレイに収納"
+}

@@ -1,4 +1,5 @@
 import { SettingSwitch } from './SettingSwitch'
+import { t } from '../i18n'
 
 interface AppSettings {
   start_in_tray: boolean
@@ -20,34 +21,34 @@ export function SettingsPanel(props: SettingsPanelProps) {
         <SettingSwitch
           checked={props.rpcEnabled}
           onChange={props.onRpcChange}
-          label="Discord Rich Presence を有効にする"
+          label={t("settings.enable_rpc")}
         />
         <p class="switch-desc">
-          再生中のメディア情報を Discord のアクティビティに表示します。
+          {t("settings.rpc_description")}
         </p>
       </div>
 
       <div class="settings-divider" />
 
-      <h3 class="section-title">タスクトレイ設定</h3>
+      <h3 class="section-title">{t("settings.tray_title")}</h3>
 
       <div class="settings-card">
         <SettingSwitch
           checked={props.traySettings.start_in_tray}
           onChange={(v) => props.onUpdateSetting('start_in_tray', v)}
-          label="起動時にタスクトレイに格納"
+          label={t("settings.start_in_tray")}
         />
 
         <SettingSwitch
           checked={props.traySettings.minimize_to_tray}
           onChange={(v) => props.onUpdateSetting('minimize_to_tray', v)}
-          label="最小化時にタスクトレイに収納"
+          label={t("settings.minimize_to_tray")}
         />
 
         <SettingSwitch
           checked={props.traySettings.close_to_tray}
           onChange={(v) => props.onUpdateSetting('close_to_tray', v)}
-          label="閉じる時にタスクトレイに収納"
+          label={t("settings.close_to_tray")}
         />
       </div>
     </>
