@@ -117,7 +117,9 @@ limitations under the License.`,
 // ── 1. Rust ──────────────────────────────────────────────────────────
 
 console.log('[1/3] Running cargo-about...')
-const tmpJson = resolve(SRC_TAURI, 'target', '.cargo-about-tmp.json')
+const tmpDir = resolve(SRC_TAURI, 'target')
+mkdirSync(tmpDir, { recursive: true })
+const tmpJson = resolve(tmpDir, '.cargo-about-tmp.json')
 execSync('cargo about generate --format json -o ' + tmpJson, {
   cwd: SRC_TAURI,
   encoding: 'utf-8',

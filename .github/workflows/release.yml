@@ -30,8 +30,7 @@ jobs:
 
       - run: pnpm install
 
-      - run: cargo install cargo-about
-        timeout-minutes: 5
+      - run: cargo install cargo-binstall && cargo binstall cargo-about --no-confirm
 
       - run: pnpm tauri build --bundles msi
 

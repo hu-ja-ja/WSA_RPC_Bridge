@@ -33,8 +33,8 @@ jobs:
 
       - run: pnpm install
 
-      - run: cargo install cargo-about
-        timeout-minutes: 5
+      - uses: cargo-bins/cargo-binstall@main
+      - run: cargo binstall cargo-about --no-confirm
 
       - run: pnpm generate-licenses
 
