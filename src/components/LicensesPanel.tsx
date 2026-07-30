@@ -8,7 +8,7 @@ export function LicensesPanel() {
   return (
     <div class="licenses-panel">
       <div class="license-about-card">
-        <p class="license-app-name">WSA RPC Bridge v0.1.0</p>
+        <p class="license-app-name">WSA RPC Bridge v0.2.0</p>
         <p class="license-copyright">Copyright (C) 2026 hu-ja-ja</p>
         <p class="license-project-license">{t('licenses.mpl_notice')}</p>
       </div>

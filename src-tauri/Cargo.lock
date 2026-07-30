@@ -5820,7 +5820,7 @@ dependencies = [
 
 [[package]]
 name = "wsa-rpc-bridge"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "adb_client",
  "anyhow",
