@@ -12,6 +12,7 @@ use std::path::PathBuf;
 
 use commands::AppState;
 use tauri::{Manager, WindowEvent};
+use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
 
 use crate::apk_label::ApkLabelResolver;
@@ -56,6 +57,7 @@ pub fn run() {
             config: config::ConfigManager::new(),
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::get_adb_status,
             commands::get_media_info,
@@ -101,6 +103,9 @@ pub fn run() {
                 if !path.is_empty() {
                     let _ = std::fs::create_dir_all(path);
                 }
+            }
+            if cfg.auto_start {
+                let _ = app.autolaunch().enable();
             }
             if cfg.start_in_tray {
                 tray::hide_main_window(app.handle());

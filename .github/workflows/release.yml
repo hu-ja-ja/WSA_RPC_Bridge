@@ -30,7 +30,10 @@ jobs:
 
       - run: pnpm install
 
-      - run: cargo install cargo-binstall && cargo binstall cargo-about --no-confirm
+      - uses: cargo-bins/cargo-binstall@main
+        with:
+          version: 1.21.1
+      - run: cargo binstall cargo-about --no-confirm
 
       - run: pnpm tauri build --bundles msi
 

@@ -4,6 +4,7 @@ import { SettingSwitch } from './SettingSwitch'
 import { t } from '../i18n'
 
 interface AppSettings {
+  auto_start: boolean
   start_in_tray: boolean
   minimize_to_tray: boolean
   close_to_tray: boolean
@@ -53,6 +54,12 @@ export function SettingsPanel(props: SettingsPanelProps) {
       <h3 class="section-title">{t("settings.tray_title")}</h3>
 
       <div class="settings-card">
+        <SettingSwitch
+          checked={props.traySettings.auto_start}
+          onChange={(v) => props.onUpdateSetting('auto_start', v)}
+          label={t("settings.auto_start")}
+        />
+
         <SettingSwitch
           checked={props.traySettings.start_in_tray}
           onChange={(v) => props.onUpdateSetting('start_in_tray', v)}

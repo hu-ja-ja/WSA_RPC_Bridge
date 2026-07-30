@@ -21,6 +21,7 @@ interface MediaInfo {
 }
 
 interface AppSettings {
+  auto_start: boolean
   start_in_tray: boolean
   minimize_to_tray: boolean
   close_to_tray: boolean
@@ -47,6 +48,7 @@ function App() {
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
 
   const [traySettings, setTraySettings] = createSignal<AppSettings>({
+    auto_start: false,
     start_in_tray: true,
     minimize_to_tray: true,
     close_to_tray: true,

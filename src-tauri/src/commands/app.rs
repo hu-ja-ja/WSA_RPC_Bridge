@@ -1,4 +1,5 @@
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
 
 use std::path::PathBuf;
@@ -96,8 +97,18 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-pub fn update_settings(state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
-    state.config.set(config);
+pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
+    let old = state.config.get();
+    state.config.set(config.clone());
+    if old.auto_start != config.auto_start {
+        if config.auto_start {
+            let _ = app.autolaunch().enable();
+            log::info!("update_settings: auto-start enabled");
+        } else {
+            let _ = app.autolaunch().disable();
+            log::info!("update_settings: auto-start disabled");
+        }
+    }
     log::info!("update_settings: settings updated");
     Ok(())
 }

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
+    pub auto_start: bool,
     pub start_in_tray: bool,
     pub minimize_to_tray: bool,
     pub close_to_tray: bool,
@@ -16,6 +17,7 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
+            auto_start: false,
             start_in_tray: true,
             minimize_to_tray: true,
             close_to_tray: true,
