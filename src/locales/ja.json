@@ -22,5 +22,14 @@
   "app.tab.licenses": "ライセンス",
   "licenses.mpl_notice": "MPL-2.0 License (Mozilla Public License Version 2.0)",
   "licenses.third_party_title": "サードパーティライセンス",
-  "licenses.version": "バージョン"
+  "licenses.version": "バージョン",
+  "settings.updates_title": "アップデート",
+  "settings.check_update": "更新を確認",
+  "settings.check_update_again": "再確認",
+  "settings.checking": "更新を確認中...",
+  "settings.up_to_date": "最新バージョンです",
+  "settings.update_available": "バージョン {version} が利用可能です",
+  "settings.update_available_notification": "バージョン {version} が利用可能です。設定から更新してください。",
+  "settings.download_progress": "ダウンロード中... {progress}%",
+  "settings.install_update": "インストールして再起動"
 }

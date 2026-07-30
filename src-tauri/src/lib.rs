@@ -58,6 +58,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             commands::get_adb_status,
             commands::get_media_info,
@@ -89,6 +90,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
 
             std::fs::create_dir_all(wsa_data_dir())?;
             std::fs::create_dir_all(default_cache_dir())?;

@@ -22,5 +22,14 @@
   "app.tab.licenses": "Licenses",
   "licenses.mpl_notice": "MPL-2.0 License (Mozilla Public License Version 2.0)",
   "licenses.third_party_title": "Third Party Licenses",
-  "licenses.version": "Version"
+  "licenses.version": "Version",
+  "settings.updates_title": "Updates",
+  "settings.check_update": "Check for Updates",
+  "settings.check_update_again": "Check Again",
+  "settings.checking": "Checking for updates...",
+  "settings.up_to_date": "You are up to date!",
+  "settings.update_available": "Update {version} is available",
+  "settings.update_available_notification": "Version {version} is available. Open Settings to update.",
+  "settings.download_progress": "Downloading... {progress}%",
+  "settings.install_update": "Install & Restart"
 }

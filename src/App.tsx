@@ -1,6 +1,7 @@
 import { createSignal, onCleanup, onMount, createMemo, Show } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { check } from '@tauri-apps/plugin-updater'
 import { Tabs } from '@kobalte/core/tabs'
 import { StatusBar } from './components/StatusBar'
 import { MediaCard } from './components/MediaCard'
@@ -164,6 +165,14 @@ function App() {
     await loadSettings()
     await fetchMediaInfo()
     await checkStatus()
+
+    check().then(update => {
+      if (update && Notification.permission === 'granted') {
+        new Notification('WSA RPC Bridge', {
+          body: t('settings.update_available_notification', { version: update.version })
+        })
+      }
+    })
 
     if (rpcEnabled()) {
       try {

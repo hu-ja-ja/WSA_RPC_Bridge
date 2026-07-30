@@ -1,5 +1,7 @@
-import { Show } from 'solid-js'
+import { createSignal, Show } from 'solid-js'
 import { open } from '@tauri-apps/plugin-dialog'
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 import { SettingSwitch } from './SettingSwitch'
 import { t } from '../i18n'
 
@@ -20,7 +22,16 @@ interface SettingsPanelProps {
   defaultCachePath: string
 }
 
+type UpdateState = 'idle' | 'checking' | 'uptodate' | 'available' | 'downloading'
+
 export function SettingsPanel(props: SettingsPanelProps) {
+  const [updateState, setUpdateState] = createSignal<UpdateState>('idle')
+  const [updateVersion, setUpdateVersion] = createSignal<string | null>(null)
+  const [downloadProgress, setDownloadProgress] = createSignal(0)
+  const [updateError, setUpdateError] = createSignal<string | null>(null)
+
+  let pendingUpdate: any = null
+
   const effectiveCachePath = (): string => {
     return props.traySettings.thumbnail_cache_path || props.defaultCachePath
   }
@@ -33,6 +44,50 @@ export function SettingsPanel(props: SettingsPanelProps) {
     })
     if (selected) {
       props.onUpdateSetting('thumbnail_cache_path', selected)
+    }
+  }
+
+  async function handleCheckUpdate() {
+    setUpdateState('checking')
+    setUpdateError(null)
+    try {
+      pendingUpdate = await check()
+      if (!pendingUpdate) {
+        setUpdateState('uptodate')
+        return
+      }
+      setUpdateVersion(pendingUpdate.version)
+      setUpdateState('available')
+    } catch (e) {
+      setUpdateError(String(e))
+      setUpdateState('idle')
+    }
+  }
+
+  async function handleInstall() {
+    if (!pendingUpdate) return
+    setUpdateState('downloading')
+    setDownloadProgress(0)
+    try {
+      let downloaded = 0
+      let contentLength = 0
+      await pendingUpdate.downloadAndInstall((event: any) => {
+        switch (event.event) {
+          case 'Started':
+            contentLength = event.data.contentLength
+            break
+          case 'Progress':
+            downloaded += event.data.chunkLength
+            if (contentLength > 0) {
+              setDownloadProgress(Math.round((downloaded / contentLength) * 100))
+            }
+            break
+        }
+      })
+      await relaunch()
+    } catch (e) {
+      setUpdateError(String(e))
+      setUpdateState('available')
     }
   }
 
@@ -105,6 +160,50 @@ export function SettingsPanel(props: SettingsPanelProps) {
               {t("settings.browse")}
             </button>
           </div>
+        </Show>
+      </div>
+
+      <div class="settings-divider" />
+
+      <h3 class="section-title">{t("settings.updates_title")}</h3>
+
+      <div class="settings-card">
+        <Show when={updateState() === 'idle' || updateState() === 'available'}>
+          <button onClick={handleCheckUpdate} class="btn-update" disabled={updateState() === 'checking'}>
+            {updateState() === 'idle' ? t("settings.check_update") : t("settings.check_update_again")}
+          </button>
+        </Show>
+
+        <Show when={updateState() === 'checking'}>
+          <p class="update-status">{t("settings.checking")}</p>
+        </Show>
+
+        <Show when={updateState() === 'uptodate'}>
+          <p class="update-status update-ok">{t("settings.up_to_date")}</p>
+        </Show>
+
+        <Show when={updateState() === 'available' && updateVersion()}>
+          <div class="update-info">
+            <p class="update-status update-available">
+              {t("settings.update_available", { version: updateVersion()! })}
+            </p>
+            <button onClick={handleInstall} class="btn-install">
+              {t("settings.install_update")}
+            </button>
+          </div>
+        </Show>
+
+        <Show when={updateState() === 'downloading'}>
+          <div class="update-progress">
+            <p class="update-status">{t("settings.download_progress", { progress: downloadProgress() })}</p>
+            <div class="progress-bar">
+              <div class="progress-bar-fill" style={{ width: `${downloadProgress()}%` }} />
+            </div>
+          </div>
+        </Show>
+
+        <Show when={updateError()}>
+          <p class="update-error">{updateError()}</p>
         </Show>
       </div>
     </>
