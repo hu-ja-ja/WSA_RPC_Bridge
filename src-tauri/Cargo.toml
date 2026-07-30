@@ -1,0 +1,36 @@
+[package]
+name = "wsa-rpc-bridge"
+version = "0.2.0"
+description = "WSA RPC Bridge - Display WSA Android app media info on Discord Rich Presence"
+authors = ["hu-ja-ja"]
+license = "MPL-2.0"
+repository = "https://github.com/hu-ja-ja/WSA_RPC_Bridge"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.3", features = ["tray-icon"] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "fs", "process", "macros"] }
+anyhow = "1"
+adb_client = { version = "3", default-features = false }
+discord-rich-presence = "1.1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+async-trait = "0.1"
+urlencoding = "2"
+apk-info = "1.0.11"
+sys-locale = "0.3.2"
