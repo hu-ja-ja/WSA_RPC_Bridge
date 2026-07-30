@@ -28,8 +28,8 @@
   "settings.check_update_again": "Check Again",
   "settings.checking": "Checking for updates...",
   "settings.up_to_date": "You are up to date!",
-  "settings.update_available": "Update {version} is available",
-  "settings.update_available_notification": "Version {version} is available. Open Settings to update.",
-  "settings.download_progress": "Downloading... {progress}%",
+  "settings.update_available": "Update {{version}} is available",
+  "settings.update_available_notification": "Version {{version}} is available. Open Settings to update.",
+  "settings.download_progress": "Downloading... {{progress}}%",
   "settings.install_update": "Install & Restart"
 }
