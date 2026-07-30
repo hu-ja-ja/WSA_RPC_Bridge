@@ -1,11 +1,11 @@
 {
-  "version": "0.2.0",
   "notes": "# Changelog\r\n\r\n## [0.2.0] - 2026-07-30\r\n\r\n### 追加\r\n\r\n- 自動起動設定を追加\r\n- アップデーターを追加\r\n- ライセンス表記タブを追加\r\n\r\n**Full Changelog**: https://github.com/hu-ja-ja/WSA_RPC_Bridge/compare/0.1.0...0.2.0",
-  "pub_date": "2026-07-30T14:41:10Z",
+  "pub_date": "2026-07-30T15:02:32Z",
+  "version": "0.2.1",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.2.0/wsa-rpc-bridge_0.2.0_x64_en-US.msi",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDgvbXU4d2xaNW10bWtoa0RnS1pUYTRMM1B0QmxkZ21QTmNXejNvMkhYN2tIY05pV0ovRWlUeGRvUjlVRDhRN2Z4OHV0bVYxUERiSzM3NmlRcjQ2Y0FjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1NDIyNDY5CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4yLjBfeDY0X2VuLVVTLm1zaQpzMUtZcGpKSXVEQ0NUUENleVdaSmg5U1JGUUV0YTJwSnArV2pLZnBMV3hvdnhoeWkrQlpUaG8rdDliZlZicW4xUW1CaG9YYmNhUDF5QkpmeEJhNm9EZz09Cg=="
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0THlZM3RwUHQ5L1NubHBoMXROd0tHeGJlcFo1azYzU1ZpZFc3RjRlTFRFalp4Q3c1Z1FLWDdaUnU3bWVMUmlHMmhNWUJEWUV5VUZWTyt5a25RMEE2aVF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1NDIzNzUxCWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4yLjBfeDY0X2VuLVVTLm1zaQorQWFkSUpaZkVnOVBaR2lOSm9abTE1clU2TEF6aURSdHIyS3c1RVhjUS9FN3g2aDVjL3kwOVlmYlExcmpQK2JRRFhEdWtWUUlhNDRhZjlzNEdxM01BZz09Cg==",
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.2.1/wsa-rpc-bridge_0.2.0_x64_en-US.msi"
     }
   }
 }
