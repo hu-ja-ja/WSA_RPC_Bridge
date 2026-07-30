@@ -123,7 +123,7 @@ const tmpJson = resolve(tmpDir, '.cargo-about-tmp.json')
 execSync('cargo about generate --format json -o ' + tmpJson, {
   cwd: SRC_TAURI,
   encoding: 'utf-8',
-  timeout: 120_000,
+  timeout: 300_000,
 })
 const rustRaw = JSON.parse(readFileSync(tmpJson, 'utf-8'))
 const rustEntries = []

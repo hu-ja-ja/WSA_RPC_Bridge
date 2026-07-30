@@ -33,7 +33,8 @@ jobs:
       - uses: cargo-bins/cargo-binstall@main
         with:
           version: 1.21.1
-      - run: cargo binstall cargo-about --no-confirm
+      - run: cargo binstall cargo-about --no-confirm --force
+      - run: cargo about --version
 
       - run: pnpm tauri build --bundles msi
         env:
