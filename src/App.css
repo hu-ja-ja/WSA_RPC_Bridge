@@ -315,6 +315,123 @@ header h1 {
   opacity: 0.7;
 }
 
+.licenses-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.license-about-card {
+  padding: 16px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.license-app-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.license-copyright {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.license-project-license {
+  font-size: 12px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.license-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.license-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.license-item[open] {
+  border-color: var(--accent-border);
+}
+
+.license-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-h);
+  user-select: none;
+  list-style: none;
+}
+
+.license-header::-webkit-details-marker {
+  display: none;
+}
+
+.license-header:hover {
+  background: var(--accent-bg);
+}
+
+.license-name {
+  color: var(--text-h);
+}
+
+.license-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.license-body {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.license-meta {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.license-meta a {
+  color: var(--accent);
+}
+
+.license-text {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--code-bg);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 @media (prefers-color-scheme: dark) {
   .switch-track {
     background: #4b5563;

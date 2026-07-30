@@ -5,6 +5,7 @@ import { Tabs } from '@kobalte/core/tabs'
 import { StatusBar } from './components/StatusBar'
 import { MediaCard } from './components/MediaCard'
 import { SettingsPanel } from './components/SettingsPanel'
+import { LicensesPanel } from './components/LicensesPanel'
 import { t } from './i18n'
 import './App.css'
 
@@ -195,6 +196,7 @@ function App() {
         <Tabs.List class="tabs-list" aria-label="tabs">
           <Tabs.Trigger class="tab-trigger" value="media">{t("app.tab.media")}</Tabs.Trigger>
           <Tabs.Trigger class="tab-trigger" value="settings">{t("app.tab.settings")}</Tabs.Trigger>
+          <Tabs.Trigger class="tab-trigger" value="licenses">{t("app.tab.licenses")}</Tabs.Trigger>
           <Tabs.Indicator class="tab-indicator" />
         </Tabs.List>
 
@@ -220,6 +222,10 @@ function App() {
             onUpdateSetting={updateSetting}
             defaultCachePath={defaultCachePath()}
           />
+        </Tabs.Content>
+
+        <Tabs.Content class="tab-content" value="licenses">
+          <LicensesPanel />
         </Tabs.Content>
       </Tabs>
     </div>

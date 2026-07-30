@@ -17,5 +17,9 @@
   "settings.thumbnail_cache_enabled": "Cache thumbnail images",
   "settings.thumbnail_cache_description": "Thumbnail cache is used only for display in this window, not for Discord Rich Presence.",
   "settings.thumbnail_cache_path": "Cache location",
-  "settings.browse": "Browse"
+  "settings.browse": "Browse",
+  "app.tab.licenses": "Licenses",
+  "licenses.mpl_notice": "MPL-2.0 License (Mozilla Public License Version 2.0)",
+  "licenses.third_party_title": "Third Party Licenses",
+  "licenses.version": "Version"
 }

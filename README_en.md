@@ -70,4 +70,9 @@ Download and run the latest installer from [Releases](https://github.com/hu-ja-j
 
 ## License
 
+Copyright (C) 2026 hu-ja-ja
+
 MPL-2.0 License
+
+See the [LICENSE](LICENSE) file for details.
+Third-party licenses can be viewed in the app via **Settings → Licenses**, and are automatically generated from `cargo-about` (Rust) and `pnpm licenses` (npm).

@@ -17,5 +17,9 @@
   "settings.thumbnail_cache_enabled": "サムネイル画像をキャッシュする",
   "settings.thumbnail_cache_description": "サムネイルキャッシュはこのウィンドウでの表示のみに使用され、Discord Rich Presence では使用されません。",
   "settings.thumbnail_cache_path": "キャッシュ場所",
-  "settings.browse": "参照"
+  "settings.browse": "参照",
+  "app.tab.licenses": "ライセンス",
+  "licenses.mpl_notice": "MPL-2.0 License (Mozilla Public License Version 2.0)",
+  "licenses.third_party_title": "サードパーティライセンス",
+  "licenses.version": "バージョン"
 }

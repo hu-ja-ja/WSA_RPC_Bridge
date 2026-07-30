@@ -30,6 +30,9 @@ jobs:
 
       - run: pnpm install
 
+      - run: cargo install cargo-about
+        timeout-minutes: 5
+
       - run: pnpm tauri build --bundles msi
 
       - name: Generate SHA-256 checksums

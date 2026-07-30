@@ -33,6 +33,11 @@ jobs:
 
       - run: pnpm install
 
+      - run: cargo install cargo-about
+        timeout-minutes: 5
+
+      - run: pnpm generate-licenses
+
       - run: pnpm lint
 
       - run: pnpm build

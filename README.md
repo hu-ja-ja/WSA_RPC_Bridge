@@ -39,7 +39,6 @@ pnpm tauri build
 ## 開発
 
 ```bash
-pnpm dev       # Vite dev server
 pnpm tauri dev # Tauri + Vite dev
 pnpm lint      # oxlint
 ```
@@ -70,4 +69,9 @@ cargo test -- --ignored             # WSA 実機が必要な結合テスト
 
 ## ライセンス
 
+Copyright (C) 2026 hu-ja-ja
+
 MPL-2.0 License
+
+See the [LICENSE](LICENSE) file for details.
+サードパーティライセンスはアプリ内の **設定 → ライセンス** から確認できます。Rust 依存関係は `cargo-about`、npm 依存関係は `pnpm licenses` により自動生成されています。
