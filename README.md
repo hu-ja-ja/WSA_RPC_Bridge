@@ -71,7 +71,9 @@ cargo test -- --ignored             # WSA 実機が必要な結合テスト
 
 Copyright (C) 2026 hu-ja-ja
 
-MPL-2.0 License
+MPL-2.0
 
-See the [LICENSE](LICENSE) file for details.
-サードパーティライセンスはアプリ内の **設定 → ライセンス** から確認できます。Rust 依存関係は `cargo-about`、npm 依存関係は `pnpm licenses` により自動生成されています。
+詳細は [LICENSE](LICENSE) ファイルを参照してください。
+
+サードパーティライセンスはアプリ内の **設定 → ライセンス** から確認できます。
+Rust 依存関係は `cargo-about`、npm 依存関係は `pnpm licenses` により自動生成されています。
