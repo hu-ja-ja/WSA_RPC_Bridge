@@ -1,8 +1,14 @@
-import { t } from '../i18n'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { t, locale } from '../i18n'
 import { licenses } from '../generated/licenses'
 import type { LicenseEntry } from '../generated/licenses'
 
 const entries: LicenseEntry[] = licenses
+
+const privacyPolicyUrl =
+  locale === 'ja'
+    ? 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY.md'
+    : 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY_en.md'
 
 export function LicensesPanel() {
   return (
@@ -11,6 +17,9 @@ export function LicensesPanel() {
         <p class="license-app-name">WSA RPC Bridge v0.2.0</p>
         <p class="license-copyright">Copyright (C) 2026 hu-ja-ja</p>
         <p class="license-project-license">{t('licenses.mpl_notice')}</p>
+        <a class="license-privacy-link" href="#" onClick={(e) => { e.preventDefault(); openUrl(privacyPolicyUrl) }}>
+          {t('licenses.privacy_policy')}
+        </a>
       </div>
 
       <div class="settings-divider" />

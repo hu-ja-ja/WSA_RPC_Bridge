@@ -348,6 +348,19 @@ header h1 {
   margin-top: 2px;
 }
 
+.license-privacy-link {
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: 6px;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.license-privacy-link:hover {
+  text-decoration: underline;
+}
+
 .license-list {
   display: flex;
   flex-direction: column;
