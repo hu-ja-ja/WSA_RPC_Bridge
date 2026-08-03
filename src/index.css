@@ -9,6 +9,11 @@
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
+  --pane-bg: #f7f6f4;
+  --card-head-bg: #f0eeec;
+  --field-bg: #f4f3f0;
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --hover-bg-active: rgba(0, 0, 0, 0.08);
   --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -37,18 +42,27 @@
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
     --social-bg: rgba(47, 48, 58, 0.5);
+    --pane-bg: #1c1d23;
+    --card-head-bg: #272830;
+    --field-bg: #262730;
+    --hover-bg: rgba(255, 255, 255, 0.06);
+    --hover-bg-active: rgba(255, 255, 255, 0.09);
     --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
 }
 
+html,
 body {
+  height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 #root {
   max-width: 100%;
   margin: 0 auto;
-  min-height: 100svh;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
