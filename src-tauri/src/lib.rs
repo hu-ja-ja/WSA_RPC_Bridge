@@ -22,15 +22,7 @@ const DISCORD_CLIENT_ID: &str = "1530562506513449120";
 const APP_DIR: &str = "wsa-rpc-bridge";
 
 fn wsa_data_dir() -> PathBuf {
-    let base = std::env::var("LOCALAPPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            let home = std::env::var("USERPROFILE")
-                .or_else(|_| std::env::var("HOME"))
-                .unwrap_or_else(|_| ".".into());
-            PathBuf::from(home).join("AppData").join("Local")
-        });
-    base.join(APP_DIR)
+    config::app_data_base("LOCALAPPDATA", "Local").join(APP_DIR)
 }
 
 pub fn default_cache_dir() -> PathBuf {

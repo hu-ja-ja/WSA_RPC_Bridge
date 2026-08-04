@@ -27,16 +27,21 @@ impl Default for AppConfig {
     }
 }
 
-fn config_path() -> PathBuf {
-    let base = std::env::var("APPDATA")
+pub(crate) fn app_data_base(env_var: &str, fallback_dir: &str) -> PathBuf {
+    std::env::var(env_var)
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             let home = std::env::var("USERPROFILE")
                 .or_else(|_| std::env::var("HOME"))
-                .unwrap_or_else(|_| String::from("."));
-            PathBuf::from(home).join("AppData").join("Roaming")
-        });
-    base.join("wsa-rpc-bridge").join("config.json")
+                .unwrap_or_else(|_| ".".into());
+            PathBuf::from(home).join("AppData").join(fallback_dir)
+        })
+}
+
+fn config_path() -> PathBuf {
+    app_data_base("APPDATA", "Roaming")
+        .join("wsa-rpc-bridge")
+        .join("config.json")
 }
 
 pub struct ConfigManager {

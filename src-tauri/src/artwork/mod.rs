@@ -55,13 +55,16 @@ impl ArtworkRegistry {
     }
 
     pub async fn resolve(&mut self, info: &MediaInfo) -> Option<String> {
-        if self.cache_enabled {
-            let key = (
+        let key = self.cache_enabled.then(|| {
+            (
                 info.package_name.clone(),
                 info.title.clone(),
                 info.artist.clone(),
-            );
-            if let Some(cached) = self.in_memory.get(&key) {
+            )
+        });
+
+        if let Some(ref k) = key {
+            if let Some(cached) = self.in_memory.get(k) {
                 return cached.clone();
             }
         }
@@ -82,25 +85,15 @@ impl ArtworkRegistry {
                 info.package_name,
                 info.title
             );
-            if self.cache_enabled {
-                let key = (
-                    info.package_name.clone(),
-                    info.title.clone(),
-                    info.artist.clone(),
-                );
-                self.in_memory.insert(key, Some(u.clone()));
+            if let Some(ref k) = key {
+                self.in_memory.insert(k.clone(), Some(u.clone()));
             }
             return Some(u.clone());
         }
 
         log::debug!("artwork: no resolver found for {}, using placeholder", info.package_name);
-        if self.cache_enabled {
-            let key = (
-                info.package_name.clone(),
-                info.title.clone(),
-                info.artist.clone(),
-            );
-            self.in_memory.insert(key, Some(PLACEHOLDER_URL.to_string()));
+        if let Some(ref k) = key {
+            self.in_memory.insert(k.clone(), Some(PLACEHOLDER_URL.to_string()));
         }
         Some(PLACEHOLDER_URL.to_string())
     }
