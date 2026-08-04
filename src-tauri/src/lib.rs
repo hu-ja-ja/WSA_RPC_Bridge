@@ -25,19 +25,14 @@ fn wsa_data_dir() -> PathBuf {
     config::app_data_base("LOCALAPPDATA", "Local").join(APP_DIR)
 }
 
-pub fn default_cache_dir() -> PathBuf {
-    wsa_data_dir().join("Cache")
-}
-
 fn default_apk_cache_dir() -> PathBuf {
     wsa_data_dir().join("ApkCache")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let cache_dir = default_cache_dir();
     let apk_cache_dir = default_apk_cache_dir();
-    let mut artwork_registry = ArtworkRegistry::new(cache_dir, true);
+    let mut artwork_registry = ArtworkRegistry::new();
     artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver::new()));
 
     tauri::Builder::default()
@@ -48,7 +43,6 @@ pub fn run() {
             apk_label: Mutex::new(ApkLabelResolver::new(apk_cache_dir)),
             config: config::ConfigManager::new(),
         })
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
@@ -61,7 +55,6 @@ pub fn run() {
             commands::get_discord_status,
             commands::get_settings,
             commands::update_settings,
-            commands::get_default_cache_path,
         ])
         .on_window_event(|window, event| {
             let app = window.app_handle();
@@ -87,7 +80,6 @@ pub fn run() {
             app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
 
             std::fs::create_dir_all(wsa_data_dir())?;
-            std::fs::create_dir_all(default_cache_dir())?;
             std::fs::create_dir_all(default_apk_cache_dir())?;
             log::info!("data directories created");
 
@@ -95,11 +87,6 @@ pub fn run() {
 
             let state = app.state::<AppState>();
             let cfg = state.config.get();
-            if let Some(ref path) = cfg.thumbnail_cache_path {
-                if !path.is_empty() {
-                    let _ = std::fs::create_dir_all(path);
-                }
-            }
             if cfg.auto_start {
                 let _ = app.autolaunch().enable();
             }

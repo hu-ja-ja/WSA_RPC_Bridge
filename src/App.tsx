@@ -28,8 +28,6 @@ interface AppSettings {
   start_in_tray: boolean
   minimize_to_tray: boolean
   close_to_tray: boolean
-  thumbnail_cache_enabled: boolean
-  thumbnail_cache_path: string | null
 }
 
 const POLL_INTERVAL = 5000
@@ -56,11 +54,7 @@ function App() {
     start_in_tray: true,
     minimize_to_tray: true,
     close_to_tray: true,
-    thumbnail_cache_enabled: true,
-    thumbnail_cache_path: null,
   })
-
-  const [defaultCachePath, setDefaultCachePath] = createSignal('')
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
 
@@ -137,12 +131,6 @@ function App() {
       setTraySettings(s)
     } catch (e) {
       console.error('failed to load settings', e)
-    }
-    try {
-      const p = await invoke<string>('get_default_cache_path')
-      setDefaultCachePath(p)
-    } catch (e) {
-      console.error('failed to load default cache path', e)
     }
   }
 
@@ -223,7 +211,6 @@ function App() {
             onRpcChange={handleRpcChange}
             traySettings={traySettings()}
             onUpdateSetting={updateSetting}
-            defaultCachePath={defaultCachePath()}
           />
         </Show>
 
