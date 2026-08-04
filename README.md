@@ -8,7 +8,7 @@ WSA (Windows Subsystem for Android) 上で動作しているアプリケーシ�
 
 WSA側で、開発者モードを有効にしている必要があります。
 
-![WSA_Config](public/WSA_Config.png)
+![WSA_Config](img/WSA_Config.png)
 
 ## 機能
 
@@ -20,9 +20,9 @@ WSA側で、開発者モードを有効にしている必要があります。
 
 ## スクリーンショット
 
-![GUI](public/GUI.png)
+![GUI](img/GUI.png)
 
-![RPC](public/RPC.png)
+![RPC](img/RPC.png)
 
 ## 技術スタック
 

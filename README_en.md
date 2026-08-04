@@ -8,7 +8,7 @@ A desktop app that retrieves media playback information from apps running on WSA
 
 Developer mode must be enabled on the WSA side.
 
-![WSA_Config](public/WSA_Config.png)
+![WSA_Config](img/WSA_Config.png)
 
 ## Features
 
@@ -20,9 +20,9 @@ Developer mode must be enabled on the WSA side.
 
 ## Screenshots
 
-![GUI](public/GUI.png)
+![GUI](img/GUI.png)
 
-![RPC](public/RPC.png)
+![RPC](img/RPC.png)
 
 ## Tech Stack
 
