@@ -90,8 +90,8 @@ pub fn run() {
             if cfg.auto_start {
                 let _ = app.autolaunch().enable();
             }
-            if cfg.start_in_tray {
-                tray::hide_main_window(app.handle());
+            if !cfg.start_in_tray {
+                tray::show_main_window(app.handle());
             }
 
             Ok(())
