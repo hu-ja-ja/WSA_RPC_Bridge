@@ -68,6 +68,10 @@ Download and run the latest installer from [Releases](https://github.com/hu-ja-j
 - [discord-rich-presence](https://github.com/vionya/discord-rich-presence)
 - [apk-info](https://github.com/delvinru/apk-info)
 
+## Privacy Policy
+
+Please see the [Privacy Policy](PRIVACY_POLICY_en.md).
+
 ## License
 
 Copyright (C) 2026 hu-ja-ja

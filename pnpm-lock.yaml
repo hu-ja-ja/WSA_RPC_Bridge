@@ -14,18 +14,24 @@ importers:
       '@solid-primitives/i18n':
         specifier: ^2.2.1
         version: 2.2.1(solid-js@1.9.14)
+      '@tabler/icons-solidjs':
+        specifier: ^3.46.0
+        version: 3.46.0(solid-js@1.9.14)
       '@tauri-apps/api':
         specifier: ^2.11.1
         version: 2.11.1
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.7.2
-        version: 2.7.2
+      '@tauri-apps/plugin-opener':
+        specifier: ^2.2.7
+        version: 2.5.4
       '@tauri-apps/plugin-process':
         specifier: ^2.3.1
         version: 2.3.1
       '@tauri-apps/plugin-updater':
         specifier: ^2.10.1
         version: 2.10.1
+      lucide-solid:
+        specifier: ^1.28.0
+        version: 1.28.0(solid-js@1.9.14)
       solid-js:
         specifier: ^1.9.13
         version: 1.9.14
@@ -477,6 +483,14 @@ packages:
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
+  '@tabler/icons-solidjs@3.46.0':
+    resolution: {integrity: sha512-urJx0IwNCYsXMghjBCAVHpMJzCr4dWo5g/Eq9T9gxarJArJw0LksOrN4RlOXMVGzY3OTxbW4DTQx9ongQ/wyfw==}
+    peerDependencies:
+      solid-js: ^1.4.7
+
+  '@tabler/icons@3.46.0':
+    resolution: {integrity: sha512-f2RYFl3fzPwj5WO82x6en0dmkjefxEfOm16D1ByM6cj/McNiwOkL4VaPUoP9VVIrXAD9WnTSVFr70px703b//A==}
+
   '@tauri-apps/api@2.11.1':
     resolution: {integrity: sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==}
 
@@ -556,8 +570,8 @@ packages:
     engines: {node: '>= 10'}
     hasBin: true
 
-  '@tauri-apps/plugin-dialog@2.7.2':
-    resolution: {integrity: sha512-pX0IGm1I3I6wc+zeKYcq1GSqogK6okCNX5fOdaNU5ab1AjGS6l1E5wFNjEb7meg7ZFSp0JUs+0jQGQNyOvLrsg==}
+  '@tauri-apps/plugin-opener@2.5.4':
+    resolution: {integrity: sha512-1HnPkb+AmgO29HBazm4uPLKB+r7zzcTBW1d0fyYp1uP+jwtpoiNDGKMMzz58SFp49nOIrxdE3aUJtT57lfO9CQ==}
 
   '@tauri-apps/plugin-process@2.3.1':
     resolution: {integrity: sha512-nCa4fGVaDL/B9ai03VyPOjfAHRHSBz5v6F/ObsB73r/dA3MHHhZtldaDMIc0V/pnUw9ehzr2iEG+XkSEyC0JJA==}
@@ -754,6 +768,11 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-solid@1.28.0:
+    resolution: {integrity: sha512-zF/0H7eiZya+tgmtpJNGzKPUfr+7p+zjLyrIsOSUAPi0IHbEqdLJ+U8w41g+889s63eUoU6BrSLu0HxUx3RTIQ==}
+    peerDependencies:
+      solid-js: ^1.4.7
 
   merge-anything@5.1.7:
     resolution: {integrity: sha512-eRtbOb1N5iyH0tkQDAoQ4Ipsp/5qSR79Dzrz8hEPxRX10RWWR/iQXdoKmBSRCThY1Fh5EhISDtpSc93fpxUniQ==}
@@ -1298,6 +1317,13 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@tabler/icons-solidjs@3.46.0(solid-js@1.9.14)':
+    dependencies:
+      '@tabler/icons': 3.46.0
+      solid-js: 1.9.14
+
+  '@tabler/icons@3.46.0': {}
+
   '@tauri-apps/api@2.11.1': {}
 
   '@tauri-apps/cli-darwin-arm64@2.11.4':
@@ -1347,7 +1373,7 @@ snapshots:
       '@tauri-apps/cli-win32-ia32-msvc': 2.11.4
       '@tauri-apps/cli-win32-x64-msvc': 2.11.4
 
-  '@tauri-apps/plugin-dialog@2.7.2':
+  '@tauri-apps/plugin-opener@2.5.4':
     dependencies:
       '@tauri-apps/api': 2.11.1
 
@@ -1504,6 +1530,10 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lucide-solid@1.28.0(solid-js@1.9.14):
+    dependencies:
+      solid-js: 1.9.14
 
   merge-anything@5.1.7:
     dependencies:

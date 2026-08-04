@@ -7,13 +7,7 @@ const entries: LicenseEntry[] = licenses
 export function LicensesPanel() {
   return (
     <div class="licenses-panel">
-      <div class="license-about-card">
-        <p class="license-app-name">WSA RPC Bridge v0.2.0</p>
-        <p class="license-copyright">Copyright (C) 2026 hu-ja-ja</p>
-        <p class="license-project-license">{t('licenses.mpl_notice')}</p>
-      </div>
-
-      <div class="settings-divider" />
+      <h2 class="page-heading">{t('app.nav.licenses')}</h2>
 
       <h3 class="section-title">{t('licenses.third_party_title')}</h3>
 

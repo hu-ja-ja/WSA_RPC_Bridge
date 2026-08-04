@@ -67,6 +67,10 @@ cargo test -- --ignored             # WSA 実機が必要な結合テスト
 - [discord-rich-presence](https://github.com/vionya/discord-rich-presence)
 - [apk-info](https://github.com/delvinru/apk-info)
 
+## プライバシーポリシー
+
+[プライバシーポリシー](PRIVACY_POLICY.md) をご確認ください。
+
 ## ライセンス
 
 Copyright (C) 2026 hu-ja-ja

@@ -5,13 +5,12 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppConfig {
     pub auto_start: bool,
     pub start_in_tray: bool,
     pub minimize_to_tray: bool,
     pub close_to_tray: bool,
-    pub thumbnail_cache_enabled: bool,
-    pub thumbnail_cache_path: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -21,22 +20,25 @@ impl Default for AppConfig {
             start_in_tray: true,
             minimize_to_tray: true,
             close_to_tray: true,
-            thumbnail_cache_enabled: true,
-            thumbnail_cache_path: None,
         }
     }
 }
 
-fn config_path() -> PathBuf {
-    let base = std::env::var("APPDATA")
+pub(crate) fn app_data_base(env_var: &str, fallback_dir: &str) -> PathBuf {
+    std::env::var(env_var)
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             let home = std::env::var("USERPROFILE")
                 .or_else(|_| std::env::var("HOME"))
-                .unwrap_or_else(|_| String::from("."));
-            PathBuf::from(home).join("AppData").join("Roaming")
-        });
-    base.join("wsa-rpc-bridge").join("config.json")
+                .unwrap_or_else(|_| ".".into());
+            PathBuf::from(home).join("AppData").join(fallback_dir)
+        })
+}
+
+fn config_path() -> PathBuf {
+    app_data_base("APPDATA", "Roaming")
+        .join("wsa-rpc-bridge")
+        .join("config.json")
 }
 
 pub struct ConfigManager {

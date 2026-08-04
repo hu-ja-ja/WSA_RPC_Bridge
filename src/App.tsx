@@ -2,11 +2,13 @@ import { createSignal, onCleanup, onMount, createMemo, Show } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { check } from '@tauri-apps/plugin-updater'
-import { Tabs } from '@kobalte/core/tabs'
-import { StatusBar } from './components/StatusBar'
-import { MediaCard } from './components/MediaCard'
+import { Sidebar } from './components/Sidebar'
+import type { NavKey } from './components/Sidebar'
+import { Dashboard } from './components/Dashboard'
 import { SettingsPanel } from './components/SettingsPanel'
+import { UpdatesPanel } from './components/UpdatesPanel'
 import { LicensesPanel } from './components/LicensesPanel'
+import { AboutPanel } from './components/AboutPanel'
 import { t } from './i18n'
 import './App.css'
 
@@ -26,8 +28,6 @@ interface AppSettings {
   start_in_tray: boolean
   minimize_to_tray: boolean
   close_to_tray: boolean
-  thumbnail_cache_enabled: boolean
-  thumbnail_cache_path: string | null
 }
 
 const POLL_INTERVAL = 5000
@@ -43,7 +43,8 @@ function App() {
   const [loading, setLoading] = createSignal(false)
   const [lastFetch, setLastFetch] = createSignal<{ pos: number; time: number } | null>(null)
   const [now, setNow] = createSignal(Date.now())
-  const [activeTab, setActiveTab] = createSignal('media')
+  const [activeTab, setActiveTab] = createSignal<NavKey>('dashboard')
+  const [navCollapsed, setNavCollapsed] = createSignal(false)
 
   const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_RPC_KEY) : null
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
@@ -53,11 +54,7 @@ function App() {
     start_in_tray: true,
     minimize_to_tray: true,
     close_to_tray: true,
-    thumbnail_cache_enabled: true,
-    thumbnail_cache_path: null,
   })
-
-  const [defaultCachePath, setDefaultCachePath] = createSignal('')
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
 
@@ -135,12 +132,6 @@ function App() {
     } catch (e) {
       console.error('failed to load settings', e)
     }
-    try {
-      const p = await invoke<string>('get_default_cache_path')
-      setDefaultCachePath(p)
-    } catch (e) {
-      console.error('failed to load default cache path', e)
-    }
   }
 
   async function updateSetting(key: keyof AppSettings, value: boolean | string | null) {
@@ -192,53 +183,53 @@ function App() {
   })
 
   return (
-    <div id="app">
-      <header>
-        <h1>WSA RPC Bridge</h1>
-      </header>
-
-      <StatusBar
-        adbConnected={adbConnected()}
-        discordConnected={discordConnected()}
-        rpcEnabled={rpcEnabled()}
+    <div id="app" class="shell">
+      <Sidebar
+        active={activeTab()}
+        collapsed={navCollapsed()}
+        onSelect={setActiveTab}
+        onToggleCollapsed={() => setNavCollapsed((c) => !c)}
       />
 
-      <Tabs value={activeTab()} onChange={setActiveTab} class="tabs">
-        <Tabs.List class="tabs-list" aria-label="tabs">
-          <Tabs.Trigger class="tab-trigger" value="media">{t("app.tab.media")}</Tabs.Trigger>
-          <Tabs.Trigger class="tab-trigger" value="settings">{t("app.tab.settings")}</Tabs.Trigger>
-          <Tabs.Trigger class="tab-trigger" value="licenses">{t("app.tab.licenses")}</Tabs.Trigger>
-          <Tabs.Indicator class="tab-indicator" />
-        </Tabs.List>
-
-        <Tabs.Content class="tab-content" value="media">
-          <MediaCard
+      <main class="content">
+        <Show when={activeTab() === 'dashboard'}>
+          <Dashboard
             media={media()}
             loading={loading()}
             error={error()}
             displayPosition={displayPosition()}
+            adbConnected={adbConnected()}
+            discordConnected={discordConnected()}
+            rpcEnabled={rpcEnabled()}
             onRetry={fetchMediaInfo}
           />
+        </Show>
 
-          <Show when={error() && media()}>
-            <p class="error-toast">{error()}</p>
-          </Show>
-        </Tabs.Content>
-
-        <Tabs.Content class="tab-content" value="settings">
+        <Show when={activeTab() === 'settings'}>
           <SettingsPanel
             rpcEnabled={rpcEnabled()}
             onRpcChange={handleRpcChange}
             traySettings={traySettings()}
             onUpdateSetting={updateSetting}
-            defaultCachePath={defaultCachePath()}
           />
-        </Tabs.Content>
+        </Show>
 
-        <Tabs.Content class="tab-content" value="licenses">
+        <Show when={activeTab() === 'updates'}>
+          <UpdatesPanel />
+        </Show>
+
+        <Show when={activeTab() === 'licenses'}>
           <LicensesPanel />
-        </Tabs.Content>
-      </Tabs>
+        </Show>
+
+        <Show when={activeTab() === 'about'}>
+          <AboutPanel />
+        </Show>
+
+        <Show when={error() && media()}>
+          <p class="error-toast">{error()}</p>
+        </Show>
+      </main>
     </div>
   )
 }

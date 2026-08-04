@@ -1,7 +1,7 @@
 {
   "name": "wsa-rpc-bridge",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "packageManager": "pnpm@11.15.1",
   "scripts": {
@@ -17,9 +17,11 @@
     "@kobalte/core": "^0.13.12",
     "@solid-primitives/i18n": "^2.2.1",
     "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-opener": "^2.2.7",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
+    "@tabler/icons-solidjs": "^3.46.0",
+    "lucide-solid": "^1.28.0",
     "solid-js": "^1.9.13"
   },
   "devDependencies": {

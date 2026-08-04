@@ -1,11 +1,11 @@
 {
-  "notes": "# Changelog\r\n\r\n## [0.2.0] - 2026-07-30\r\n\r\n### 追加\r\n\r\n- 自動起動設定を追加\r\n- アップデーターを追加\r\n- ライセンス表記タブを追加\r\n\r\n**Full Changelog**: https://github.com/hu-ja-ja/WSA_RPC_Bridge/compare/0.1.0...0.2.0",
-  "pub_date": "2026-07-30T15:02:32Z",
-  "version": "0.2.1",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0THlZM3RwUHQ5L1NubHBoMXROd0tHeGJlcFo1azYzU1ZpZFc3RjRlTFRFalp4Q3c1Z1FLWDdaUnU3bWVMUmlHMmhNWUJEWUV5VUZWTyt5a25RMEE2aVF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1NDIzNzUxCWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4yLjBfeDY0X2VuLVVTLm1zaQorQWFkSUpaZkVnOVBaR2lOSm9abTE1clU2TEF6aURSdHIyS3c1RVhjUS9FN3g2aDVjL3kwOVlmYlExcmpQK2JRRFhEdWtWUUlhNDRhZjlzNEdxM01BZz09Cg==",
-      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.2.1/wsa-rpc-bridge_0.2.0_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDUrR2c1bnZCcC9IQnByb053ZldlZDg5MXJMSDNvUTRkTXBHNm50TjBrVXFISStPMWRIeUJkTkUxMkFUY0REMDlJd2ZjV2dvMllWengvK2RlV2xGUUFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1ODIwOTQyCWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4zLjBfeDY0X2VuLVVTLm1zaQpaVUN0SXlkRUs1N3hDZWh1cDVKT1ZIRGg4aUZHRi9HbnZrcU5pQ3ZIT3cvakRwY1ZWV294dE5HT0NTQzVVSXFTYUFOVEl6Z3hTYVc4SE1GQ3FGT1JDQT09Cg==",
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.3.0/wsa-rpc-bridge_0.3.0_x64_en-US.msi"
     }
-  }
+  },
+  "notes": "## [0.3.0] - 2026-08-04\r\n\r\n## 追加\r\n\r\n- プライバシーポリシーを追加\r\n\r\n## 変更\r\n\r\n- GUIを刷新\r\n- 一部の処理を最適化\r\n\r\n## 削除\r\n\r\n- サムネイルキャッシュ機能を削除\r\n\r\n**Full Changelog**: https://github.com/hu-ja-ja/WSA_RPC_Bridge/compare/0.2.1...0.3.0",
+  "version": "0.3.0",
+  "pub_date": "2026-08-04T05:22:23Z"
 }

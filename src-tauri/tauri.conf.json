@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "wsa-rpc-bridge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.wsarpcbridge.app",
   "build": {
     "frontendDist": "../dist",
@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "WSA RPC Bridge",
-        "width": 800,
-        "height": 600,
+        "width": 960,
+        "height": 640,
         "resizable": true,
         "fullscreen": false
       }

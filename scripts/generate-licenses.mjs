@@ -25,6 +25,17 @@ function readLicenseFile(pkgPath, pkgName) {
       return readFileSync(f, 'utf-8').trim()
     } catch { /* next */ }
   }
+
+  // SPDX metadata document only (e.g. @tauri-apps/plugin-*)
+  // The package is licensed (MIT/Apache-2.0), so don't warn; the caller
+  // falls back to the SPDX_TEXTS template text.
+  for (const f of ['LICENSE.spdx', 'LICENCE.spdx']) {
+    try {
+      readFileSync(join(pkgPath, f))
+      return null
+    } catch { /* next */ }
+  }
+
   console.warn(`  [warn] no LICENSE file for ${pkgName}, using template`)
   return null
 }
