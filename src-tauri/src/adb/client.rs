@@ -50,6 +50,9 @@ impl AdbClient {
         let start = Instant::now();
 
         let mut server = ADBServer::new(server_addr);
+        if let Err(e) = server.disconnect_device(ws_addr) {
+            log::debug!("ADB disconnect (ignored): {e:#}");
+        }
         match server.connect_device(ws_addr) {
             Ok(()) => log::info!("ADB: connected to WSA device"),
             Err(e) => {
@@ -80,12 +83,7 @@ impl AdbClient {
         Ok(())
     }
 
-    pub async fn get_media_info(&mut self) -> Result<MediaInfo> {
-        if !self.connected {
-            log::info!("ADB: reconnecting before get_media_info");
-            self.connect().await?;
-        }
-
+    fn dump_media_session(&mut self) -> Result<Vec<u8>> {
         let device = self
             .device
             .as_mut()
@@ -94,10 +92,29 @@ impl AdbClient {
         let mut raw = Vec::new();
         let start = Instant::now();
         device
-            .shell_command(&"dumpsys media_session", Some(&mut raw), None)
-            .context(tr("adb.dumpsys_failed"))?;
+            .shell_command(&"dumpsys media_session", Some(&mut raw), None)?;
         let elapsed = start.elapsed();
         log::info!("ADB dumpsys returned {} bytes ({:?})", raw.len(), elapsed);
+        Ok(raw)
+    }
+
+    pub async fn get_media_info(&mut self) -> Result<MediaInfo> {
+        if !self.connected {
+            log::info!("ADB: reconnecting before get_media_info");
+            self.connect().await?;
+        }
+
+        let raw = match self.dump_media_session() {
+            Ok(raw) => raw,
+            Err(_) if self.connected => {
+                log::warn!("ADB dumpsys failed; forcing reconnect and retrying once");
+                self.connected = false;
+                self.device = None;
+                self.connect().await?;
+                self.dump_media_session().context(tr("adb.dumpsys_failed"))?
+            }
+            Err(e) => return Err(e.context(tr("adb.dumpsys_failed"))),
+        };
 
         let output_str =
             String::from_utf8(raw).context(tr("adb.utf8_decode_failed"))?;

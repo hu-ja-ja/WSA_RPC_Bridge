@@ -8,21 +8,21 @@ WSA (Windows Subsystem for Android) 上で動作しているアプリケーシ�
 
 WSA側で、開発者モードを有効にしている必要があります。
 
-![WSA_Config](public/WSA_Config.png)
+![WSA_Config](img/WSA_Config.png)
 
 ## 機能
 
 - WSA 上のアプリの再生情報（曲タイトル、アーティスト、アルバム、再生位置）を自動取得
 - Discord Rich Presence に再生状況を表示
-- アプリ名・アプリアイコンの自動解決
+- アプリ名の自動解決
 - トレイ常駐（タスクトレイに格納可能）
 - マルチ言語対応（日本語 / English）
 
 ## スクリーンショット
 
-![GUI](public/GUI.png)
+![GUI](img/GUI.png)
 
-![RPC](public/RPC.png)
+![RPC](img/RPC.png)
 
 ## 技術スタック
 
@@ -79,5 +79,5 @@ MPL-2.0
 
 詳細は [LICENSE](LICENSE) ファイルを参照してください。
 
-サードパーティライセンスはアプリ内の **設定 → ライセンス** から確認できます。
-Rust 依存関係は `cargo-about`、npm 依存関係は `pnpm licenses` により自動生成されています。
+サードパーティライセンスは、アプリ内のサイドバーのライセンスタブから確認できます。
+`pnpm run generate-licenses` で自動生成されています。
