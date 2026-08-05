@@ -61,6 +61,12 @@ pub fn run() {
             let state = app.state::<AppState>();
             let cfg = state.config.get();
 
+            if let WindowEvent::Resized(_) = event {
+                if cfg.minimize_to_tray && window.is_minimized().unwrap_or(false) {
+                    let _ = window.hide();
+                }
+            }
+
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if cfg.close_to_tray {
                     let _ = window.hide();
