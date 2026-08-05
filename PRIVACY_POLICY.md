@@ -2,7 +2,7 @@
 
 [English](PRIVACY_POLICY_en.md) | [日本語](PRIVACY_POLICY.md)
 
-制定日: 2026年8月2日
+制定日: 2026年8月5日
 
 ## 1. はじめに
 
@@ -50,7 +50,7 @@ WSA RPC Bridge (以下「本アプリ」) は、WSA (Windows Subsystem for Andro
 |---|---|---|---|---|
 | ボカコレ (`jp.nicovideo.nicobox`) | サムネイル画像の取得 | メディアタイトル (曲名・動画タイトル)  | ニコニコ検索API (snapshot.search.nicovideo.jp)  | 再生中のみ |
 
-取得したサムネイル画像は、設定に応じてローカルにキャッシュされます。キャッシュは本アプリ内での表示のみに使用され、Discord Rich Presence では使用されません。
+取得したサムネイルは画像ファイルとして保存されず、URLのみがアプリ内のメモリ上に一時保持され、Discord Rich Presence に送信されます。画像本体は本アプリでは取得・保存せず、Discord 側で取得・表示されます。
 
 ### 将来の連携追加について
 
@@ -63,8 +63,7 @@ WSA RPC Bridge (以下「本アプリ」) は、WSA (Windows Subsystem for Andro
 | データ | 場所 | 内容 |
 |---|---|---|
 | 設定ファイル | `%APPDATA%\wsa-rpc-bridge\config.json` | アプリの設定 (自動起動、キャッシュ設定など)  |
-| サムネイルキャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\Cache` | サムネイル画像 |
-| APKキャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | アプリ名・アイコン解決用の一時ファイル |
+| APKキャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | アプリ名解決用の一時ファイル |
 
 これらのデータはアプリをアンインストールしても自動的には削除されません。削除する場合は、上記の `wsa-rpc-bridge` フォルダを手動で削除してください。
 

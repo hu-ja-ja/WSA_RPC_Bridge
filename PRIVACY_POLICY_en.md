@@ -2,7 +2,7 @@
 
 [English](PRIVACY_POLICY_en.md) | [日本語](PRIVACY_POLICY.md)
 
-Effective date: August 2, 2026
+Effective date: August 5, 2026
 
 ## 1. Introduction
 
@@ -50,7 +50,7 @@ This app provides integration features for specific apps through a plugin archit
 |---|---|---|---|---|
 | vocacolle (`jp.nicovideo.nicobox`) | Retrieve thumbnail image | Media title (song title / video title) | Niconico Search API (snapshot.search.nicovideo.jp) | Only while playing |
 
-Retrieved thumbnail images are cached locally depending on your settings. The cache is used only for display within this app and is not used for Discord Rich Presence.
+Resolved thumbnails are not saved as image files; only the URL is held temporarily in memory within the app and sent to Discord Rich Presence. The image itself is not downloaded or stored by this app; it is retrieved and displayed by Discord.
 
 ### Future Additions to Integrations
 
@@ -63,8 +63,7 @@ This app stores the following data locally only.
 | Data | Location | Contents |
 |---|---|---|
 | Configuration file | `%APPDATA%\wsa-rpc-bridge\config.json` | App settings (auto-start, cache settings, etc.) |
-| Thumbnail cache | `%LOCALAPPDATA%\wsa-rpc-bridge\Cache` | Thumbnail images |
-| APK cache | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | Temporary files for resolving app names and icons |
+| APK cache | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | Temporary files for resolving app names |
 
 These data are not automatically deleted when the app is uninstalled. To delete them, manually remove the `wsa-rpc-bridge` folders listed above.
 

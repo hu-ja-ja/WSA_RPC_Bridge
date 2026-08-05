@@ -14,7 +14,7 @@ Developer mode must be enabled on the WSA side.
 
 - Auto-fetch playback info (song title, artist, album, playback position) from apps on WSA
 - Display playback status on Discord Rich Presence
-- Auto-resolve app name and app icon
+- Auto-resolve app name
 - System tray resident (can be minimized to tray)
 - Multi-language support (Japanese / English)
 
