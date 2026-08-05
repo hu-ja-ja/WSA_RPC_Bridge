@@ -51,12 +51,24 @@ impl DiscordRpc {
                             }
                         }
                         DiscordCmd::UpdatePresence(info) => {
+                            if client.is_none() {
+                                log::info!("Discord not connected, attempting reconnect");
+                                let mut c = DiscordIpcClient::new(&cid);
+                                match c.connect() {
+                                    Ok(()) => {
+                                        log::info!("Discord IPC reconnected");
+                                        client = Some(c);
+                                        connected_clone.store(true, Ordering::Relaxed);
+                                    }
+                                    Err(e) => {
+                                        log::warn!("Discord IPC reconnect failed: {e}");
+                                        continue;
+                                    }
+                                }
+                            }
                             let c = match client.as_mut() {
                                 Some(c) => c,
-                                None => {
-                                    log::warn!("Discord not connected, skipping presence update");
-                                    continue;
-                                }
+                                None => continue,
                             };
                             let app_name = info
                                 .display_name
@@ -96,7 +108,9 @@ impl DiscordRpc {
                                 }
                             }
                             if let Err(e) = c.set_activity(activity) {
-                                log::error!("Discord set_activity failed: {e}");
+                                log::error!("Discord set_activity failed: {e}; dropping client for reconnect");
+                                let _ = client.take();
+                                connected_clone.store(false, Ordering::Relaxed);
                             } else {
                                 log::info!("Discord presence updated: {} - {}", info.title, info.artist);
                             }
