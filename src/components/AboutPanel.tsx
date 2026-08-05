@@ -1,5 +1,6 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { BadgeInfo } from 'lucide-solid'
+import { IconBrandGithub } from '@tabler/icons-solidjs'
+import { BadgeInfo, ScrollText } from 'lucide-solid'
 import { t, locale } from '../i18n'
 
 const APP_NAME = 'WSA RPC Bridge'
@@ -12,6 +13,7 @@ const privacyPolicyUrl =
     : 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY_en.md'
 
 const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
+const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'
 
 export function AboutPanel() {
   return (
@@ -26,27 +28,43 @@ export function AboutPanel() {
 
       <div class="license-about-card">
         <p class="license-copyright">{COPYRIGHT}</p>
-        <p class="license-project-license">{t('licenses.mpl_notice')}</p>
-        <a
-          class="license-privacy-link"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            openUrl(repoUrl)
-          }}
-        >
-          {t('licenses.repository')}
-        </a>
-        <a
-          class="license-privacy-link"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            openUrl(privacyPolicyUrl)
-          }}
-        >
-          {t('licenses.privacy_policy')}
-        </a>
+        <p class="license-project-license">{t('about.license')}</p>
+        <div class="setting-sep" />
+        <div class="license-links">
+          <a
+            class="link-button"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              openUrl(repoUrl)
+            }}
+          >
+            <IconBrandGithub size={14} />
+            {t('common.repository')}
+          </a>
+          <a
+            class="link-button"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              openUrl(changelogUrl)
+            }}
+          >
+            <ScrollText size={14} />
+            {t('common.changelog')}
+          </a>
+          <a
+            class="link-button"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              openUrl(privacyPolicyUrl)
+            }}
+          >
+            <BadgeInfo size={14} />
+            {t('common.privacy_policy')}
+          </a>
+        </div>
       </div>
     </div>
   )

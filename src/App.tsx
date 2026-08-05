@@ -160,7 +160,7 @@ function App() {
     check().then(update => {
       if (update && Notification.permission === 'granted') {
         new Notification('WSA RPC Bridge', {
-          body: t('settings.update_available_notification', { version: update.version })
+          body: t('updates.update_available_notification', { version: update.version })
         })
       }
     })

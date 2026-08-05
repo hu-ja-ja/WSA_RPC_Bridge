@@ -645,19 +645,6 @@
   margin-top: 2px;
 }
 
-.license-privacy-link {
-  font-size: 13px;
-  color: var(--accent);
-  text-decoration: none;
-  margin-top: 6px;
-  cursor: pointer;
-  width: fit-content;
-}
-
-.license-privacy-link:hover {
-  text-decoration: underline;
-}
-
 /* ---------- Updates ---------- */
 
 .update-row {
@@ -710,8 +697,20 @@
   margin-top: 4px;
 }
 
+.license-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
   font-size: 12.5px;
+  line-height: 1;
   padding: 6px 14px;
   border-radius: 6px;
   color: var(--accent);

@@ -18,7 +18,7 @@ interface SettingsPanelProps {
 export function SettingsPanel(props: SettingsPanelProps) {
   return (
     <div class="settings-panel">
-      <h2 class="page-heading">{t("app.nav.settings")}</h2>
+      <h2 class="page-heading">{t("nav.settings")}</h2>
 
       <div class="settings-card">
         <h3 class="card-heading">{t("settings.rpc_title")}</h3>
