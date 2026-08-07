@@ -6,6 +6,9 @@ mod config;
 mod discord;
 mod i18n;
 mod models;
+
+#[cfg(target_os = "windows")]
+mod shutdown;
 mod tray;
 
 use std::path::PathBuf;
@@ -90,6 +93,11 @@ pub fn run() {
             log::info!("data directories created");
 
             tray::setup_tray(app.handle())?;
+
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                shutdown::install(app.handle(), &window);
+            }
 
             let state = app.state::<AppState>();
             let cfg = state.config.get();

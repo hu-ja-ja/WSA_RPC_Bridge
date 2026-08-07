@@ -12,6 +12,9 @@ rust-version = "1.77.2"
 name = "app_lib"
 crate-type = ["rlib"]
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
 
