@@ -32,3 +32,5 @@ export function LicensesPanel() {
     </div>
   )
 }
+
+export default LicensesPanel

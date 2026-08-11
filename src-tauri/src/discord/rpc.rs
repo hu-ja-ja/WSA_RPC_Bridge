@@ -17,14 +17,14 @@ enum DiscordCmd {
 }
 
 pub struct DiscordRpc {
-    tx: mpsc::Sender<DiscordCmd>,
+    tx: mpsc::SyncSender<DiscordCmd>,
     connected: Arc<AtomicBool>,
 }
 
 impl DiscordRpc {
     pub fn new(client_id: &str) -> Self {
         let cid = client_id.to_string();
-        let (tx, rx) = mpsc::channel::<DiscordCmd>();
+        let (tx, rx) = mpsc::sync_channel::<DiscordCmd>(8);
         let connected = Arc::new(AtomicBool::new(false));
         let connected_clone = connected.clone();
 
@@ -141,7 +141,7 @@ impl DiscordRpc {
     }
 
     pub fn update_presence(&self, info: &MediaInfo) {
-        let _ = self.tx.send(DiscordCmd::UpdatePresence(info.clone()));
+        let _ = self.tx.try_send(DiscordCmd::UpdatePresence(info.clone()));
     }
 
     pub fn disconnect(&self) {

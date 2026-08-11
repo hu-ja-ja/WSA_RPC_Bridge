@@ -40,5 +40,6 @@
   "updates.install_restart": "Install & Restart",
   "licenses.third_party_title": "Third Party Licenses",
   "licenses.version": "Version",
+  "licenses.loading": "Loading...",
   "about.license": "MPL-2.0 License (Mozilla Public License Version 2.0)"
 }
