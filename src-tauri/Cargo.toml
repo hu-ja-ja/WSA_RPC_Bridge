@@ -1,6 +1,6 @@
 [package]
 name = "wsa-rpc-bridge"
-version = "0.3.1"
+version = "0.3.2"
 description = "WSA RPC Bridge - Display WSA Android app media info on Discord Rich Presence"
 authors = ["hu-ja-ja"]
 license = "MPL-2.0"
