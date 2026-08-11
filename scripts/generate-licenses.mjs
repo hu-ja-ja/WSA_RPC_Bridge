@@ -9,21 +9,31 @@ const OUT_FILE = resolve(OUT_DIR, 'licenses.ts')
 
 // ── helpers ──────────────────────────────────────────────────────────
 
+// dual-licensed packages ship one file per license (e.g. LICENSE_MIT + LICENSE_APACHE-2.0)
+const MULTI_LICENSE_FILES = [
+  ['MIT', 'LICENSE_MIT'],
+  ['Apache-2.0', 'LICENSE_APACHE-2.0'],
+  ['MIT', 'LICENSE-MIT'],
+  ['Apache-2.0', 'LICENSE-APACHE'],
+]
+
 function readLicenseFile(pkgPath, pkgName) {
-  const candidates = [
-    join(pkgPath, 'LICENSE'),
-    join(pkgPath, 'LICENSE.md'),
-    join(pkgPath, 'LICENSE.txt'),
-    join(pkgPath, 'LICENCE'),
-    join(pkgPath, 'LICENCE.md'),
-    join(pkgPath, 'LICENCE.txt'),
-    join(pkgPath, 'LICENSE_APACHE-2.0'),
-    join(pkgPath, 'LICENSE_MIT'),
-  ]
-  for (const f of candidates) {
+  for (const f of ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'LICENCE.md', 'LICENCE.txt']) {
     try {
-      return readFileSync(f, 'utf-8').trim()
+      return readFileSync(join(pkgPath, f), 'utf-8').trim()
     } catch { /* next */ }
+  }
+
+  const multi = []
+  for (const [label, f] of MULTI_LICENSE_FILES) {
+    try {
+      multi.push([label, readFileSync(join(pkgPath, f), 'utf-8').trim()])
+    } catch { /* next */ }
+  }
+  if (multi.length) {
+    return multi.length > 1
+      ? multi.map(([label, t]) => `===== ${label} =====\n\n${t}`).join('\n\n')
+      : multi[0][1]
   }
 
   // SPDX metadata document only (e.g. @tauri-apps/plugin-*)
@@ -125,6 +135,16 @@ See the License for the specific language governing permissions and
 limitations under the License.`,
 }
 
+// SPDX expressions like "MIT OR Apache-2.0" / "MIT AND Apache-2.0" map
+// every component to a template, not just the first.
+function templateText(licenseName) {
+  const parts = licenseName.split(/\s+(?:OR|AND)\s+/).filter(Boolean)
+  const texts = parts.map(p => SPDX_TEXTS[p] ?? `License: ${p}`)
+  return parts.length > 1
+    ? texts.map((t, i) => `===== ${parts[i]} =====\n\n${t}`).join('\n\n')
+    : texts[0]
+}
+
 // ── 1. Rust ──────────────────────────────────────────────────────────
 
 console.log('[1/3] Running cargo-about...')
@@ -191,14 +211,7 @@ for (const [licenseName, packages] of Object.entries(npmRaw)) {
     const ver = Array.isArray(pkg.versions) ? pkg.versions[0] : pkg.versions
     // try to read actual LICENSE file
     let licText = readLicenseFile(pkgPath, pkgName)
-    if (!licText) {
-      const spdx = licenseName.replace(/ OR .*$/, '').replace(/ AND .*$/, '')
-      if (SPDX_TEXTS[spdx]) {
-        licText = SPDX_TEXTS[spdx]
-      } else {
-        licText = `License: ${licenseName}`
-      }
-    }
+    if (!licText) licText = templateText(licenseName)
     npmEntries.push({
       name: pkgName,
       version: ver,
