@@ -1,11 +1,11 @@
 {
-  "notes": "# Changelog\r\n\r\n## [0.3.1] - 2026-08-05\r\n\r\n## 変更\r\n\r\n- 起動時のウィンドウフラッシュを修正\r\n- スリープ復帰時の動作を改善\r\n- 設定を有効にしていても、最小化時にトレイに収納されていなかった問題を修正\r\n- その他細かい変更\r\n\r\n**Full Changelog**: https://github.com/hu-ja-ja/WSA_RPC_Bridge/compare/0.3.0...0.3.1",
+  "notes": "# Changelog\r\n\r\n## [0.3.2] - 2026-08-12\r\n\r\n### 変更\r\n\r\n- GUIを一部調整\r\n- PCシャットダウン時に発生する可能性のあったエラーを修正\r\n- 細かいパフォーマンス改善\r\n\r\n**Full Changelog**: https://github.com/hu-ja-ja/WSA_RPC_Bridge/compare/0.3.1...0.3.2",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDJtNzVwOWNPWS9ZaXpFOWpCQURvTnhhY2dMNUZqVS9Cc0FwQ09rckZYdG9lMHVPRUwrM0NBaHFDTmdhc0FBaHJYeTVheEZMV2hIV012TktLWUlZclFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1OTI5NDc1CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4zLjFfeDY0X2VuLVVTLm1zaQpOQWp5Wnc0KzFDT3JxNm1iYXAyWHdYTmNSWWlrZ3M5clBmQ2FFb3hlczJKOVlWRjExeHFvcU90NWwzTStyRC9WZTQ5eENEeW5OeUFSNE5QNmRFQXJDQT09Cg==",
-      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.3.1/wsa-rpc-bridge_0.3.1_x64_en-US.msi"
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.3.2/wsa-rpc-bridge_0.3.2_x64_en-US.msi",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDdheUExdjdJajhkeEJtRnFmYnAzTzBVbFMya3djYU0wL2FSUG4xUXdNR25OYXgxWDFzc0dPOVhOdVJsbUt6Uk15L1NCS0MxQTBoTk9wUGJabjF1YUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2NDc1MDQxCWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4zLjJfeDY0X2VuLVVTLm1zaQo0bDJHQUtNcElpbCtMbkRjWVkxc0NKVzlKYjh1MDZjRktSQ2QxZnd6WXdFcTlOeFRqTnh1Zk9YbzdHL2lWbGJSZkQ2WFNWeG9WR21ZOEZremhORHVDZz09Cg=="
     }
   },
-  "version": "0.3.1",
-  "pub_date": "2026-08-05T11:31:16Z"
+  "version": "0.3.2",
+  "pub_date": "2026-08-11T19:04:02Z"
 }

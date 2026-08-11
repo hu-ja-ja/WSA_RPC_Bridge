@@ -7,7 +7,7 @@ const entries: LicenseEntry[] = licenses
 export function LicensesPanel() {
   return (
     <div class="licenses-panel">
-      <h2 class="page-heading">{t('app.nav.licenses')}</h2>
+      <h2 class="page-heading">{t('nav.licenses')}</h2>
 
       <h3 class="section-title">{t('licenses.third_party_title')}</h3>
 
@@ -32,3 +32,5 @@ export function LicensesPanel() {
     </div>
   )
 }
+
+export default LicensesPanel

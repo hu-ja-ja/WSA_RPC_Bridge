@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use crate::models::MediaInfo;
 
 const PLACEHOLDER_URL: &str = "https://placehold.co/100x100/000000/000000.png";
+const CACHE_MAX: usize = 256;
 
 #[async_trait]
 pub trait ArtworkResolver: Send + Sync {
@@ -32,6 +33,10 @@ impl ArtworkRegistry {
     }
 
     pub async fn resolve(&mut self, info: &MediaInfo) -> Option<String> {
+        if self.in_memory.len() >= CACHE_MAX {
+            self.in_memory.clear();
+        }
+
         let key = (
             info.package_name.clone(),
             info.title.clone(),

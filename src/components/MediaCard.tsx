@@ -1,4 +1,5 @@
 import { Show } from 'solid-js'
+import { RefreshCw } from 'lucide-solid'
 import { t } from '../i18n'
 
 const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#e5e4e7"/><g fill="none" stroke="#9ca3af" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="66" r="10"/><circle cx="66" cy="58" r="10"/><path d="M46 66 V30 L76 22 V58"/></g></svg>`
@@ -36,7 +37,7 @@ export function MediaCard(props: MediaCardProps) {
       <Show when={props.media} fallback={
         <div class="empty-state">
           <p>{props.error ?? t("media.none")}</p>
-          <button onClick={props.onRetry} class="btn">{t("media.retry")}</button>
+          <button onClick={props.onRetry} class="btn"><RefreshCw size={16} />{t("media.retry")}</button>
         </div>
       }>
         {(m) => (

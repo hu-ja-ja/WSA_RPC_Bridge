@@ -2,6 +2,8 @@ import { createSignal, Show } from 'solid-js'
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { IconBrandGithub } from '@tabler/icons-solidjs'
+import { ScrollText } from 'lucide-solid'
 import { t } from '../i18n'
 
 type UpdateState = 'idle' | 'checking' | 'uptodate' | 'available' | 'downloading' | 'error'
@@ -65,10 +67,10 @@ export function UpdatesPanel() {
 
   return (
     <div class="settings-panel">
-      <h2 class="page-heading">{t("app.nav.updates")}</h2>
+      <h2 class="page-heading">{t("nav.updates")}</h2>
 
       <div class="settings-card">
-        <h3 class="card-heading">{t("settings.updates_title")}</h3>
+        <h3 class="card-heading">{t("nav.updates")}</h3>
 
         <div class="update-row">
           <div class="update-meta">
@@ -80,7 +82,7 @@ export function UpdatesPanel() {
           <div class="update-action">
             <Show when={updateState() === 'downloading'}>
               <div class="update-progress">
-                <p class="update-status">{t("settings.download_progress", { progress: downloadProgress() })}</p>
+                <p class="update-status">{t("updates.download_progress", { progress: downloadProgress() })}</p>
                 <div class="progress-bar">
                   <div class="progress-bar-fill" style={{ width: `${downloadProgress()}%` }} />
                 </div>
@@ -89,24 +91,24 @@ export function UpdatesPanel() {
 
             <Show when={updateState() === 'available'}>
               <p class="update-status update-available">
-                {t("settings.update_available", { version: updateVersion()! })}
+                {t("updates.update_available", { version: updateVersion()! })}
               </p>
               <button onClick={handleInstall} class="btn-install">
-                {t("settings.install_update")}
+                {t("updates.install_restart")}
               </button>
             </Show>
 
             <Show when={updateState() === 'uptodate'}>
-              <p class="update-status update-ok">{t("settings.up_to_date")}</p>
+              <p class="update-status update-ok">{t("updates.up_to_date")}</p>
               <button onClick={handleCheckUpdate} class="btn-update">
-                {t("settings.check_update_again")}
+                {t("updates.check_again")}
               </button>
             </Show>
 
             <Show when={updateState() === 'checking'}>
-              <p class="update-status">{t("settings.checking")}</p>
+              <p class="update-status">{t("updates.checking")}</p>
               <button class="btn-update" disabled>
-                {t("settings.check_update")}
+                {t("updates.check")}
               </button>
             </Show>
 
@@ -115,7 +117,7 @@ export function UpdatesPanel() {
                 <p class="update-error">{updateError()}</p>
               </Show>
               <button onClick={handleCheckUpdate} class="btn-update">
-                {updateState() === 'error' ? t("settings.check_update_again") : t("settings.check_update")}
+                {updateState() === 'error' ? t("updates.check_again") : t("updates.check")}
               </button>
             </Show>
           </div>
@@ -125,10 +127,12 @@ export function UpdatesPanel() {
 
         <div class="link-row">
           <button class="link-button" onClick={() => openUrl(repoUrl)}>
-            {t("updates.repository")}
+            <IconBrandGithub size={14} />
+            {t("common.repository")}
           </button>
           <button class="link-button" onClick={() => openUrl(changelogUrl)}>
-            {t("updates.changelog")}
+            <ScrollText size={14} />
+            {t("common.changelog")}
           </button>
         </div>
       </div>

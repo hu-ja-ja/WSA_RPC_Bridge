@@ -6,11 +6,11 @@ import { t } from '../i18n'
 type NavKey = 'dashboard' | 'settings' | 'updates' | 'licenses' | 'about'
 
 type NavLabelKey =
-  | 'app.nav.dashboard'
-  | 'app.nav.settings'
-  | 'app.nav.updates'
-  | 'app.nav.licenses'
-  | 'app.nav.about'
+  | 'nav.dashboard'
+  | 'nav.settings'
+  | 'nav.updates'
+  | 'nav.licenses'
+  | 'nav.about'
 
 interface NavItem {
   key: NavKey
@@ -26,14 +26,14 @@ interface SidebarProps {
 }
 
 const mainItems: NavItem[] = [
-  { key: 'dashboard', labelKey: 'app.nav.dashboard', icon: LayoutDashboard },
-  { key: 'settings', labelKey: 'app.nav.settings', icon: Settings },
-  { key: 'updates', labelKey: 'app.nav.updates', icon: CloudDownload },
+  { key: 'dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { key: 'settings', labelKey: 'nav.settings', icon: Settings },
+  { key: 'updates', labelKey: 'nav.updates', icon: CloudDownload },
 ]
 
 const footerItems: NavItem[] = [
-  { key: 'licenses', labelKey: 'app.nav.licenses', icon: Scale },
-  { key: 'about', labelKey: 'app.nav.about', icon: Info },
+  { key: 'licenses', labelKey: 'nav.licenses', icon: Scale },
+  { key: 'about', labelKey: 'nav.about', icon: Info },
 ]
 
 export function Sidebar(props: SidebarProps) {
@@ -41,11 +41,11 @@ export function Sidebar(props: SidebarProps) {
     <nav class={`sidebar ${props.collapsed ? 'collapsed' : ''}`} aria-label="Main navigation">
       <div class="sidebar-header">
         {props.collapsed ? (
-          <button class="nav-toggle" onClick={props.onToggleCollapsed} title={t('app.nav.expand')} aria-label={t('app.nav.expand')}>
+          <button class="nav-toggle" onClick={props.onToggleCollapsed} title={t('nav.expand')} aria-label={t('nav.expand')}>
             <PanelLeftOpen size={18} />
           </button>
         ) : (
-          <button class="nav-toggle" onClick={props.onToggleCollapsed} title={t('app.nav.collapse')} aria-label={t('app.nav.collapse')}>
+          <button class="nav-toggle" onClick={props.onToggleCollapsed} title={t('nav.collapse')} aria-label={t('nav.collapse')}>
             <PanelLeftClose size={18} />
           </button>
         )}

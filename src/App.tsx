@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, createMemo, Show } from 'solid-js'
+import { createSignal, onCleanup, onMount, createMemo, Show, lazy, Suspense } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { check } from '@tauri-apps/plugin-updater'
@@ -7,10 +7,11 @@ import type { NavKey } from './components/Sidebar'
 import { Dashboard } from './components/Dashboard'
 import { SettingsPanel } from './components/SettingsPanel'
 import { UpdatesPanel } from './components/UpdatesPanel'
-import { LicensesPanel } from './components/LicensesPanel'
 import { AboutPanel } from './components/AboutPanel'
 import { t } from './i18n'
 import './App.css'
+
+const LicensesPanel = lazy(() => import('./components/LicensesPanel'))
 
 interface MediaInfo {
   title: string
@@ -160,7 +161,7 @@ function App() {
     check().then(update => {
       if (update && Notification.permission === 'granted') {
         new Notification('WSA RPC Bridge', {
-          body: t('settings.update_available_notification', { version: update.version })
+          body: t('updates.update_available_notification', { version: update.version })
         })
       }
     })
@@ -219,7 +220,9 @@ function App() {
         </Show>
 
         <Show when={activeTab() === 'licenses'}>
-          <LicensesPanel />
+          <Suspense fallback={<p class="panel-loading">{t('licenses.loading')}</p>}>
+            <LicensesPanel />
+          </Suspense>
         </Show>
 
         <Show when={activeTab() === 'about'}>
