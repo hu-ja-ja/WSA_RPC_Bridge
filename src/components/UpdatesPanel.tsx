@@ -8,7 +8,7 @@ import { t } from '../i18n'
 
 type UpdateState = 'idle' | 'checking' | 'uptodate' | 'available' | 'downloading' | 'error'
 
-const APP_VERSION = 'v0.3.1'
+const APP_VERSION = 'v0.3.2'
 
 const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
 const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'

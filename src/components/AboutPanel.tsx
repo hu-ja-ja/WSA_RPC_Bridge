@@ -4,7 +4,7 @@ import { BadgeInfo, ScrollText } from 'lucide-solid'
 import { t, locale } from '../i18n'
 
 const APP_NAME = 'WSA RPC Bridge'
-const APP_VERSION = 'v0.3.1'
+const APP_VERSION = 'v0.3.2'
 const COPYRIGHT = 'Copyright (C) 2026 hu-ja-ja'
 
 const privacyPolicyUrl =
