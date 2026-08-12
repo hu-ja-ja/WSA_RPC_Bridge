@@ -35,7 +35,7 @@ impl ArtworkResolver for NicoboxResolver {
         let resp = self
             .client
             .get(&url)
-            .header("User-Agent", "wsa_rpc_bridge/0.3.2")
+            .header("User-Agent", concat!("wsa_rpc_bridge/", env!("CARGO_PKG_VERSION")))
             .send()
             .await
             .ok()?;

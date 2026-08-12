@@ -6078,7 +6078,7 @@ dependencies = [
 
 [[package]]
 name = "wsa-rpc-bridge"
-version = "0.3.2"
+version = "0.0.0"
 dependencies = [
  "adb_client",
  "anyhow",

@@ -1,5 +1,6 @@
-import { createSignal, Show } from 'solid-js'
+import { createSignal, createResource, Show } from 'solid-js'
 import { check } from '@tauri-apps/plugin-updater'
+import { getVersion } from '@tauri-apps/api/app'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { IconBrandGithub } from '@tabler/icons-solidjs'
@@ -8,7 +9,7 @@ import { t } from '../i18n'
 
 type UpdateState = 'idle' | 'checking' | 'uptodate' | 'available' | 'downloading' | 'error'
 
-const APP_VERSION = 'v0.3.2'
+const [appVersion] = createResource(async () => `v${await getVersion()}`)
 
 const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
 const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'
@@ -75,7 +76,7 @@ export function UpdatesPanel() {
         <div class="update-row">
           <div class="update-meta">
             <span class="update-meta-label">{t("updates.installed_label")}</span>
-            <span class="update-version-tag">{APP_VERSION}</span>
+            <span class="update-version-tag">{appVersion()}</span>
             <p class="switch-desc">{t("updates.current_description")}</p>
           </div>
 

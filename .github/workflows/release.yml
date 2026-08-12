@@ -36,6 +36,21 @@ jobs:
       - run: cargo binstall cargo-about --no-confirm --force
       - run: cargo about --version
 
+      - name: Sync version from tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.event.release.tag_name }}" -replace '^v', ''
+
+          $conf = Get-Content src-tauri/tauri.conf.json -Raw
+          $conf = $conf -replace '(?m)"version":\s*"[^"]*"', "`"version`": `"$version`""
+          Set-Content src-tauri/tauri.conf.json $conf -NoNewline -Encoding utf8
+
+          $toml = Get-Content src-tauri/Cargo.toml -Raw
+          $toml = $toml -replace '(?m)^version = ".*"', "version = `"$version`""
+          Set-Content src-tauri/Cargo.toml $toml -NoNewline -Encoding utf8
+
+          Write-Output "synced version $version"
+
       - run: pnpm tauri build --bundles msi
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}

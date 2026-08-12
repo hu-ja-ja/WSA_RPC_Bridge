@@ -1,10 +1,12 @@
+import { createResource } from 'solid-js'
 import { openUrl } from '@tauri-apps/plugin-opener'
+import { getVersion } from '@tauri-apps/api/app'
 import { IconBrandGithub } from '@tabler/icons-solidjs'
 import { BadgeInfo, ScrollText } from 'lucide-solid'
 import { t, locale } from '../i18n'
 
 const APP_NAME = 'WSA RPC Bridge'
-const APP_VERSION = 'v0.3.2'
+const [appVersion] = createResource(async () => `v${await getVersion()}`)
 const COPYRIGHT = 'Copyright (C) 2026 hu-ja-ja'
 
 const privacyPolicyUrl =
@@ -22,7 +24,7 @@ export function AboutPanel() {
         <BadgeInfo class="about-icon" size={28} />
         <div class="about-hero-body">
           <p class="about-app-name">{APP_NAME}</p>
-          <p class="about-version">{APP_VERSION}</p>
+          <p class="about-version">{appVersion()}</p>
         </div>
       </div>
 
