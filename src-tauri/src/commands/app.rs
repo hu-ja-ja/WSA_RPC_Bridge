@@ -1,23 +1,36 @@
 use tauri::{AppHandle, State};
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
 
+#[cfg(not(target_os = "android"))]
 use crate::adb::AdbClient;
+#[cfg(not(target_os = "android"))]
 use crate::apk_label::ApkLabelResolver;
 use crate::artwork::ArtworkRegistry;
 use crate::config::{AppConfig, ConfigManager};
+#[cfg(not(target_os = "android"))]
 use crate::discord::DiscordRpc;
 use crate::models::MediaInfo;
 
 pub struct AppState {
+    #[cfg(not(target_os = "android"))]
     pub adb: Mutex<AdbClient>,
+    #[cfg(not(target_os = "android"))]
     pub discord: DiscordRpc,
     pub artwork: Mutex<ArtworkRegistry>,
+    #[cfg(not(target_os = "android"))]
     pub apk_label: Mutex<ApkLabelResolver>,
     pub config: ConfigManager,
+    // ponytail: P1スタブ。P2でKotlinのMediaSessionCollectorをjni経由で読む
+    #[cfg(target_os = "android")]
+    pub media: Mutex<MediaInfo>,
+    #[cfg(target_os = "android")]
+    pub discord_connected: std::sync::atomic::AtomicBool,
 }
 
 #[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub async fn get_adb_status(state: State<'_, AppState>) -> Result<bool, String> {
     let connected = state.adb.lock().await.is_connected();
     log::debug!("get_adb_status: adb_connected={}", connected);
@@ -25,6 +38,13 @@ pub async fn get_adb_status(state: State<'_, AppState>) -> Result<bool, String> 
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub async fn get_adb_status(_state: State<'_, AppState>) -> Result<bool, String> {
+    Ok(false)
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
     log::info!("get_media_info: invoked by frontend");
     let mut adb = state.adb.lock().await;
@@ -56,6 +76,15 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
+    let info = state.media.lock().await.clone();
+    log::info!("get_media_info: android title={:?}", info.title);
+    Ok(info)
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
     log::info!("connect_discord: connecting to Discord IPC");
     state.discord.connect();
@@ -63,6 +92,16 @@ pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
+    // ponytail: P1スタブ。P2でKotlin側のSocial SDK接続をjni経由で起動する
+    log::info!("connect_discord: android stub");
+    state.discord_connected.store(true, std::sync::atomic::Ordering::Relaxed);
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
     log::info!("disconnect_discord: disconnecting from Discord IPC");
     state.discord.disconnect();
@@ -70,6 +109,15 @@ pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
+    log::info!("disconnect_discord: android stub");
+    state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub fn update_discord_presence(state: State<'_, AppState>, info: MediaInfo) -> Result<(), String> {
     log::debug!("update_discord_presence: title={:?}", info.title);
     state.discord.update_presence(&info);
@@ -77,9 +125,25 @@ pub fn update_discord_presence(state: State<'_, AppState>, info: MediaInfo) -> R
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub fn update_discord_presence(_state: State<'_, AppState>, _info: MediaInfo) -> Result<(), String> {
+    log::debug!("update_discord_presence: android stub");
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
     let connected = state.discord.is_connected();
     log::debug!("get_discord_status: discord_connected={}", connected);
+    Ok(connected)
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
+    let connected = state.discord_connected.load(std::sync::atomic::Ordering::Relaxed);
+    log::debug!("get_discord_status: android discord_connected={}", connected);
     Ok(connected)
 }
 
@@ -89,6 +153,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
     let old = state.config.get();
     state.config.set(config.clone());
@@ -101,6 +166,14 @@ pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppCo
             log::info!("update_settings: auto-start disabled");
         }
     }
+    log::info!("update_settings: settings updated");
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn update_settings(_app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
+    state.config.set(config.clone());
     log::info!("update_settings: settings updated");
     Ok(())
 }
