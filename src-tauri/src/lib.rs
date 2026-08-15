@@ -23,6 +23,8 @@ use std::path::PathBuf;
 use commands::AppState;
 #[cfg(not(target_os = "android"))]
 use tauri::{Manager, WindowEvent};
+#[cfg(target_os = "android")]
+use tauri::Manager;
 #[cfg(not(target_os = "android"))]
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
@@ -152,6 +154,40 @@ pub fn run() {
             )?;
         }
         log::info!("android: app started");
+
+        // フォアグラウンドサービスがプロセスを生かしている間、WebView のポーリングが
+        // 止まっても Discord プレゼンスを更新し続ける保険。
+        let app_handle = app.handle().clone();
+        std::thread::spawn(move || {
+            let mut last_title = String::new();
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                let state = app_handle.state::<AppState>();
+                if !state
+                    .discord_connected
+                    .load(std::sync::atomic::Ordering::Relaxed)
+                {
+                    continue;
+                }
+                let info = crate::android::media_state()
+                    .lock()
+                    .expect("media mutex poisoned")
+                    .clone();
+                if info.title.is_empty() || info.title == last_title {
+                    continue;
+                }
+                last_title = info.title.clone();
+                log::info!(
+                    "android: background presence update: {} - {}",
+                    info.title,
+                    info.artist
+                );
+                if let Err(e) = crate::android::discord_update_presence(&info) {
+                    log::warn!("android: background presence update failed: {e}");
+                }
+            }
+        });
+
         Ok(())
     });
 

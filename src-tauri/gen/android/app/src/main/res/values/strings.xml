@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">"wsa-rpc-bridge"</string>
     <string name="main_activity_title">"wsa-rpc-bridge"</string>
+    <string name="notif_channel_name">"Now Playing"</string>
+    <string name="notif_channel_description">"Shows current media info collected from other apps"</string>
+    <string name="notif_waiting_title">"WSA RPC Bridge"</string>
+    <string name="notif_waiting_text">"Waiting for media info..."</string>
+    <string name="notif_playing">"Playing"</string>
+    <string name="notif_paused">"Paused"</string>
 </resources>

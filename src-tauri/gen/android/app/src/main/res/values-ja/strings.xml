@@ -1,0 +1,8 @@
+<resources>
+    <string name="notif_channel_name">"再生中メディア"</string>
+    <string name="notif_channel_description">"他のアプリから収集した現在のメディア情報を表示します"</string>
+    <string name="notif_waiting_title">"WSA RPC Bridge"</string>
+    <string name="notif_waiting_text">"メディア情報を待機中..."</string>
+    <string name="notif_playing">"再生中"</string>
+    <string name="notif_paused">"一時停止中"</string>
+</resources>

@@ -1,0 +1,119 @@
+package com.wsarpcbridge.app
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.IBinder
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+
+/**
+ * フォアグラウンドサービス。プロセスを常駐させてメディア収集(NLS)を継続させ、
+ * 現在のメディア情報を常駐通知として表示する。
+ */
+class MediaInfoService : Service() {
+
+    override fun onCreate() {
+        super.onCreate()
+        createChannel(this)
+        val notification = buildNotification(this, null)
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            else 0
+        )
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return START_STICKY
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    companion object {
+        const val NOTIFICATION_ID = 1
+        const val CHANNEL_ID = "now_playing"
+
+        fun start(context: Context) {
+            val intent = Intent(context, MediaInfoService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        fun createChannel(context: Context) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val manager = context.getSystemService(NotificationManager::class.java)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.notif_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = context.getString(R.string.notif_channel_description)
+                setShowBadge(false)
+            }
+            manager.createNotificationChannel(channel)
+        }
+
+        /** 常駐通知を更新する。サービスが起動していなくても通知は差し替わる。 */
+        fun show(context: Context, info: NowPlaying) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager.notify(NOTIFICATION_ID, buildNotification(context, info))
+        }
+    }
+}
+
+data class NowPlaying(
+    val title: String,
+    val artist: String,
+    val album: String,
+    val isPlaying: Boolean,
+)
+
+private fun buildNotification(context: Context, info: NowPlaying?): Notification {
+    val contentIntent = PendingIntent.getActivity(
+        context,
+        0,
+        Intent(context, MainActivity::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+    val builder = NotificationCompat.Builder(context, MediaInfoService.CHANNEL_ID)
+        .setSmallIcon(R.mipmap.ic_launcher)
+        .setContentTitle(
+            if (info != null && info.title.isNotEmpty()) info.title
+            else context.getString(R.string.notif_waiting_title)
+        )
+        .setContentText(
+            if (info != null && info.title.isNotEmpty()) {
+                val parts = mutableListOf(info.artist, info.album)
+                parts.add(
+                    if (info.isPlaying) context.getString(R.string.notif_playing)
+                    else context.getString(R.string.notif_paused)
+                )
+                parts.filter { it.isNotEmpty() }.joinToString(" - ")
+            } else {
+                context.getString(R.string.notif_waiting_text)
+            }
+        )
+        .setOngoing(true)
+        .setShowWhen(false)
+        .setOnlyAlertOnce(true)
+        .setContentIntent(contentIntent)
+
+    if (info != null) {
+        builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+    }
+
+    return builder.build()
+}

@@ -19,6 +19,11 @@ class MediaCollectorService : NotificationListenerService() {
         startPolling()
     }
 
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        MediaInfoService.show(this, NowPlaying("", "", "", false))
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         pushNow()
     }
@@ -57,6 +62,7 @@ class MediaCollectorService : NotificationListenerService() {
 
         if (controller == null) {
             MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
+            MediaInfoService.show(this, NowPlaying("", "", "", false))
             return
         }
 
@@ -66,16 +72,23 @@ class MediaCollectorService : NotificationListenerService() {
             val pm = packageManager
             pm.getApplicationLabel(pm.getApplicationInfo(controller.packageName, 0)).toString()
         }.getOrDefault(controller.packageName)
+        val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
+        val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
+        val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
+        val positionMs = state?.position ?: 0L
+        val durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L
+        val isPlaying = state?.state == PlaybackState.STATE_PLAYING
         MediaBridge.updateMediaInfo(
-            title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty(),
-            artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
-            album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty(),
+            title = title,
+            artist = artist,
+            album = album,
             packageName = controller.packageName,
             displayName = displayName,
-            positionMs = state?.position ?: 0L,
-            durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L,
-            isPlaying = state?.state == PlaybackState.STATE_PLAYING,
+            positionMs = positionMs,
+            durationMs = durationMs,
+            isPlaying = isPlaying,
         )
+        MediaInfoService.show(this, NowPlaying(title, artist, album, isPlaying))
     }
 
     companion object {
