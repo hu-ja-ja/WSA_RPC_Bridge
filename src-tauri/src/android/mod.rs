@@ -210,20 +210,20 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
             (sdk.activity_set_state)(&mut activity, &mut state);
             (sdk.activity_set_details)(&mut activity, &mut details);
 
-            if let Some(pos) = info.position.filter(|p| *p > 0) {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
-                let start = now.saturating_sub(pos / 1000);
-                (sdk.ts_init)(&mut ts);
-                (sdk.ts_set_start)(&mut ts, start);
-                if info.is_playing {
+            if info.is_playing {
+                if let Some(pos) = info.position.filter(|p| *p > 0) {
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let start = now.saturating_sub(pos / 1000);
+                    (sdk.ts_init)(&mut ts);
+                    (sdk.ts_set_start)(&mut ts, start);
                     if let Some(dur) = info.duration.filter(|d| *d > 0) {
                         (sdk.ts_set_end)(&mut ts, start + dur / 1000);
                     }
+                    (sdk.activity_set_timestamps)(&mut activity, &mut ts);
                 }
-                (sdk.activity_set_timestamps)(&mut activity, &mut ts);
             }
 
             if let Some(url) = &info.thumbnail_url {
