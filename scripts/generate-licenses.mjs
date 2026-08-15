@@ -1,11 +1,38 @@
 import { execSync } from 'child_process'
-import { readFileSync, writeFileSync, rmSync, mkdirSync } from 'fs'
+import { createHash } from 'crypto'
+import { readFileSync, writeFileSync, rmSync, mkdirSync, existsSync } from 'fs'
 import { resolve, join } from 'path'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const SRC_TAURI = resolve(ROOT, 'src-tauri')
 const OUT_DIR = resolve(ROOT, 'src', 'generated')
 const OUT_FILE = resolve(OUT_DIR, 'licenses.ts')
+const HASH_FILE = resolve(OUT_DIR, '.licenses-hash')
+
+const INPUT_FILES = [
+  resolve(ROOT, 'package.json'),
+  resolve(ROOT, 'pnpm-lock.yaml'),
+  resolve(SRC_TAURI, 'Cargo.toml'),
+  resolve(SRC_TAURI, 'Cargo.lock'),
+  resolve(SRC_TAURI, 'about.toml'),
+  resolve(ROOT, 'scripts', 'generate-licenses.mjs'),
+]
+
+function currentHash() {
+  const h = createHash('sha256')
+  for (const f of INPUT_FILES) h.update(readFileSync(f))
+  return h.digest('hex')
+}
+
+const hash = currentHash()
+if (
+  existsSync(OUT_FILE) &&
+  existsSync(HASH_FILE) &&
+  readFileSync(HASH_FILE, 'utf-8') === hash
+) {
+  console.log('licenses up to date, skipping (inputs unchanged)')
+  process.exit(0)
+}
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -259,6 +286,7 @@ export const licenses: LicenseEntry[] = ${JSON.stringify(allEntries, null, 2)}
 `
 
 writeFileSync(OUT_FILE, code, 'utf-8')
+writeFileSync(HASH_FILE, hash, 'utf-8')
 console.log(`  -> ${allEntries.length} total entries written to ${OUT_FILE}`)
 
 try { rmSync(tmpJson) } catch { /* best effort */ }
