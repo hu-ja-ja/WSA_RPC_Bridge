@@ -22,9 +22,6 @@ pub struct AppState {
     #[cfg(not(target_os = "android"))]
     pub apk_label: Mutex<ApkLabelResolver>,
     pub config: ConfigManager,
-    // ponytail: P1スタブ。P2でKotlinのMediaSessionCollectorをjni経由で読む
-    #[cfg(target_os = "android")]
-    pub media: Mutex<MediaInfo>,
     #[cfg(target_os = "android")]
     pub discord_connected: std::sync::atomic::AtomicBool,
 }
@@ -78,8 +75,17 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
-    let info = state.media.lock().await.clone();
-    log::info!("get_media_info: android title={:?}", info.title);
+    let mut info = crate::android::media_state()
+        .lock()
+        .expect("media mutex poisoned")
+        .clone();
+
+    let mut registry = state.artwork.lock().await;
+    if let Some(url) = registry.resolve(&info).await {
+        info.thumbnail_url = Some(url);
+    }
+
+    log::info!("get_media_info: android title={:?}, artist={:?}", info.title, info.artist);
     Ok(info)
 }
 

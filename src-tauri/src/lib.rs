@@ -2,6 +2,8 @@
 mod adb;
 #[cfg(not(target_os = "android"))]
 mod apk_label;
+#[cfg(target_os = "android")]
+mod android;
 mod artwork;
 mod commands;
 mod config;
@@ -48,7 +50,6 @@ pub fn run() {
     let apk_cache_dir = default_apk_cache_dir();
 
     let mut artwork_registry = ArtworkRegistry::new();
-    #[cfg(not(target_os = "android"))]
     artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver::new()));
 
     let builder = tauri::Builder::default();
@@ -66,7 +67,6 @@ pub fn run() {
     let builder = builder.manage(AppState {
         artwork: Mutex::new(artwork_registry),
         config: config::ConfigManager::new(),
-        media: Mutex::new(crate::models::MediaInfo::default()),
         discord_connected: std::sync::atomic::AtomicBool::new(false),
     });
 

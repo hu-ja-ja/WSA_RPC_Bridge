@@ -1,4 +1,3 @@
-#[cfg(not(target_os = "android"))]
 pub mod nicobox;
 
 use std::collections::HashMap;
