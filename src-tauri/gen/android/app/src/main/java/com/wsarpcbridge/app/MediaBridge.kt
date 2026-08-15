@@ -10,6 +10,7 @@ object MediaBridge {
         artist: String,
         album: String,
         packageName: String,
+        displayName: String,
         positionMs: Long,
         durationMs: Long,
         isPlaying: Boolean,

@@ -6086,6 +6086,7 @@ dependencies = [
  "async-trait",
  "discord-rich-presence",
  "jni 0.21.1",
+ "libc",
  "log",
  "reqwest 0.12.28",
  "serde",

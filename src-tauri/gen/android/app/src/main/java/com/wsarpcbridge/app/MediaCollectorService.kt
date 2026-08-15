@@ -56,17 +56,22 @@ class MediaCollectorService : NotificationListenerService() {
         }
 
         if (controller == null) {
-            MediaBridge.updateMediaInfo("", "", "", "", 0L, 0L, false)
+            MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
             return
         }
 
         val metadata = controller.metadata
         val state = controller.playbackState
+        val displayName = runCatching {
+            val pm = packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(controller.packageName, 0)).toString()
+        }.getOrDefault(controller.packageName)
         MediaBridge.updateMediaInfo(
             title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty(),
             artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
             album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty(),
             packageName = controller.packageName,
+            displayName = displayName,
             positionMs = state?.position ?: 0L,
             durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L,
             isPlaying = state?.state == PlaybackState.STATE_PLAYING,

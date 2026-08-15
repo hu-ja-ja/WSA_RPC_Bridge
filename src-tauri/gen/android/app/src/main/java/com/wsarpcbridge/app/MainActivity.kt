@@ -10,6 +10,8 @@ class MainActivity : TauriActivity() {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
 
+    DiscordBridge.init(this)
+
     if (!MediaCollectorService.isNotificationAccessGranted(this)) {
       startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
     }

@@ -100,8 +100,8 @@ pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
-    // ponytail: P1スタブ。P2でKotlin側のSocial SDK接続をjni経由で起動する
-    log::info!("connect_discord: android stub");
+    log::info!("connect_discord: connecting Discord RPC (android)");
+    crate::android::discord_connect()?;
     state.discord_connected.store(true, std::sync::atomic::Ordering::Relaxed);
     Ok(())
 }
@@ -117,7 +117,8 @@ pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
-    log::info!("disconnect_discord: android stub");
+    log::info!("disconnect_discord: disconnecting Discord RPC (android)");
+    crate::android::discord_disconnect()?;
     state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
     Ok(())
 }
@@ -132,9 +133,9 @@ pub fn update_discord_presence(state: State<'_, AppState>, info: MediaInfo) -> R
 
 #[tauri::command]
 #[cfg(target_os = "android")]
-pub fn update_discord_presence(_state: State<'_, AppState>, _info: MediaInfo) -> Result<(), String> {
-    log::debug!("update_discord_presence: android stub");
-    Ok(())
+pub fn update_discord_presence(_state: State<'_, AppState>, info: MediaInfo) -> Result<(), String> {
+    log::debug!("update_discord_presence: title={:?}", info.title);
+    crate::android::discord_update_presence(&info)
 }
 
 #[tauri::command]
