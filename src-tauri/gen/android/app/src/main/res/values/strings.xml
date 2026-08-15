@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">"wsa-rpc-bridge"</string>
+    <string name="main_activity_title">"wsa-rpc-bridge"</string>
+</resources>
