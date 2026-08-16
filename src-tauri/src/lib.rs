@@ -161,7 +161,7 @@ pub fn run() {
         std::thread::spawn(move || {
             let mut last_title = String::new();
             loop {
-                std::thread::sleep(std::time::Duration::from_secs(3));
+                std::thread::sleep(std::time::Duration::from_secs(10));
                 let state = app_handle.state::<AppState>();
                 if !state
                     .discord_connected

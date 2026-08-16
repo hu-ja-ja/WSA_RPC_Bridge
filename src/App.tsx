@@ -58,6 +58,7 @@ function App() {
   })
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
+  let lastPresenceKey: string | null = null
 
   const displayPosition = createMemo(() => {
     const m = media()
@@ -94,7 +95,11 @@ function App() {
       }
       if (rpcEnabled()) {
         await invoke('connect_discord')
-        await invoke('update_discord_presence', { info: result })
+        const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}`
+        if (key !== lastPresenceKey) {
+          lastPresenceKey = key
+          await invoke('update_discord_presence', { info: result })
+        }
       }
     } catch (e) {
       setMedia(null)

@@ -296,7 +296,7 @@ fn start_callbacks() {
                 (sdk.run_callbacks)();
             }
         }
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(250));
     });
     CALLBACKS
         .get_or_init(|| Mutex::new(None))
@@ -347,6 +347,6 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
         is_playing: is_playing != 0,
     };
 
-    log::info!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
+    log::debug!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
     *media_state().lock().expect("media mutex poisoned") = info;
 }

@@ -13,6 +13,7 @@ import java.util.TimerTask
 class MediaCollectorService : NotificationListenerService() {
 
     private var timer: Timer? = null
+    private var lastNow: NowPlaying? = null
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -60,24 +61,32 @@ class MediaCollectorService : NotificationListenerService() {
             }.getOrDefault(false)
         }
 
+        val metadata = controller?.metadata
+        val state = controller?.playbackState
+        val displayName = controller?.let { c ->
+            runCatching {
+                val pm = packageManager
+                pm.getApplicationLabel(pm.getApplicationInfo(c.packageName, 0)).toString()
+            }.getOrDefault(c.packageName)
+        }.orEmpty()
+        val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
+        val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
+        val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
+        val isPlaying = state?.state == PlaybackState.STATE_PLAYING
+
+        // ponytail: 無変化なら何もしない（通知の再投稿とJNI更新でCPUを起こさない）
+        val now = NowPlaying(title, artist, album, isPlaying)
+        if (now == lastNow) return
+        lastNow = now
+
         if (controller == null) {
             MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
             MediaInfoService.show(this, NowPlaying("", "", "", false))
             return
         }
 
-        val metadata = controller.metadata
-        val state = controller.playbackState
-        val displayName = runCatching {
-            val pm = packageManager
-            pm.getApplicationLabel(pm.getApplicationInfo(controller.packageName, 0)).toString()
-        }.getOrDefault(controller.packageName)
-        val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty()
-        val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
-        val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
         val positionMs = state?.position ?: 0L
         val durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L
-        val isPlaying = state?.state == PlaybackState.STATE_PLAYING
         MediaBridge.updateMediaInfo(
             title = title,
             artist = artist,
@@ -88,11 +97,12 @@ class MediaCollectorService : NotificationListenerService() {
             durationMs = durationMs,
             isPlaying = isPlaying,
         )
-        MediaInfoService.show(this, NowPlaying(title, artist, album, isPlaying))
+        MediaInfoService.show(this, now)
     }
 
     companion object {
-        private const val POLL_INTERVAL_MS = 2000L
+        // 保険のポーリング。通常は onNotificationPosted/Removed のイベント駆動で更新される。
+        private const val POLL_INTERVAL_MS = 30_000L
 
         fun isNotificationAccessGranted(context: Context): Boolean {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
