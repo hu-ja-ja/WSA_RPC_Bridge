@@ -35,6 +35,10 @@ const POLL_INTERVAL = 5000
 const TICK_INTERVAL = 1000
 const STORAGE_RPC_KEY = 'rpcEnabled'
 const EVENT_SHOW_SETTINGS = 'show-settings'
+const EVENT_MEDIA_UPDATED = 'media-updated'
+const EVENT_DISCORD_STATUS = 'discord-status-changed'
+// AndroidではRust側(JNI)がイベントでプッシュするためポーリングしない。デスクトップはADBの都合でポーリング。
+const IS_ANDROID = typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
 
 function App() {
   const [adbConnected, setAdbConnected] = createSignal(false)
@@ -161,7 +165,9 @@ function App() {
 
     await loadSettings()
     await fetchMediaInfo()
-    await checkStatus()
+    if (!IS_ANDROID) {
+      await checkStatus()
+    }
 
     check().then(update => {
       if (update && Notification.permission === 'granted') {
@@ -171,6 +177,31 @@ function App() {
       }
     })
 
+    if (IS_ANDROID) {
+      const unlistenMedia = await listen<MediaInfo>(EVENT_MEDIA_UPDATED, (event) => {
+        const result = event.payload
+        setMedia(result)
+        setError(null)
+        if (result.position !== null) {
+          setLastFetch({ pos: result.position, time: Date.now() })
+        }
+      })
+      onCleanup(unlistenMedia)
+
+      const unlistenDiscord = await listen<boolean>(EVENT_DISCORD_STATUS, (event) => {
+        setDiscordConnected(event.payload)
+      })
+      onCleanup(unlistenDiscord)
+    } else {
+      pollingTimer = setInterval(async () => {
+        await checkStatus()
+        await fetchMediaInfo()
+      }, POLL_INTERVAL)
+      onCleanup(() => {
+        if (pollingTimer) clearInterval(pollingTimer)
+      })
+    }
+
     if (rpcEnabled()) {
       try {
         await invoke('connect_discord')
@@ -178,14 +209,6 @@ function App() {
         console.error('initial connect_discord failed', e)
       }
     }
-
-    pollingTimer = setInterval(async () => {
-      await checkStatus()
-      await fetchMediaInfo()
-    }, POLL_INTERVAL)
-    onCleanup(() => {
-      if (pollingTimer) clearInterval(pollingTimer)
-    })
   })
 
   return (

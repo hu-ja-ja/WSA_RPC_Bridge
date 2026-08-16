@@ -4,15 +4,25 @@ use std::sync::{Mutex, OnceLock};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
+use tauri::{AppHandle, Emitter, Manager};
+
+use crate::commands::AppState;
 use crate::models::MediaInfo;
 
 const APP_ID: u64 = 1530562506513449120;
 
 static MEDIA_STATE: OnceLock<Mutex<MediaInfo>> = OnceLock::new();
 
-/// 無再生が1時間続いて切断した後、フロントエンドの5秒ポーリングによる
-/// 誤再接続を抑止するフラグ。ユーザーがRPCをOFF/ONするか再起動で解除される。
+/// 無再生が1時間続いて切断した後、ユーザーがRPCをOFF/ONするか再起動するまで
+/// 再接続を抑止するフラグ。
 static RPC_IDLE: AtomicBool = AtomicBool::new(false);
+
+static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+static LAST_PRESENCE_KEY: Mutex<String> = Mutex::new(String::new());
+
+pub fn set_app_handle(app: AppHandle) {
+    let _ = APP_HANDLE.set(app);
+}
 
 pub fn rpc_idle() -> bool {
     RPC_IDLE.load(Ordering::SeqCst)
@@ -281,6 +291,7 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
 
 pub fn discord_disconnect() -> Result<(), String> {
     RPC_IDLE.store(false, Ordering::SeqCst);
+    *LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned") = String::new();
     do_disconnect()
 }
 
@@ -373,5 +384,38 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     };
 
     log::debug!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
-    *media_state().lock().expect("media mutex poisoned") = info;
+    *media_state().lock().expect("media mutex poisoned") = info.clone();
+
+    let Some(app) = APP_HANDLE.get().cloned() else {
+        return;
+    };
+    tauri::async_runtime::spawn(async move {
+        let state = app.state::<AppState>();
+        let mut info = info;
+        if let Some(url) = state.artwork.lock().await.resolve(&info).await {
+            info.thumbnail_url = Some(url);
+        }
+        let _ = app.emit("media-updated", &info);
+
+        if info.title.is_empty()
+            || !state
+                .discord_connected
+                .load(Ordering::Relaxed)
+        {
+            return;
+        }
+        let key = format!(
+            "{}|{}|{}|{}",
+            info.title, info.artist, info.album, info.is_playing
+        );
+        let mut last = LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned");
+        if *last == key {
+            return;
+        }
+        *last = key;
+        drop(last);
+        if let Err(e) = discord_update_presence(&info) {
+            log::warn!("android: presence update failed: {e}");
+        }
+    });
 }

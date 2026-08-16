@@ -1,6 +1,8 @@
 use tauri::{AppHandle, State};
 #[cfg(not(target_os = "android"))]
 use tauri_plugin_autostart::ManagerExt;
+#[cfg(target_os = "android")]
+use tauri::Emitter;
 use tokio::sync::Mutex;
 
 #[cfg(not(target_os = "android"))]
@@ -99,13 +101,14 @@ pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 #[cfg(target_os = "android")]
-pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
+pub fn connect_discord(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     if crate::android::rpc_idle() {
         return Ok(());
     }
     log::info!("connect_discord: connecting Discord RPC (android)");
     crate::android::discord_connect()?;
     state.discord_connected.store(true, std::sync::atomic::Ordering::Relaxed);
+    let _ = app.emit("discord-status-changed", true);
     Ok(())
 }
 
@@ -119,10 +122,11 @@ pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 #[cfg(target_os = "android")]
-pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
+pub fn disconnect_discord(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     log::info!("disconnect_discord: disconnecting Discord RPC (android)");
     crate::android::discord_disconnect()?;
     state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
+    let _ = app.emit("discord-status-changed", false);
     Ok(())
 }
 

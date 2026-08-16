@@ -24,7 +24,7 @@ use commands::AppState;
 #[cfg(not(target_os = "android"))]
 use tauri::{Manager, WindowEvent};
 #[cfg(target_os = "android")]
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 #[cfg(not(target_os = "android"))]
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
@@ -159,11 +159,11 @@ pub fn run() {
         }
         log::info!("android: app started");
 
-        // フォアグラウンドサービスがプロセスを生かしている間、WebView のポーリングが
-        // 止まっても Discord プレゼンスを更新し続ける保険。
+        // プレゼンス更新は JNI の updateMediaInfo で即時に行われるため、
+        // このスレッドは無再生が1時間続いたときのアイドル切断のみを監視する。
         let app_handle = app.handle().clone();
+        crate::android::set_app_handle(app_handle.clone());
         std::thread::spawn(move || {
-            let mut last_title = String::new();
             let mut paused_since: Option<std::time::Instant> = None;
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(10));
@@ -189,21 +189,8 @@ pub fn run() {
                             log::warn!("android: idle disconnect failed: {e}");
                         }
                         state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
-                        last_title = String::new();
-                        continue;
+                        let _ = app_handle.emit("discord-status-changed", false);
                     }
-                }
-                if info.title.is_empty() || info.title == last_title {
-                    continue;
-                }
-                last_title = info.title.clone();
-                log::info!(
-                    "android: background presence update: {} - {}",
-                    info.title,
-                    info.artist
-                );
-                if let Err(e) = crate::android::discord_update_presence(&info) {
-                    log::warn!("android: background presence update failed: {e}");
                 }
             }
         });
