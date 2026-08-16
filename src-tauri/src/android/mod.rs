@@ -248,6 +248,19 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
                     }
                     (sdk.activity_set_timestamps)(&mut activity, &mut ts);
                 }
+                // 位置なしで再生中: タイマーは前回のまま維持（次の位置付き更新で正しくなる）
+            } else {
+                // 一時停止: マージ型SDKは省略フィールドが旧値維持になるため、明示的に
+                // start=一時停止位置の開始時刻, end=現在時刻 を送りバーを0:00で固定する。
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let start = now.saturating_sub(info.position.unwrap_or(0) / 1000);
+                (sdk.ts_init)(&mut ts);
+                (sdk.ts_set_start)(&mut ts, start);
+                (sdk.ts_set_end)(&mut ts, now);
+                (sdk.activity_set_timestamps)(&mut activity, &mut ts);
             }
 
             if let Some(url) = &info.thumbnail_url {
@@ -260,7 +273,7 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
             }
 
             (sdk.client_update_rich_presence)(c_ptr, &mut activity, update_presence_cb, std::ptr::null_mut(), std::ptr::null_mut());
-            log::debug!("discord: presence update sent: {} - {}", info.title, info.artist);
+            log::debug!("discord: presence update sent: {} - {} (playing={})", info.title, info.artist, info.is_playing);
         }
         Ok::<(), String>(())
     })();
@@ -465,6 +478,11 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
                 .discord_connected
                 .load(Ordering::Relaxed)
         {
+            log::debug!(
+                "android: presence update skipped (title_empty={}, connected={})",
+                info.title.is_empty(),
+                state.discord_connected.load(Ordering::Relaxed)
+            );
             return;
         }
         let key = format!(
@@ -473,6 +491,7 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
         );
         let mut last = LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned");
         if *last == key {
+            log::debug!("android: presence update skipped (dedup key unchanged)");
             return;
         }
         *last = key;
