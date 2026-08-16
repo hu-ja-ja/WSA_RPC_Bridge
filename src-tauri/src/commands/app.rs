@@ -169,8 +169,10 @@ pub fn list_media_apps() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 #[cfg(target_os = "android")]
-pub fn list_media_apps() -> Result<Vec<String>, String> {
-    crate::android::list_media_apps()
+pub async fn list_media_apps() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(crate::android::list_media_apps)
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

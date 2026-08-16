@@ -6,6 +6,7 @@
   "nav.about": "アプリ概要",
   "nav.collapse": "サイドバーを折りたたむ",
   "nav.expand": "サイドバーを展開",
+  "nav.close": "メニューを閉じる",
   "common.repository": "GitHub リポジトリ",
   "common.changelog": "更新履歴",
   "common.privacy_policy": "プライバシーポリシー",

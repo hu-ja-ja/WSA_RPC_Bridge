@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event'
 import { check } from '@tauri-apps/plugin-updater'
 import { Sidebar } from './components/Sidebar'
 import type { NavKey } from './components/Sidebar'
+import { Menu } from 'lucide-solid'
 import { Dashboard } from './components/Dashboard'
 import { SettingsPanel } from './components/SettingsPanel'
 import { UpdatesPanel } from './components/UpdatesPanel'
@@ -51,6 +52,7 @@ function App() {
   const [now, setNow] = createSignal(Date.now())
   const [activeTab, setActiveTab] = createSignal<NavKey>('dashboard')
   const [navCollapsed, setNavCollapsed] = createSignal(false)
+  const [drawerOpen, setDrawerOpen] = createSignal(false)
 
   const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_RPC_KEY) : null
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
@@ -171,13 +173,15 @@ function App() {
       await checkStatus()
     }
 
-    check().then(update => {
-      if (update && Notification.permission === 'granted') {
-        new Notification('WSA RPC Bridge', {
-          body: t('updates.update_available_notification', { version: update.version })
-        })
-      }
-    })
+    if (!IS_ANDROID) {
+      check().then(update => {
+        if (update && Notification.permission === 'granted') {
+          new Notification('WSA RPC Bridge', {
+            body: t('updates.update_available_notification', { version: update.version })
+          })
+        }
+      }).catch(() => {})
+    }
 
     if (IS_ANDROID) {
       const unlistenMedia = await listen<MediaInfo>(EVENT_MEDIA_UPDATED, async (event) => {
@@ -218,11 +222,31 @@ function App() {
   })
 
   return (
-    <div id="app" class="shell">
+    <div id="app" class={`shell ${IS_ANDROID ? 'android' : ''}`}>
+      <Show when={IS_ANDROID}>
+        <header class="top-bar">
+          <button
+            class="nav-toggle"
+            onClick={() => setDrawerOpen(true)}
+            title={t('nav.expand')}
+            aria-label={t('nav.expand')}
+          >
+            <Menu size={22} />
+          </button>
+          <span class="sidebar-title">WSA RPC Bridge</span>
+        </header>
+      </Show>
+
       <Sidebar
         active={activeTab()}
         collapsed={navCollapsed()}
-        onSelect={setActiveTab}
+        android={IS_ANDROID}
+        open={drawerOpen()}
+        onSelect={(key) => {
+          setActiveTab(key)
+          setDrawerOpen(false)
+        }}
+        onClose={() => setDrawerOpen(false)}
         onToggleCollapsed={() => setNavCollapsed((c) => !c)}
       />
 
@@ -236,6 +260,7 @@ function App() {
             adbConnected={adbConnected()}
             discordConnected={discordConnected()}
             rpcEnabled={rpcEnabled()}
+            android={IS_ANDROID}
             onRetry={fetchMediaInfo}
           />
         </Show>

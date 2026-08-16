@@ -23,13 +23,23 @@ pub fn media_state() -> &'static Mutex<MediaInfo> {
 
 static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
+static STORE_CLASS: OnceLock<jni::objects::GlobalRef> = OnceLock::new();
+
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
-    env: jni::JNIEnv,
+    mut env: jni::JNIEnv,
     _this: jni::objects::JObject,
 ) {
     if let Ok(vm) = env.get_java_vm() {
         let _ = JVM.set(vm);
+    }
+    // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
+    // spawn_blocking などの別スレッドからは find_class できない。
+    // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
+    if let Ok(class) = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore") {
+        if let Ok(gref) = env.new_global_ref(class) {
+            let _ = STORE_CLASS.set(gref);
+        }
     }
 }
 
@@ -54,11 +64,17 @@ fn jstring_array_to_vec(
 }
 
 fn call_string_array(name: &str) -> Result<Vec<String>, String> {
+    let class = store_class()?;
     with_jni(|env| {
-        let class = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore")?;
         let result = env.call_static_method(class, name, "()[Ljava/lang/String;", &[])?;
         jstring_array_to_vec(env, result.l()?)
     })
+}
+
+fn store_class() -> Result<&'static jni::objects::GlobalRef, String> {
+    STORE_CLASS
+        .get()
+        .ok_or_else(|| "MediaWhitelistStore class not cached (MediaBridge.init not called)".to_string())
 }
 
 pub fn list_media_apps() -> Result<Vec<String>, String> {
@@ -70,8 +86,8 @@ pub fn load_whitelist() -> Result<Vec<String>, String> {
 }
 
 pub fn save_whitelist(packages: &[String]) -> Result<(), String> {
+    let class = store_class()?;
     with_jni(|env| {
-        let class = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore")?;
         let arr = env.new_object_array(packages.len() as i32, "java/lang/String", jni::objects::JObject::null())?;
         for (i, pkg) in packages.iter().enumerate() {
             let js = env.new_string(pkg.as_str())?;

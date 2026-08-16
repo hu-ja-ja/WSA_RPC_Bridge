@@ -6,6 +6,7 @@
   "nav.about": "About",
   "nav.collapse": "Collapse sidebar",
   "nav.expand": "Expand sidebar",
+  "nav.close": "Close menu",
   "common.repository": "GitHub Repository",
   "common.changelog": "View Changelog",
   "common.privacy_policy": "Privacy Policy",

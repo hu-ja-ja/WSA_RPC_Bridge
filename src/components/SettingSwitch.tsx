@@ -10,22 +10,20 @@ interface SettingSwitchProps {
 
 export function SettingSwitch(props: SettingSwitchProps) {
   return (
-    <>
-      <Switch
-        checked={props.checked}
-        onChange={props.onChange}
-        class="rpc-switch"
-      >
-        <Switch.Label class="switch-label">
-          {props.label}
-        </Switch.Label>
-        <Switch.Control class="switch-track">
-          <Switch.Thumb class="switch-thumb" />
-        </Switch.Control>
-      </Switch>
-      <Show when={props.description}>
-        <p class="switch-desc">{props.description}</p>
-      </Show>
-    </>
+    <Switch
+      checked={props.checked}
+      onChange={props.onChange}
+      class="rpc-switch"
+    >
+      <Switch.Label class="switch-label">
+        <span>{props.label}</span>
+        <Show when={props.description}>
+          <span class="switch-desc">{props.description}</span>
+        </Show>
+      </Switch.Label>
+      <Switch.Control class="switch-track">
+        <Switch.Thumb class="switch-thumb" />
+      </Switch.Control>
+    </Switch>
   )
 }

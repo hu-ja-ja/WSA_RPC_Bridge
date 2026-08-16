@@ -1,5 +1,6 @@
-import { createMemo, createSignal, For, onMount, Show } from 'solid-js'
+import { createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
+import { LoaderCircle } from 'lucide-solid'
 import { SettingSwitch } from './SettingSwitch'
 import { t } from '../i18n'
 
@@ -24,26 +25,45 @@ interface SettingsPanelProps {
   isAndroid: boolean
 }
 
+let cached: MediaApp[] | null = null
+let inflight: Promise<MediaApp[]> | null = null
+
+async function fetchApps(): Promise<MediaApp[]> {
+  if (cached) return cached
+  if (!inflight) {
+    inflight = (async () => {
+      const list = await invoke<string[]>('list_media_apps')
+      cached = list.map((s) => {
+        const [label, pkg] = s.split('\t')
+        return { label, pkg }
+      })
+      return cached
+    })()
+  }
+  return inflight
+}
+
 export function SettingsPanel(props: SettingsPanelProps) {
   const [apps, setApps] = createSignal<MediaApp[]>([])
   const [query, setQuery] = createSignal('')
   const [appsLoaded, setAppsLoaded] = createSignal(false)
+  const [appsLoading, setAppsLoading] = createSignal(false)
 
-  onMount(async () => {
+  onMount(() => {
     if (!props.isAndroid) return
-    try {
-      const list = await invoke<string[]>('list_media_apps')
-      setApps(
-        list.map((s) => {
-          const [label, pkg] = s.split('\t')
-          return { label, pkg }
-        })
-      )
-    } catch (e) {
-      console.error('failed to load media apps', e)
-    } finally {
-      setAppsLoaded(true)
-    }
+    // 遅延ロード: JNIのアプリ列挙は重いため、初回描画の後に非同期で取得する
+    const timer = setTimeout(async () => {
+      setAppsLoading(true)
+      try {
+        setApps(await fetchApps())
+      } catch (e) {
+        console.error('failed to load media apps', e)
+      } finally {
+        setAppsLoading(false)
+        setAppsLoaded(true)
+      }
+    }, 100)
+    onCleanup(() => clearTimeout(timer))
   })
 
   const filtered = createMemo(() => {
@@ -86,70 +106,78 @@ export function SettingsPanel(props: SettingsPanelProps) {
             value={query()}
             onInput={(e) => setQuery(e.currentTarget.value)}
           />
-          <Show
-            when={appsLoaded() && filtered().length === 0}
-            fallback={
-              <ul class="whitelist-list">
-                <For each={filtered()}>
-                  {(app) => (
-                    <li>
-                      <label class="whitelist-item">
-                        <input
-                          type="checkbox"
-                          checked={props.traySettings.media_whitelist.includes(app.pkg)}
-                          onChange={(e) => toggle(app.pkg, e.currentTarget.checked)}
-                        />
+          <Show when={appsLoading()}>
+            <div class="whitelist-loading">
+              <LoaderCircle class="spinner" size={22} />
+              <span>{t('media.loading')}</span>
+            </div>
+          </Show>
+          <Show when={appsLoaded() && !appsLoading() && filtered().length === 0}>
+            <p class="whitelist-no-matches">{t("settings.media_no_matches")}</p>
+          </Show>
+          <Show when={appsLoaded() && !appsLoading() && filtered().length > 0}>
+            <ul class="whitelist-list">
+              <For each={filtered()}>
+                {(app) => (
+                  <li>
+                    <label class="whitelist-item">
+                      <input
+                        type="checkbox"
+                        checked={props.traySettings.media_whitelist.includes(app.pkg)}
+                        onChange={(e) => toggle(app.pkg, e.currentTarget.checked)}
+                      />
+                      <span class="whitelist-text">
                         <span class="whitelist-label">{app.label}</span>
                         <span class="whitelist-pkg">{app.pkg}</span>
-                      </label>
-                    </li>
-                  )}
-                </For>
-              </ul>
-            }
-          >
-            <p class="whitelist-no-matches">{t("settings.media_no_matches")}</p>
+                      </span>
+                    </label>
+                  </li>
+                )}
+              </For>
+            </ul>
           </Show>
         </div>
       </Show>
 
-      <div class="settings-card">
-        <h3 class="card-heading">{t("settings.tray_title")}</h3>
+      <Show when={!props.isAndroid}>
+        <div class="settings-card">
+          <h3 class="card-heading">{t("settings.tray_title")}</h3>
 
-        <SettingSwitch
-          checked={props.traySettings.auto_start}
-          onChange={(v) => props.onUpdateSetting('auto_start', v)}
-          label={t("settings.auto_start")}
-          description={t("settings.auto_start_description")}
-        />
+          <SettingSwitch
+            checked={props.traySettings.auto_start}
+            onChange={(v) => props.onUpdateSetting('auto_start', v)}
+            label={t("settings.auto_start")}
+            description={t("settings.auto_start_description")}
+          />
 
-        <div class="setting-sep" />
+          <div class="setting-sep" />
 
-        <SettingSwitch
-          checked={props.traySettings.start_in_tray}
-          onChange={(v) => props.onUpdateSetting('start_in_tray', v)}
-          label={t("settings.start_in_tray")}
-          description={t("settings.start_in_tray_description")}
-        />
+          <SettingSwitch
+            checked={props.traySettings.start_in_tray}
+            onChange={(v) => props.onUpdateSetting('start_in_tray', v)}
+            label={t("settings.start_in_tray")}
+            description={t("settings.start_in_tray_description")}
+          />
 
-        <div class="setting-sep" />
+          <div class="setting-sep" />
 
-        <SettingSwitch
-          checked={props.traySettings.minimize_to_tray}
-          onChange={(v) => props.onUpdateSetting('minimize_to_tray', v)}
-          label={t("settings.minimize_to_tray")}
-          description={t("settings.minimize_to_tray_description")}
-        />
+          <SettingSwitch
+            checked={props.traySettings.minimize_to_tray}
+            onChange={(v) => props.onUpdateSetting('minimize_to_tray', v)}
+            label={t("settings.minimize_to_tray")}
+            description={t("settings.minimize_to_tray_description")}
+          />
 
-        <div class="setting-sep" />
+          <div class="setting-sep" />
 
-        <SettingSwitch
-          checked={props.traySettings.close_to_tray}
-          onChange={(v) => props.onUpdateSetting('close_to_tray', v)}
-          label={t("settings.close_to_tray")}
-          description={t("settings.close_to_tray_description")}
-        />
-      </div>
+          <SettingSwitch
+            checked={props.traySettings.close_to_tray}
+            onChange={(v) => props.onUpdateSetting('close_to_tray', v)}
+            label={t("settings.close_to_tray")}
+            description={t("settings.close_to_tray_description")}
+          />
+        </div>
+      </Show>
     </div>
   )
 }
