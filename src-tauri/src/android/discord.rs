@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+
 use std::ffi::{c_char, c_void, CString};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -28,6 +30,7 @@ struct Discord_String {
 }
 
 struct Discord_Client {
+    #[allow(dead_code)]
     opaque: *mut c_void,
 }
 
@@ -44,6 +47,7 @@ struct Discord_ActivityAssets {
 }
 
 struct Discord_ClientResult {
+    #[allow(dead_code)]
     opaque: *mut c_void,
 }
 

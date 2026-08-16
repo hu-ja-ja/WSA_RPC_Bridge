@@ -9,6 +9,7 @@ mod commands;
 mod config;
 #[cfg(not(target_os = "android"))]
 mod discord;
+#[cfg(not(target_os = "android"))]
 mod i18n;
 mod models;
 
