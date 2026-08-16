@@ -956,6 +956,7 @@
 
 #app.shell.android {
   flex-direction: column;
+  touch-action: pan-y;
 }
 
 .top-bar {

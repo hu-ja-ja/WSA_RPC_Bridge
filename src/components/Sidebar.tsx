@@ -23,10 +23,14 @@ interface SidebarProps {
   collapsed: boolean
   android?: boolean
   open?: boolean
+  dragOffset?: number | null
   onSelect: (key: NavKey) => void
   onToggleCollapsed: () => void
   onClose?: () => void
 }
+
+// ponytail: matches .shell.android .sidebar width 280px in App.css
+const DRAWER_WIDTH = 280
 
 const mainItems: NavItem[] = [
   { key: 'dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
@@ -42,9 +46,28 @@ const footerItems: NavItem[] = [
 export function Sidebar(props: SidebarProps) {
   const items = () => (props.android ? mainItems.filter((i) => i.key !== 'updates') : mainItems)
 
+  const dragStyle = () => {
+    const dx = props.dragOffset
+    if (dx === undefined || dx === null) return undefined
+    const base = props.open ? 0 : -DRAWER_WIDTH
+    const pos = Math.max(-DRAWER_WIDTH, Math.min(0, base + dx))
+    return { transform: `translateX(${pos}px)`, transition: 'none' }
+  }
+
+  const backdropVisible = () =>
+    props.android &&
+    (props.open || (props.dragOffset !== undefined && props.dragOffset !== null && props.dragOffset > 0))
+
+  const backdropStyle = () => {
+    const dx = props.dragOffset
+    if (dx === undefined || dx === null) return undefined
+    const p = props.open ? (DRAWER_WIDTH + dx) / DRAWER_WIDTH : dx / DRAWER_WIDTH
+    return { opacity: String(0.4 * Math.max(0, Math.min(1, p))) }
+  }
+
   return (
     <>
-      <nav class={`sidebar ${props.collapsed ? 'collapsed' : ''} ${props.android ? 'android' : ''} ${props.open ? 'open' : ''}`} aria-label="Main navigation">
+      <nav class={`sidebar ${props.collapsed ? 'collapsed' : ''} ${props.android ? 'android' : ''} ${props.open ? 'open' : ''}`} style={dragStyle()} aria-label="Main navigation">
         <div class="sidebar-header">
           {props.android ? (
             <button class="nav-toggle" onClick={props.onClose} title={t('nav.close')} aria-label={t('nav.close')}>
@@ -100,8 +123,8 @@ export function Sidebar(props: SidebarProps) {
           </ul>
         </div>
       </nav>
-      <Show when={props.android && props.open}>
-        <div class="drawer-backdrop" onClick={props.onClose} />
+      <Show when={backdropVisible()}>
+        <div class="drawer-backdrop" style={backdropStyle()} onClick={props.onClose} />
       </Show>
     </>
   )

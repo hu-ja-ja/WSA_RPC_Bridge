@@ -71,6 +71,8 @@ function App() {
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
   let lastPresenceKey: string | null = null
+  let dragStart: { x: number; y: number } | null = null
+  const [dragOffset, setDragOffset] = createSignal<number | null>(null)
 
   const displayPosition = createMemo(() => {
     const m = media()
@@ -140,6 +142,41 @@ function App() {
       }
     } catch (e) {
       console.error('rpc toggle failed', e)
+    }
+  }
+
+  function onTouchStart(e: TouchEvent) {
+    if (!IS_ANDROID) return
+    const t = e.changedTouches[0]
+    if (drawerOpen() || t.clientX < window.innerWidth / 2) {
+      dragStart = { x: t.clientX, y: t.clientY }
+    }
+  }
+
+  function onTouchMove(e: TouchEvent) {
+    if (!dragStart) return
+    const t = e.touches[0]
+    const dx = t.clientX - dragStart.x
+    const dy = t.clientY - dragStart.y
+    if (dragOffset() === null && Math.abs(dx) <= 20) return
+    if (Math.abs(dx) > Math.abs(dy)) {
+      e.preventDefault()
+      setDragOffset(dx)
+    }
+  }
+
+  function onTouchEnd() {
+    if (!dragStart) return
+    const dx = dragOffset() ?? 0
+    const startX = dragStart.x
+    dragStart = null
+    setDragOffset(null)
+    if (dx === 0) return
+    const THRESHOLD = 100
+    if (drawerOpen()) {
+      if (dx < -THRESHOLD) setDrawerOpen(false)
+    } else if (dx > THRESHOLD && startX < window.innerWidth / 2) {
+      setDrawerOpen(true)
     }
   }
 
@@ -232,7 +269,7 @@ function App() {
   })
 
   return (
-    <div id="app" class={`shell ${IS_ANDROID ? 'android' : ''}`}>
+    <div id="app" class={`shell ${IS_ANDROID ? 'android' : ''}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       <Show when={IS_ANDROID}>
         <header class="top-bar">
           <button
@@ -261,6 +298,7 @@ function App() {
         collapsed={navCollapsed()}
         android={IS_ANDROID}
         open={drawerOpen()}
+        dragOffset={dragOffset()}
         onSelect={(key) => {
           setActiveTab(key)
           setDrawerOpen(false)
