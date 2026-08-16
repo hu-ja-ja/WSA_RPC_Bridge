@@ -261,7 +261,9 @@ function App() {
             discordConnected={discordConnected()}
             rpcEnabled={rpcEnabled()}
             android={IS_ANDROID}
+            whitelistEmpty={traySettings().media_whitelist.length === 0}
             onRetry={fetchMediaInfo}
+            onOpenSettings={() => setActiveTab('settings')}
           />
         </Show>
 

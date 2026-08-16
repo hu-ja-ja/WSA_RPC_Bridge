@@ -24,7 +24,9 @@ interface DashboardProps {
   discordConnected: boolean
   rpcEnabled: boolean
   android?: boolean
+  whitelistEmpty?: boolean
   onRetry: () => void
+  onOpenSettings?: () => void
 }
 
 function StatusCard(props: {
@@ -80,7 +82,10 @@ export function Dashboard(props: DashboardProps) {
           loading={props.loading}
           error={props.error}
           displayPosition={props.displayPosition}
+          android={props.android}
+          whitelistEmpty={props.whitelistEmpty}
           onRetry={props.onRetry}
+          onOpenSettings={props.onOpenSettings}
         />
       </section>
     </div>

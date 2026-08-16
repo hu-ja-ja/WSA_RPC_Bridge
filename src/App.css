@@ -328,6 +328,17 @@
   padding: 48px 0;
 }
 
+.empty-state p {
+  margin: 0;
+}
+
+.empty-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 420px;
+  text-align: center;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
