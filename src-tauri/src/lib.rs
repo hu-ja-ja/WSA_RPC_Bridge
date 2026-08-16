@@ -29,6 +29,10 @@ use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
 
+/// 無再生状態がこの時間続いたらプレゼンスをクリアして切断する。
+#[cfg(target_os = "android")]
+const IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3600);
+
 use crate::artwork::ArtworkRegistry;
 
 #[cfg(not(target_os = "android"))]
@@ -160,6 +164,7 @@ pub fn run() {
         let app_handle = app.handle().clone();
         std::thread::spawn(move || {
             let mut last_title = String::new();
+            let mut paused_since: Option<std::time::Instant> = None;
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(10));
                 let state = app_handle.state::<AppState>();
@@ -167,12 +172,27 @@ pub fn run() {
                     .discord_connected
                     .load(std::sync::atomic::Ordering::Relaxed)
                 {
+                    paused_since = None;
                     continue;
                 }
                 let info = crate::android::media_state()
                     .lock()
                     .expect("media mutex poisoned")
                     .clone();
+                if info.is_playing {
+                    paused_since = None;
+                } else {
+                    let since = paused_since.get_or_insert_with(std::time::Instant::now);
+                    if since.elapsed() >= IDLE_TIMEOUT {
+                        log::info!("android: no playback for 1h, clearing RPC and disconnecting");
+                        if let Err(e) = crate::android::discord_idle_disconnect() {
+                            log::warn!("android: idle disconnect failed: {e}");
+                        }
+                        state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
+                        last_title = String::new();
+                        continue;
+                    }
+                }
                 if info.title.is_empty() || info.title == last_title {
                     continue;
                 }

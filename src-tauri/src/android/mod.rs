@@ -10,6 +10,14 @@ const APP_ID: u64 = 1530562506513449120;
 
 static MEDIA_STATE: OnceLock<Mutex<MediaInfo>> = OnceLock::new();
 
+/// 無再生が1時間続いて切断した後、フロントエンドの5秒ポーリングによる
+/// 誤再接続を抑止するフラグ。ユーザーがRPCをOFF/ONするか再起動で解除される。
+static RPC_IDLE: AtomicBool = AtomicBool::new(false);
+
+pub fn rpc_idle() -> bool {
+    RPC_IDLE.load(Ordering::SeqCst)
+}
+
 // ---- cdiscord.h FFI 宣言 (Discord Social SDK 1.10) ----
 
 #[repr(C)]
@@ -154,6 +162,9 @@ fn free_discord_string(s: &mut Discord_String) {
 // Discord アプリの RPC サービスへ接続される (Connect() 不要)
 
 pub fn discord_connect() -> Result<(), String> {
+    if rpc_idle() {
+        return Ok(());
+    }
     let sdk = load_sdk()?;
     let mut guard = client()?;
     if guard.is_some() {
@@ -176,6 +187,9 @@ pub fn discord_connect() -> Result<(), String> {
 }
 
 pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
+    if rpc_idle() {
+        return Ok(());
+    }
     let sdk = load_sdk()?;
     let guard = client()?;
     let Some(c) = guard.as_ref() else {
@@ -266,6 +280,17 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
 }
 
 pub fn discord_disconnect() -> Result<(), String> {
+    RPC_IDLE.store(false, Ordering::SeqCst);
+    do_disconnect()
+}
+
+/// 無再生アイドルによる自動切断。`RPC_IDLE`を維持して再接続を抑止する。
+pub fn discord_idle_disconnect() -> Result<(), String> {
+    RPC_IDLE.store(true, Ordering::SeqCst);
+    do_disconnect()
+}
+
+fn do_disconnect() -> Result<(), String> {
     let sdk = load_sdk()?;
     stop_callbacks();
     let mut guard = client()?;

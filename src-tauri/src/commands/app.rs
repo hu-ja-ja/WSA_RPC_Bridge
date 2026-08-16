@@ -100,6 +100,9 @@ pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
+    if crate::android::rpc_idle() {
+        return Ok(());
+    }
     log::info!("connect_discord: connecting Discord RPC (android)");
     crate::android::discord_connect()?;
     state.discord_connected.store(true, std::sync::atomic::Ordering::Relaxed);
