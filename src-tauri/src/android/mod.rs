@@ -473,16 +473,18 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
         }
         let _ = app.emit("media-updated", &info);
 
-        if info.title.is_empty()
-            || !state
-                .discord_connected
-                .load(Ordering::Relaxed)
-        {
-            log::debug!(
-                "android: presence update skipped (title_empty={}, connected={})",
-                info.title.is_empty(),
-                state.discord_connected.load(Ordering::Relaxed)
-            );
+        if info.title.is_empty() {
+            // ホワイトリスト対象のメディアセッションが消えた → RPCを切断する
+            if state.discord_connected.swap(false, Ordering::Relaxed) {
+                if let Err(e) = discord_disconnect() {
+                    log::warn!("android: session-lost disconnect failed: {e}");
+                }
+                let _ = app.emit("discord-status-changed", false);
+            }
+            return;
+        }
+        if !state.discord_connected.load(Ordering::Relaxed) {
+            log::debug!("android: presence update skipped (not connected)");
             return;
         }
         let key = format!(

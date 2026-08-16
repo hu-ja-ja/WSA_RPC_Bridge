@@ -180,12 +180,16 @@ function App() {
     })
 
     if (IS_ANDROID) {
-      const unlistenMedia = await listen<MediaInfo>(EVENT_MEDIA_UPDATED, (event) => {
+      const unlistenMedia = await listen<MediaInfo>(EVENT_MEDIA_UPDATED, async (event) => {
         const result = event.payload
         setMedia(result)
         setError(null)
         if (result.position !== null) {
           setLastFetch({ pos: result.position, time: Date.now() })
+        }
+        if (result.title && rpcEnabled()) {
+          await invoke('connect_discord')
+          await invoke('update_discord_presence', { info: result })
         }
       })
       onCleanup(unlistenMedia)
