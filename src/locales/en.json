@@ -10,6 +10,7 @@
   "common.repository": "GitHub Repository",
   "common.changelog": "View Changelog",
   "common.privacy_policy": "Privacy Policy",
+  "common.terms_of_service": "Terms of Service",
   "dashboard.now_playing": "Now Playing",
   "media.none": "No media is currently playing",
   "media.retry": "Retry",

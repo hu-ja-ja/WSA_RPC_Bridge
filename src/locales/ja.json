@@ -10,6 +10,7 @@
   "common.repository": "GitHub リポジトリ",
   "common.changelog": "更新履歴",
   "common.privacy_policy": "プライバシーポリシー",
+  "common.terms_of_service": "利用規約",
   "dashboard.now_playing": "再生中",
   "media.none": "再生中のメディアはありません",
   "media.retry": "再試行",

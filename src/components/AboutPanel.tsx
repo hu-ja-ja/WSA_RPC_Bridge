@@ -2,7 +2,7 @@ import { createResource } from 'solid-js'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { getVersion } from '@tauri-apps/api/app'
 import { IconBrandGithub } from '@tabler/icons-solidjs'
-import { BadgeInfo, ScrollText } from 'lucide-solid'
+import { BadgeInfo, ScrollText, Handshake } from 'lucide-solid'
 import { t, locale } from '../i18n'
 
 const APP_NAME = 'WSA RPC Bridge'
@@ -13,6 +13,11 @@ const privacyPolicyUrl =
   locale === 'ja'
     ? 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY.md'
     : 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY_en.md'
+
+const termsOfServiceUrl =
+  locale === 'ja'
+    ? 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/TERMS_OF_SERVICE.md'
+    : 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/TERMS_OF_SERVICE_en.md'
 
 const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
 const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'
@@ -65,6 +70,17 @@ export function AboutPanel() {
           >
             <BadgeInfo size={14} />
             {t('common.privacy_policy')}
+          </a>
+          <a
+            class="link-button"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              openUrl(termsOfServiceUrl)
+            }}
+          >
+            <Handshake size={14} />
+            {t('common.terms_of_service')}
           </a>
         </div>
       </div>
