@@ -1030,6 +1030,18 @@
   min-height: 48px;
 }
 
+.shell.android .whitelist-list::-webkit-scrollbar {
+  width: 8px;
+}
+.shell.android .whitelist-list::-webkit-scrollbar-track {
+  background: var(--card-head-bg);
+  border-radius: 4px;
+}
+.shell.android .whitelist-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
 .shell.android .whitelist-search,
 .shell.android .cache-path-input {
   min-height: 44px;
