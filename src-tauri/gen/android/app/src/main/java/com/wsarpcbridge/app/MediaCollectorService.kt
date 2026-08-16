@@ -55,9 +55,12 @@ class MediaCollectorService : NotificationListenerService() {
     private fun pushNow() {
         val sessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         val controllers = sessionManager.getActiveSessions(ComponentName(this, MediaCollectorService::class.java))
+        // ホワイトリストに含まれるアプリのセッションのみ検出する。空なら何も検出しない。
+        val whitelist = MediaWhitelistStore.load().toSet()
         val controller = controllers.firstOrNull { c ->
             runCatching {
-                !c.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrEmpty()
+                c.packageName in whitelist &&
+                    !c.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrEmpty()
             }.getOrDefault(false)
         }
 

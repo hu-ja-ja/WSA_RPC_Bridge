@@ -354,6 +354,69 @@ pub fn media_state() -> &'static Mutex<MediaInfo> {
     MEDIA_STATE.get_or_init(|| Mutex::new(MediaInfo::default()))
 }
 
+// ---- ホワイトリスト (Kotlin の MediaWhitelistStore へ JNI で橋渡し) ----
+
+static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
+
+#[no_mangle]
+pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
+    env: jni::JNIEnv,
+    _this: jni::objects::JObject,
+) {
+    if let Ok(vm) = env.get_java_vm() {
+        let _ = JVM.set(vm);
+    }
+}
+
+fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
+    let vm = JVM.get().ok_or("JVM not initialized (MediaBridge.init not called)")?;
+    let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
+    f(&mut env).map_err(|e| e.to_string())
+}
+
+fn jstring_array_to_vec(
+    env: &mut jni::JNIEnv,
+    arr: jni::objects::JObject,
+) -> jni::errors::Result<Vec<String>> {
+    let arr = jni::objects::JObjectArray::from(arr);
+    let len = env.get_array_length(&arr)?;
+    let mut out = Vec::with_capacity(len as usize);
+    for i in 0..len {
+        let el = env.get_object_array_element(&arr, i)?;
+        out.push(env.get_string(&jni::objects::JString::from(el))?.into());
+    }
+    Ok(out)
+}
+
+fn call_string_array(name: &str) -> Result<Vec<String>, String> {
+    with_jni(|env| {
+        let class = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore")?;
+        let result = env.call_static_method(class, name, "()[Ljava/lang/String;", &[])?;
+        jstring_array_to_vec(env, result.l()?)
+    })
+}
+
+pub fn list_media_apps() -> Result<Vec<String>, String> {
+    call_string_array("listApps")
+}
+
+pub fn load_whitelist() -> Result<Vec<String>, String> {
+    call_string_array("load")
+}
+
+pub fn save_whitelist(packages: &[String]) -> Result<(), String> {
+    with_jni(|env| {
+        let class = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore")?;
+        let arr = env.new_object_array(packages.len() as i32, "java/lang/String", jni::objects::JObject::null())?;
+        for (i, pkg) in packages.iter().enumerate() {
+            let js = env.new_string(pkg.as_str())?;
+            env.set_object_array_element(&arr, i as i32, js)?;
+        }
+        let _ = env.call_static_method(class, "save", "([Ljava/lang/String;)V", &[jni::objects::JValue::from(&arr)])?;
+        Ok(())
+    })
+}
+
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     mut env: jni::JNIEnv,

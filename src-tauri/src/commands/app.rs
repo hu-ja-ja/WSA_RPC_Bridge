@@ -162,8 +162,29 @@ pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
 }
 
 #[tauri::command]
+#[cfg(not(target_os = "android"))]
+pub fn list_media_apps() -> Result<Vec<String>, String> {
+    Ok(vec![])
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn list_media_apps() -> Result<Vec<String>, String> {
+    crate::android::list_media_apps()
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
     Ok(state.config.get())
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
+    let mut config = state.config.get();
+    config.media_whitelist = crate::android::load_whitelist().unwrap_or_default();
+    Ok(config)
 }
 
 #[tauri::command]
@@ -187,6 +208,9 @@ pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppCo
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn update_settings(_app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
+    if let Err(e) = crate::android::save_whitelist(&config.media_whitelist) {
+        log::warn!("update_settings: failed to save media whitelist: {e}");
+    }
     state.config.set(config.clone());
     log::info!("update_settings: settings updated");
     Ok(())

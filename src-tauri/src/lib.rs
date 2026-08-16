@@ -88,6 +88,7 @@ pub fn run() {
             commands::get_discord_status,
             commands::get_settings,
             commands::update_settings,
+            commands::list_media_apps,
         ]);
 
     #[cfg(not(target_os = "android"))]

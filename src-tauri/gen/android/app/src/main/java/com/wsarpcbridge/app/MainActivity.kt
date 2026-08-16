@@ -15,6 +15,9 @@ class MainActivity : TauriActivity() {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
 
+    MediaWhitelistStore.init(this)
+    MediaBridge.init()
+
     DiscordBridge.init(this)
     MediaInfoService.createChannel(this)
 

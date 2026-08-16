@@ -29,6 +29,7 @@ interface AppSettings {
   start_in_tray: boolean
   minimize_to_tray: boolean
   close_to_tray: boolean
+  media_whitelist: string[]
 }
 
 const POLL_INTERVAL = 5000
@@ -59,6 +60,7 @@ function App() {
     start_in_tray: true,
     minimize_to_tray: true,
     close_to_tray: true,
+    media_whitelist: [],
   })
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
@@ -144,7 +146,7 @@ function App() {
     }
   }
 
-  async function updateSetting(key: keyof AppSettings, value: boolean | string | null) {
+  async function updateSetting(key: keyof AppSettings, value: boolean | string | string[] | null) {
     const next = { ...traySettings(), [key]: value }
     setTraySettings(next)
     try {
@@ -240,6 +242,7 @@ function App() {
             onRpcChange={handleRpcChange}
             traySettings={traySettings()}
             onUpdateSetting={updateSetting}
+            isAndroid={IS_ANDROID}
           />
         </Show>
 
