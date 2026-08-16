@@ -22,7 +22,9 @@ class MediaCollectorService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        MediaInfoService.show(this, NowPlaying("", "", "", false))
+        if (MediaInfoService.isEnabled()) {
+            MediaInfoService.show(this, NowPlaying("", "", "", false))
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -84,7 +86,9 @@ class MediaCollectorService : NotificationListenerService() {
 
         if (controller == null) {
             MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
-            MediaInfoService.show(this, NowPlaying("", "", "", false))
+            if (MediaInfoService.isEnabled()) {
+                MediaInfoService.show(this, NowPlaying("", "", "", false))
+            }
             return
         }
 
@@ -100,7 +104,9 @@ class MediaCollectorService : NotificationListenerService() {
             durationMs = durationMs,
             isPlaying = isPlaying,
         )
-        MediaInfoService.show(this, now)
+        if (MediaInfoService.isEnabled()) {
+            MediaInfoService.show(this, now)
+        }
     }
 
     companion object {

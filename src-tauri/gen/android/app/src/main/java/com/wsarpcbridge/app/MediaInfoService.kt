@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 
@@ -21,6 +22,7 @@ class MediaInfoService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.i(TAG, "foreground service started")
         createChannel(this)
         val notification = buildNotification(this, null)
         ServiceCompat.startForeground(
@@ -40,8 +42,45 @@ class MediaInfoService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        private const val TAG = "MediaInfoService"
         const val NOTIFICATION_ID = 1
         const val CHANNEL_ID = "now_playing"
+        private const val PREFS_NAME = "media_notification"
+        private const val KEY_ENABLED = "enabled"
+
+        @Volatile
+        private var appContext: Context? = null
+
+        @JvmStatic
+        fun init(context: Context) {
+            appContext = context.applicationContext
+        }
+
+        @JvmStatic
+        fun isEnabled(): Boolean {
+            val ctx = appContext ?: return false
+            return ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_ENABLED, false)
+        }
+
+        /** 設定変更時に Rust 側(JNI)から呼ばれる。on なら通知を開始し、権限も確認する。 */
+        @JvmStatic
+        fun setEnabled(enabled: Boolean) {
+            val ctx = appContext ?: return
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_ENABLED, enabled)
+                .apply()
+            if (enabled) {
+                Log.i(TAG, "setEnabled(true)")
+                start(ctx)
+                // HyperOSでは権限ダイアログが表示されないため、システム設定画面で許可してもらう
+                MainActivity.current?.openNotificationSettingsIfNeeded()
+            } else {
+                Log.i(TAG, "setEnabled(false)")
+                stop(ctx)
+            }
+        }
 
         fun start(context: Context) {
             val intent = Intent(context, MediaInfoService::class.java)
@@ -50,6 +89,10 @@ class MediaInfoService : Service() {
             } else {
                 context.startService(intent)
             }
+        }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, MediaInfoService::class.java))
         }
 
         fun createChannel(context: Context) {

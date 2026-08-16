@@ -90,6 +90,8 @@ pub fn run() {
             commands::get_settings,
             commands::update_settings,
             commands::list_media_apps,
+            commands::get_notification_access_status,
+            commands::open_notification_access_settings,
         ]);
 
     #[cfg(not(target_os = "android"))]

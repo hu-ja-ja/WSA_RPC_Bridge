@@ -15,6 +15,10 @@ pub fn set_app_handle(app: AppHandle) {
     let _ = APP_HANDLE.set(app);
 }
 
+pub fn app_handle() -> Option<AppHandle> {
+    APP_HANDLE.get().cloned()
+}
+
 pub fn media_state() -> &'static Mutex<MediaInfo> {
     MEDIA_STATE.get_or_init(|| Mutex::new(MediaInfo::default()))
 }
@@ -25,6 +29,8 @@ static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
 static STORE_CLASS: OnceLock<jni::objects::GlobalRef> = OnceLock::new();
 
+static INFO_SERVICE_CLASS: OnceLock<jni::objects::GlobalRef> = OnceLock::new();
+
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
     mut env: jni::JNIEnv,
@@ -34,11 +40,15 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
         let _ = JVM.set(vm);
     }
     // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
-    // spawn_blocking などの別スレッドからは find_class できない。
     // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
     if let Ok(class) = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore") {
         if let Ok(gref) = env.new_global_ref(class) {
             let _ = STORE_CLASS.set(gref);
+        }
+    }
+    if let Ok(class) = env.find_class("com/wsarpcbridge/app/MediaInfoService") {
+        if let Ok(gref) = env.new_global_ref(class) {
+            let _ = INFO_SERVICE_CLASS.set(gref);
         }
     }
 }
@@ -75,6 +85,28 @@ fn store_class() -> Result<&'static jni::objects::GlobalRef, String> {
     STORE_CLASS
         .get()
         .ok_or_else(|| "MediaWhitelistStore class not cached (MediaBridge.init not called)".to_string())
+}
+
+fn info_service_class() -> Result<&'static jni::objects::GlobalRef, String> {
+    INFO_SERVICE_CLASS
+        .get()
+        .ok_or_else(|| "MediaInfoService class not cached (MediaBridge.init not called)".to_string())
+}
+
+pub fn load_media_notification_enabled() -> Result<bool, String> {
+    let class = info_service_class()?;
+    with_jni(|env| {
+        let result = env.call_static_method(class, "isEnabled", "()Z", &[])?;
+        result.z()
+    })
+}
+
+pub fn set_media_notification_enabled(enabled: bool) -> Result<(), String> {
+    let class = info_service_class()?;
+    with_jni(|env| {
+        env.call_static_method(class, "setEnabled", "(Z)V", &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)])?;
+        Ok(())
+    })
 }
 
 pub fn list_media_apps() -> Result<Vec<String>, String> {

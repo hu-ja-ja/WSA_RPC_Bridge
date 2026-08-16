@@ -10,6 +10,7 @@ interface AppSettings {
   minimize_to_tray: boolean
   close_to_tray: boolean
   media_whitelist: string[]
+  media_notification: boolean
 }
 
 interface MediaApp {
@@ -93,6 +94,16 @@ export function SettingsPanel(props: SettingsPanelProps) {
       </div>
 
       <Show when={props.isAndroid}>
+        <div class="settings-card">
+          <h3 class="card-heading">{t("settings.media_notification_title")}</h3>
+          <SettingSwitch
+            checked={props.traySettings.media_notification}
+            onChange={(v) => props.onUpdateSetting('media_notification', v)}
+            label={t("settings.media_notification_title")}
+            description={t("settings.media_notification_description")}
+          />
+        </div>
+
         <div class="settings-card">
           <h3 class="card-heading">{t("settings.media_whitelist_title")}</h3>
           <p class="switch-desc">{t("settings.media_whitelist_description")}</p>

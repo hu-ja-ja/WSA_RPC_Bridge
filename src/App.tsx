@@ -31,6 +31,7 @@ interface AppSettings {
   minimize_to_tray: boolean
   close_to_tray: boolean
   media_whitelist: string[]
+  media_notification: boolean
 }
 
 const POLL_INTERVAL = 5000
@@ -39,6 +40,7 @@ const STORAGE_RPC_KEY = 'rpcEnabled'
 const EVENT_SHOW_SETTINGS = 'show-settings'
 const EVENT_MEDIA_UPDATED = 'media-updated'
 const EVENT_DISCORD_STATUS = 'discord-status-changed'
+const EVENT_NOTIFICATION_ACCESS = 'notification-access-changed'
 // AndroidではRust側(JNI)がイベントでプッシュするためポーリングしない。デスクトップはADBの都合でポーリング。
 const IS_ANDROID = typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
 
@@ -53,6 +55,7 @@ function App() {
   const [activeTab, setActiveTab] = createSignal<NavKey>('dashboard')
   const [navCollapsed, setNavCollapsed] = createSignal(false)
   const [drawerOpen, setDrawerOpen] = createSignal(false)
+  const [notificationAccess, setNotificationAccess] = createSignal(true)
 
   const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_RPC_KEY) : null
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
@@ -63,6 +66,7 @@ function App() {
     minimize_to_tray: true,
     close_to_tray: true,
     media_whitelist: [],
+    media_notification: false,
   })
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
@@ -184,6 +188,12 @@ function App() {
     }
 
     if (IS_ANDROID) {
+      const unlistenAccess = await listen<boolean>(EVENT_NOTIFICATION_ACCESS, (event) => {
+        setNotificationAccess(event.payload)
+      })
+      onCleanup(unlistenAccess)
+      invoke<boolean>('get_notification_access_status').then(setNotificationAccess).catch(() => {})
+
       const unlistenMedia = await listen<MediaInfo>(EVENT_MEDIA_UPDATED, async (event) => {
         const result = event.payload
         setMedia(result)
@@ -235,6 +245,15 @@ function App() {
           </button>
           <span class="sidebar-title">WSA RPC Bridge</span>
         </header>
+      </Show>
+
+      <Show when={IS_ANDROID && activeTab() === 'dashboard' && !notificationAccess()}>
+        <div class="perm-banner">
+          <span class="perm-banner-text">{t('permissions.notification_access_required')}</span>
+          <button class="btn" onClick={() => invoke('open_notification_access_settings')}>
+            {t('permissions.open_settings')}
+          </button>
+        </div>
       </Show>
 
       <Sidebar

@@ -1008,6 +1008,28 @@
   z-index: 20;
 }
 
+.perm-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  background: var(--pane-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.perm-banner-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.perm-banner .btn {
+  flex-shrink: 0;
+}
+
 .shell.android .content {
   padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
 }
