@@ -18,11 +18,13 @@ class MediaCollectorService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        isConnected = true
         startPolling()
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        isConnected = false
         if (MediaInfoService.isEnabled()) {
             MediaInfoService.show(this, NowPlaying("", "", "", false))
         }
@@ -37,6 +39,7 @@ class MediaCollectorService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        isConnected = false
         timer?.cancel()
         super.onDestroy()
     }
@@ -112,6 +115,11 @@ class MediaCollectorService : NotificationListenerService() {
     }
 
     companion object {
+        /** システムにバインドされているか。false なら onResume で強制リバインド対象。 */
+        @Volatile
+        var isConnected: Boolean = false
+            private set
+
         // 保険のポーリング。通常は onNotificationPosted/Removed のイベント駆動で更新される。
         private const val POLL_INTERVAL_MS = 30_000L
 

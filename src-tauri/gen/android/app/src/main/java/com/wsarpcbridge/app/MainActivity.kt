@@ -1,6 +1,7 @@
 package com.wsarpcbridge.app
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -55,6 +56,12 @@ class MainActivity : TauriActivity() {
       MediaInfoService.stop(this)
       MediaInfoService.start(this)
     }
+    // 権限はONなのにNLSが未接続のままの状態(APKアップデート等で発生)を直す。
+    if (MediaCollectorService.isNotificationAccessGranted(this) &&
+      !MediaCollectorService.isConnected
+    ) {
+      forceRebindNotificationListener()
+    }
   }
 
   override fun onPause() {
@@ -72,6 +79,14 @@ class MainActivity : TauriActivity() {
           .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       )
     }
+  }
+
+  /** 権限はONのまま、コンポーネントを一度無効化→再有効化してNLSを再バインドさせる。 */
+  private fun forceRebindNotificationListener() {
+    val comp = ComponentName(this, MediaCollectorService::class.java)
+    val pm = packageManager
+    pm.setComponentEnabledSetting(comp, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+    pm.setComponentEnabledSetting(comp, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
   }
 
   private fun hasNotificationPermission(): Boolean {
