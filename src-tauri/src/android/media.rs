@@ -56,7 +56,15 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
 fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
     let vm = JVM.get().ok_or("JVM not initialized (MediaBridge.init not called)")?;
     let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
-    f(&mut env).map_err(|e| e.to_string())
+    match f(&mut env) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            // 失敗時は pending exception を残さない。残すと次の JNI 呼び出しで
+            // "unexpected pending exception" により ART がプロセスごと abort する。
+            let _ = env.exception_clear();
+            Err(e.to_string())
+        }
+    }
 }
 
 fn jstring_array_to_vec(
