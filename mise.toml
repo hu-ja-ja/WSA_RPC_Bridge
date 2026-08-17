@@ -1,0 +1,52 @@
+[tools]
+node = "22"
+pnpm = "11.15.1"
+java = "21"
+rust = { version = "1.97", components = ["rust-analyzer"], targets = ["aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android"] }
+"github:StrawberryPerl/Perl-Dist-Strawberry" = { version = "latest", matching = "portable", bin_path = "perl/bin", os = ["windows"] }
+"aqua:skaji/relocatable-perl" = { version = "latest", os = ["linux", "macos"] }
+
+[tasks.dev]
+description = "Tauri + Vite dev server"
+run = "pnpm tauri dev"
+
+[tasks.build]
+description = "Build release bundle"
+run = "pnpm tauri build"
+
+[tasks.lint]
+description = "Run oxlint"
+run = "pnpm lint"
+
+[tasks.test]
+description = "Run cargo unit tests"
+dir = "src-tauri"
+run = "cargo test"
+
+[tasks.tauri]
+description = "Pass-through to the tauri CLI"
+run = "pnpm tauri"
+
+[tasks.deps]
+description = "Install JS dependencies"
+run = "pnpm install"
+
+[tasks.generate-licenses]
+description = "Regenerate third-party licenses"
+run = "pnpm generate-licenses"
+
+[env]
+NDK_VERSION = "29.0.13846066"
+SDK_ROOT = '{% if os() == "windows" %}{{ env.LOCALAPPDATA }}\Android\Sdk{% elif get_env(name="ANDROID_HOME", default="") != "" %}{{ get_env(name="ANDROID_HOME") }}{% else %}{{ env.HOME }}/Android/Sdk{% endif %}'
+NDK_BIN = '{{ env.SDK_ROOT }}/ndk/{{ env.NDK_VERSION }}/toolchains/llvm/prebuilt/{% if os() == "windows" %}windows-x86_64{% else %}linux-x86_64{% endif %}/bin'
+CLANG_EXT = '{% if os() == "windows" %}.cmd{% endif %}'
+AR_EXT = '{% if os() == "windows" %}.exe{% endif %}'
+
+CC_aarch64_linux_android = "{{ env.NDK_BIN }}/aarch64-linux-android24-clang{{ env.CLANG_EXT }}"
+AR_aarch64_linux_android = "{{ env.NDK_BIN }}/llvm-ar{{ env.AR_EXT }}"
+CC_armv7_linux_androideabi = "{{ env.NDK_BIN }}/armv7a-linux-androideabi24-clang{{ env.CLANG_EXT }}"
+AR_armv7_linux_androideabi = "{{ env.NDK_BIN }}/llvm-ar{{ env.AR_EXT }}"
+CC_i686_linux_android = "{{ env.NDK_BIN }}/i686-linux-android24-clang{{ env.CLANG_EXT }}"
+AR_i686_linux_android = "{{ env.NDK_BIN }}/llvm-ar{{ env.AR_EXT }}"
+CC_x86_64_linux_android = "{{ env.NDK_BIN }}/x86_64-linux-android24-clang{{ env.CLANG_EXT }}"
+AR_x86_64_linux_android = "{{ env.NDK_BIN }}/llvm-ar{{ env.AR_EXT }}"
