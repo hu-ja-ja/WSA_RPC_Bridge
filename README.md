@@ -2,20 +2,27 @@
 
 [English](README_en.md) | [日本語](README.md)
 
-WSA (Windows Subsystem for Android) 上で動作しているアプリケーションのメディア再生情報を ADB 経由で取得し、Discord Rich Presence に表示するデスクトップアプリ。
+WSA (Windows Subsystem for Android) や Android デバイス上で再生されているメディア情報を取得し、Discord Rich Presence に表示するアプリ（Windows デスクトップ / Android 対応）。
 
 ## 注意
 
-WSA側で、開発者モードを有効にしている必要があります。
+- **デスクトップ版**: WSA 側で開発者モードを有効にしている必要があります。
+- **Android 版**: Android 7.0 以上が必要で、通知アクセス権限の許可が必要です。
 
 ![WSA_Config](img/WSA_Config.png)
 
 ## 機能
 
-- WSA 上のアプリの再生情報（曲タイトル、アーティスト、アルバム、再生位置）を自動取得
+- 再生情報（曲タイトル、アーティスト、アルバム、再生位置、アルバムアート）の自動取得
+  - デスクトップ版: WSA 上のアプリを ADB 経由で取得
+  - Android 版: 通知アクセス経由で直接取得
 - Discord Rich Presence に再生状況を表示
+- メディアを検出するアプリの選択（ホワイトリスト）
 - アプリ名の自動解決
-- トレイ常駐（タスクトレイに格納可能）
+- トレイ常駐（起動時 / 最小化時 / 閉じる時の格納を設定可能）
+- 自動起動（Windows）
+- 自動アップデート
+- ライセンス表示タブ
 - マルチ言語対応（日本語 / English）
 
 ## スクリーンショット
@@ -26,8 +33,9 @@ WSA側で、開発者モードを有効にしている必要があります。
 
 ## 技術スタック
 
-- **フロントエンド**: SolidJS + Kobalte + Vite
+- **フロントエンド**: SolidJS + Kobalte + Vite（デスクトップ / Android 共通）
 - **バックエンド**: Rust / Tauri v2
+- **Android ネイティブ**: Kotlin（通知アクセスによるメディア取得 / JNI ブリッジ）
 
 ## 開発環境
 
@@ -97,7 +105,8 @@ tauri CLI が Android SDK を自動検出します。
 
 ## インストール
 
-[Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新のインストーラをダウンロードして実行してください。
+- **デスクトップ版**: [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新のインストーラをダウンロードして実行してください。アプリ内から自動更新もできます。
+- **Android 版**: [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新の APK をダウンロードしてインストールしてください。
 
 ## 謝辞
 
@@ -113,7 +122,7 @@ tauri CLI が Android SDK を自動検出します。
 
 ## プライバシーポリシー
 
-[プライバシーポリシー](PRIVACY_POLICY.md) をご確認ください。
+[プライバシーポリシー](PRIVACY_POLICY.md) と [利用規約](TERMS_OF_SERVICE.md) をご確認ください。
 
 ## ライセンス
 

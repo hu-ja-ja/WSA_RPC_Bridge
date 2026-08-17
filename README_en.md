@@ -2,20 +2,27 @@
 
 [English](README_en.md) | [日本語](README.md)
 
-A desktop app that retrieves media playback information from apps running on WSA (Windows Subsystem for Android) via ADB and displays it on Discord Rich Presence.
+An app (Windows desktop / Android) that retrieves media playback information playing on WSA (Windows Subsystem for Android) or Android devices and displays it on Discord Rich Presence.
 
 ## Notes
 
-Developer mode must be enabled on the WSA side.
+- **Desktop**: Developer mode must be enabled on the WSA side.
+- **Android**: Android 7.0+ is required and notification access permission must be granted.
 
 ![WSA_Config](img/WSA_Config.png)
 
 ## Features
 
-- Auto-fetch playback info (song title, artist, album, playback position) from apps on WSA
+- Auto-fetch playback info (song title, artist, album, playback position, album art)
+  - Desktop: from apps on WSA via ADB
+  - Android: directly via notification access
 - Display playback status on Discord Rich Presence
+- Choose which apps to detect media from (whitelist)
 - Auto-resolve app name
-- System tray resident (can be minimized to tray)
+- System tray resident (configurable for startup / minimize / close)
+- Auto-start (Windows)
+- Auto-update
+- License viewer tab
 - Multi-language support (Japanese / English)
 
 ## Screenshots
@@ -26,8 +33,9 @@ Developer mode must be enabled on the WSA side.
 
 ## Tech Stack
 
-- **Frontend**: SolidJS + Kobalte + Vite
+- **Frontend**: SolidJS + Kobalte + Vite (shared between desktop and Android)
 - **Backend**: Rust / Tauri v2
+- **Android native**: Kotlin (media retrieval via notification access / JNI bridge)
 
 ## Development Environment
 
@@ -97,7 +105,8 @@ The tauri CLI auto-detects the Android SDK.
 
 ## Installation
 
-Download and run the latest installer from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases).
+- **Desktop**: Download and run the latest installer from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases). Auto-updates are available from within the app.
+- **Android**: Download and install the latest APK from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases).
 
 ## Acknowledgments
 
@@ -113,7 +122,7 @@ Download and run the latest installer from [Releases](https://github.com/hu-ja-j
 
 ## Privacy Policy
 
-Please see the [Privacy Policy](PRIVACY_POLICY_en.md).
+Please see the [Privacy Policy](PRIVACY_POLICY_en.md) and [Terms of Service](TERMS_OF_SERVICE_en.md).
 
 ## License
 
