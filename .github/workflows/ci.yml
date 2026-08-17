@@ -10,40 +10,104 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  MISE_TASK_OUTPUT: prefix
+
 jobs:
   test:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: jdx/mise-action@v3
 
-      - uses: actions/setup-node@v4
+      - name: Get pnpm store path
+        id: pnpm-cache
+        shell: pwsh
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $env:GITHUB_OUTPUT
+      - uses: actions/cache@v4
         with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: stable
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> src-tauri/target
 
-      - run: pnpm install
+      - run: mise run deps
 
-      - uses: cargo-bins/cargo-binstall@main
+      - run: mise run generate-licenses
+
+      - run: mise run lint
+
+      - run: mise run build
+
+      - run: mise run test
+
+  android-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v3
+
+      - uses: Swatinem/rust-cache@v2
         with:
-          version: 1.21.1
-      - run: cargo binstall cargo-about --no-confirm --force
-      - run: cargo about --version
+          workspaces: src-tauri -> src-tauri/target
 
-      - run: pnpm generate-licenses
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\.gradle\caches
+            ~\.gradle\wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('src-tauri/gen/android/**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - run: pnpm lint
+      - name: Set JAVA_HOME
+        shell: pwsh
+        run: echo "JAVA_HOME=$(mise where java)" >> $env:GITHUB_ENV
 
-      - run: pnpm build
+      # tauri.settings.gradle / tauri.build.gradle.kts と generated kotlin (TauriActivity 等) は
+      # gitignore されていて fresh checkout には無い。
+      # ・gradle 2 ファイル: build.rs (tauri-build) が TAURI_ANDROID_PROJECT_PATH と
+      #   DEP_*_ANDROID_LIBRARY_PATH から生成する。android target でないと DEP_ 変数は
+      #   出ないので手動で渡す (cargo は未知の DEP_ 変数を build.rs に通す)
+      # ・kotlin codegen: 実ビルドでは android target の build.rs が tauri/wry クレートの
+      #   template を展開するので、ここで同じ展開を行う ({{...}} 置換のみ)
+      - name: Generate Android gradle files
+        shell: pwsh
+        run: |
+          $meta = cargo metadata --format-version 1 --manifest-path src-tauri/Cargo.toml | ConvertFrom-Json
+          $project = "${{ github.workspace }}\src-tauri\gen\android"
+          $root = $meta.packages | Where-Object { $_.manifest_path -eq (Resolve-Path src-tauri/Cargo.toml).Path }
+          $tauri = $meta.packages | Where-Object { $_.name -eq "tauri" }
+          $wry = $meta.packages | Where-Object { $_.name -eq "wry" }
+          $package = "com.wsarpcbridge.app"
+          $library = $root.name -replace '-', '_'
+          $generated = "$project\app\src\main\java\com\wsarpcbridge\app\generated"
+          New-Item -ItemType Directory -Force -Path $generated | Out-Null
+          $env:TAURI_ANDROID_PROJECT_PATH = $project
+          foreach ($pkg in $meta.packages) {
+            $crateDir = Split-Path $pkg.manifest_path
+            if (Test-Path "$crateDir\mobile\android") {
+              $name = $pkg.name.ToUpper() -replace '-', '_'
+              Set-Item "env:DEP_${name}_ANDROID_LIBRARY_PATH" "$crateDir\mobile\android"
+            }
+          }
+          Copy-Item "$(Split-Path $tauri.manifest_path)\mobile\android-codegen\*" $generated
+          Copy-Item "$(Split-Path $wry.manifest_path)\src\android\kotlin\*" $generated
+          Get-ChildItem "$generated\*.kt", "$generated\*.pro" | ForEach-Object {
+            $c = Get-Content $_.FullName -Raw
+            $c = $c.Replace("{{package}}", $package).Replace("{{package-unescaped}}", $package)
+            $c = $c.Replace("{{library}}", $library).Replace("{{class-extension}}", "").Replace("{{class-init}}", "")
+            Set-Content -NoNewline -Path $_.FullName -Value $c
+          }
+          # rust-cache 復元時に build.rs が up-to-date のままにならないよう再実行を強制
+          cargo clean -p wsa-rpc-bridge --manifest-path src-tauri/Cargo.toml
+          cargo check --manifest-path src-tauri/Cargo.toml
 
-      - run: cargo test
-        working-directory: src-tauri
+      - run: mise run android-test

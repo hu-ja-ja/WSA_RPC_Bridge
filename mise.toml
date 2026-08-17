@@ -5,6 +5,7 @@ java = "21"
 rust = { version = "1.97", components = ["rust-analyzer"], targets = ["aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android"] }
 "github:StrawberryPerl/Perl-Dist-Strawberry" = { version = "latest", matching = "portable", bin_path = "perl/bin", os = ["windows"] }
 "aqua:skaji/relocatable-perl" = { version = "latest", os = ["linux", "macos"] }
+"cargo:cargo-about" = "latest"
 
 [tasks.dev]
 description = "Tauri + Vite dev server"
@@ -23,6 +24,11 @@ description = "Run cargo unit tests"
 dir = "src-tauri"
 run = "cargo test"
 
+[tasks.android-test]
+description = "Run Android unit tests (Robolectric). Requires `pnpm tauri android init` on a fresh checkout"
+dir = "src-tauri/gen/android"
+run = "gradlew.bat test"
+
 [tasks.tauri]
 description = "Pass-through to the tauri CLI"
 run = "pnpm tauri"
@@ -37,7 +43,8 @@ run = "pnpm generate-licenses"
 
 [env]
 NDK_VERSION = "29.0.13846066"
-SDK_ROOT = '{% if os() == "windows" %}{{ env.LOCALAPPDATA }}\Android\Sdk{% elif get_env(name="ANDROID_HOME", default="") != "" %}{{ get_env(name="ANDROID_HOME") }}{% else %}{{ env.HOME }}/Android/Sdk{% endif %}'
+SDK_ROOT = '{% if get_env(name="CI", default="") == "true" %}{{ get_env(name="ANDROID_HOME") }}{% elif os() == "windows" %}{{ env.LOCALAPPDATA }}\Android\Sdk{% elif get_env(name="ANDROID_HOME", default="") != "" %}{{ get_env(name="ANDROID_HOME") }}{% else %}{{ env.HOME }}/Android/Sdk{% endif %}'
+ANDROID_HOME = '{{ env.SDK_ROOT }}'
 NDK_BIN = '{{ env.SDK_ROOT }}/ndk/{{ env.NDK_VERSION }}/toolchains/llvm/prebuilt/{% if os() == "windows" %}windows-x86_64{% else %}linux-x86_64{% endif %}/bin'
 CLANG_EXT = '{% if os() == "windows" %}.cmd{% endif %}'
 AR_EXT = '{% if os() == "windows" %}.exe{% endif %}'
