@@ -55,5 +55,9 @@
   "licenses.third_party_title": "Third Party Licenses",
   "licenses.version": "Version",
   "licenses.loading": "Loading...",
-  "about.license": "MPL-2.0 License (Mozilla Public License Version 2.0)"
+  "about.license": "MPL-2.0 License (Mozilla Public License Version 2.0)",
+  "about.fingerprint": "Signing Certificate Fingerprint (SHA-256)",
+  "about.copy": "Copy",
+  "about.copied": "Copied",
+  "about.fingerprint_description": "A match with apk-signing-fingerprint.txt attached to the release confirms this APK carries the developer's signing certificate."
 }

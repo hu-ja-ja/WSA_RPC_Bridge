@@ -780,6 +780,65 @@
   margin-top: 2px;
 }
 
+.about-fingerprint {
+  font-size: 12px;
+  color: var(--text);
+  font-family: var(--mono);
+  word-break: break-all;
+  user-select: text;
+}
+
+.fingerprint-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.fingerprint-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fingerprint-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.fingerprint-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  cursor: pointer;
+  font-family: var(--sans);
+  flex-shrink: 0;
+}
+
+.fingerprint-copy:hover {
+  background: var(--accent-border);
+}
+
+.fingerprint-hint {
+  font-size: 11.5px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* ---------- Updates ---------- */
 
 .update-row {
@@ -1105,7 +1164,8 @@ button:focus-visible {
 #app.shell.android input,
 #app.shell.android textarea,
 #app.shell.android .license-text,
-#app.shell.android .license-meta {
+#app.shell.android .license-meta,
+#app.shell.android .about-fingerprint {
   -webkit-user-select: text;
   user-select: text;
 }

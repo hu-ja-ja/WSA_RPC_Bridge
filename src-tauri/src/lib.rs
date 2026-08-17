@@ -92,6 +92,7 @@ pub fn run() {
             commands::list_media_apps,
             commands::get_notification_access_status,
             commands::open_notification_access_settings,
+            commands::get_signing_fingerprint,
         ]);
 
     #[cfg(not(target_os = "android"))]

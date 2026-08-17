@@ -1,12 +1,14 @@
-import { createResource } from 'solid-js'
+import { createResource, createSignal, Show } from 'solid-js'
+import { invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { getVersion } from '@tauri-apps/api/app'
 import { IconBrandGithub } from '@tabler/icons-solidjs'
-import { BadgeInfo, ScrollText, Handshake } from 'lucide-solid'
+import { BadgeInfo, Check, Copy, ScrollText, Handshake } from 'lucide-solid'
 import { t, locale } from '../i18n'
 
 const APP_NAME = 'WSA RPC Bridge'
 const [appVersion] = createResource(async () => `v${await getVersion()}`)
+const [fingerprint] = createResource(async () => await invoke<string | null>('get_signing_fingerprint'))
 const COPYRIGHT = 'Copyright (C) 2026 hu-ja-ja'
 
 const privacyPolicyUrl =
@@ -23,6 +25,16 @@ const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
 const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'
 
 export function AboutPanel() {
+  const [copied, setCopied] = createSignal(false)
+
+  const copyFingerprint = async () => {
+    const fp = fingerprint()
+    if (!fp) return
+    await navigator.clipboard.writeText(fp)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   return (
     <div class="about-panel">
       <div class="about-hero">
@@ -32,6 +44,22 @@ export function AboutPanel() {
           <p class="about-version">{appVersion()}</p>
         </div>
       </div>
+
+      <Show when={fingerprint()}>
+        <div class="fingerprint-card">
+          <div class="fingerprint-head">
+            <p class="fingerprint-title">{t('about.fingerprint')}</p>
+            <button class="fingerprint-copy" onClick={copyFingerprint}>
+              <Show when={copied()} fallback={<Copy size={13} />}>
+                <Check size={13} />
+              </Show>
+              {copied() ? t('about.copied') : t('about.copy')}
+            </button>
+          </div>
+          <p class="about-fingerprint">{fingerprint()}</p>
+          <p class="fingerprint-hint">{t('about.fingerprint_description')}</p>
+        </div>
+      </Show>
 
       <div class="license-about-card">
         <p class="license-copyright">{COPYRIGHT}</p>

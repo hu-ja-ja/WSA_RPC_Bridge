@@ -27,6 +27,9 @@ class MainActivity : TauriActivity() {
     NotificationBridge.init()
     MediaInfoService.init(this)
 
+    SignatureBridge.initContext(this)
+    SignatureBridge.init()
+
     DiscordBridge.init(this)
     MediaInfoService.createChannel(this)
 

@@ -55,5 +55,9 @@
   "licenses.third_party_title": "サードパーティライセンス",
   "licenses.version": "バージョン",
   "licenses.loading": "読み込み中...",
-  "about.license": "MPL-2.0 License (Mozilla Public License Version 2.0)"
+  "about.license": "MPL-2.0 License (Mozilla Public License Version 2.0)",
+  "about.fingerprint": "署名証明書フィンガープリント (SHA-256)",
+  "about.copy": "コピー",
+  "about.copied": "コピーしました",
+  "about.fingerprint_description": "リリースに添付される apk-signing-fingerprint.txt とこの値が一致すれば、配布されたAPKが開発者の署名証明書で署名されたままであることを確認できます。"
 }

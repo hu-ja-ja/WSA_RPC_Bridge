@@ -88,6 +88,23 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "${{ inputs.sdk_url }}" -OutFile "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
 
+      - name: Decode Android signing keystore
+        shell: pwsh
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if ($env:ANDROID_KEYSTORE_BASE64 -eq "") {
+            Write-Warning "ANDROID_KEYSTORE_BASE64 is not set; release APK will be unsigned"
+            exit 0
+          }
+          $keystore = "$env:RUNNER_TEMP\release.keystore"
+          [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+          "KEYSTORE_FILE=$keystore" >> $env:GITHUB_ENV
+          "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $env:GITHUB_ENV
+          "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $env:GITHUB_ENV
+          "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $env:GITHUB_ENV
+          Write-Output "keystore restored to $keystore"
+
       - name: Build Android APK (aarch64)
         run: pnpm tauri android build --apk --target aarch64
 
@@ -104,6 +121,24 @@ jobs:
           foreach ($msi in $msiFiles) {
             $hash = (Get-FileHash -Path $msi.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($msi.Name)" | Out-File -FilePath "$($msi.FullName).sha256" -Encoding ascii
+          }
+
+      - name: Generate APK signing fingerprint
+        shell: pwsh
+        run: |
+          $apk = Get-ChildItem src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk | Select-Object -First 1
+          if (-not $apk) { Write-Warning "no release APK found"; exit 0 }
+          $keystore = "$env:RUNNER_TEMP\release.keystore"
+          if (-not (Test-Path $keystore)) { Write-Warning "no keystore; skipping fingerprint"; exit 0 }
+          $fp = & keytool -list -v -keystore $keystore -alias $env:KEY_ALIAS -storepass $env:KEYSTORE_PASSWORD 2>$null |
+            Select-String -Pattern 'SHA256:' | Select-Object -First 1
+          if ($fp) {
+            $line = $fp.ToString().Trim()
+            $fpValue = ($line -replace '^.*SHA256:\s*', '').Replace(':', '').Trim()
+            "Signing certificate SHA-256 fingerprint`n$fpValue" | Out-File apk-signing-fingerprint.txt -Encoding ascii
+            Write-Output "fingerprint: $fpValue"
+          } else {
+            Write-Warning "keytool fingerprint extraction failed"
           }
 
       - name: Extract release notes from CHANGELOG.md
@@ -172,6 +207,7 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/msi/*.msi.sha256
             src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
+            apk-signing-fingerprint.txt
 
       - name: Create release (fallback)
         if: steps.changelog.outputs.has_section != 'true'
@@ -184,3 +220,4 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/msi/*.msi.sha256
             src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
+            apk-signing-fingerprint.txt

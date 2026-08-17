@@ -33,6 +33,13 @@ GitHub Actions の `workflow_dispatch` からリリースを生成する。
 
 - Windows: MSI + `.sig` + `.sha256`
 - Android: APK（`aarch64` のみ。エミュレータ向け ABU が必要になったら増やす）
+- APK はリリース署名キーで署名され、署名証明書の SHA-256 フィンガープリントが `apk-signing-fingerprint.txt` として添付される。アプリの「アプリ概要」画面に表示されるフィンガープリントと照合することで、配布APKの真正性を確認できる。
+
+## Android リリース署名キー
+
+- GitHub リポジトリの Secrets に以下を設定する
+  - `ANDROID_KEYSTORE_BASE64`: release keystore を Base64 化したもの
+  - `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
 
 ## CI の Android 環境
 

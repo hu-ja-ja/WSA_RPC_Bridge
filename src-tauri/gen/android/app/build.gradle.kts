@@ -13,6 +13,17 @@ val tauriProperties = Properties().apply {
     }
 }
 
+fun keyFrom(name: String, prop: String): String? {
+    val propFile = file("keystore.properties")
+    if (propFile.exists()) {
+        val props = Properties().apply { propFile.inputStream().use { load(it) } }
+        props.getProperty(prop)?.let { return it }
+    }
+    return System.getenv(name)
+}
+
+val keystoreFile = keyFrom("KEYSTORE_FILE", "storeFile")?.let { file(it) }
+
 android {
     compileSdk = 36
     namespace = "com.wsarpcbridge.app"
@@ -23,6 +34,14 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        create("release") {
+            storeFile = keystoreFile
+            storePassword = keyFrom("KEYSTORE_PASSWORD", "storePassword")
+            keyAlias = keyFrom("KEY_ALIAS", "keyAlias")
+            keyPassword = keyFrom("KEY_PASSWORD", "keyPassword")
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -38,6 +57,9 @@ android {
             }
         }
         getByName("release") {
+            if (keystoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }

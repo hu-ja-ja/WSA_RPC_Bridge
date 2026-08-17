@@ -245,3 +245,16 @@ pub fn open_notification_access_settings() -> Result<(), String> {
 pub fn open_notification_access_settings() -> Result<(), String> {
     crate::android::open_notification_access_settings()
 }
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
+pub fn get_signing_fingerprint() -> Result<Option<String>, String> {
+    Ok(None)
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn get_signing_fingerprint() -> Result<Option<String>, String> {
+    let fp = crate::android::get_signing_fingerprint()?;
+    Ok((!fp.is_empty()).then_some(fp))
+}
