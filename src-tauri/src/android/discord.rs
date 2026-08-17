@@ -297,10 +297,15 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
 }
 
 /// 前回と同じプレゼンスなら送信を省く (updateMediaInfo 用)。
+/// 位置もキーに含め、シークでタイムスタンプを張り直す。
 pub fn update_presence_dedup(info: &MediaInfo) -> Result<(), String> {
     let key = format!(
-        "{}|{}|{}|{}",
-        info.title, info.artist, info.album, info.is_playing
+        "{}|{}|{}|{}|{}",
+        info.title,
+        info.artist,
+        info.album,
+        info.is_playing,
+        info.position.unwrap_or(0)
     );
     let mut last = LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned");
     if *last == key {

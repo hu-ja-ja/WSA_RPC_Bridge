@@ -14,6 +14,7 @@ class MediaCollectorService : NotificationListenerService() {
 
     private var timer: Timer? = null
     private var lastNow: NowPlaying? = null
+    private var lastPositionMs: Long = -1L
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -78,11 +79,13 @@ class MediaCollectorService : NotificationListenerService() {
         val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
         val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
         val isPlaying = state?.state == PlaybackState.STATE_PLAYING
+        val positionMs = state?.position ?: 0L
 
-        // ponytail: 無変化なら何もしない（通知の再投稿とJNI更新でCPUを起こさない）
+        // ponytail: 位置も含めて無変化なら何もしない（シークは位置変化として検出する）
         val now = NowPlaying(title, artist, album, isPlaying)
-        if (now == lastNow) return
+        if (now == lastNow && positionMs == lastPositionMs) return
         lastNow = now
+        lastPositionMs = positionMs
 
         if (controller == null) {
             MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
@@ -92,7 +95,6 @@ class MediaCollectorService : NotificationListenerService() {
             return
         }
 
-        val positionMs = state?.position ?: 0L
         val durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L
         MediaBridge.updateMediaInfo(
             title = title,
