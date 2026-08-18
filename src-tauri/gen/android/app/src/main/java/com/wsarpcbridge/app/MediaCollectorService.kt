@@ -31,10 +31,15 @@ class MediaCollectorService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        // 自分のアプリの通知(常駐通知)は無視する。無視しないと
+        // show() -> notify() -> onNotificationPosted -> pushNow() -> show() ... の
+        // 自己増幅ループで main スレッドと system_server を常時暴走させる。
+        if (sbn?.packageName == packageName) return
         pushNow()
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        if (sbn?.packageName == packageName) return
         pushNow()
     }
 
@@ -84,16 +89,23 @@ class MediaCollectorService : NotificationListenerService() {
         val isPlaying = state?.state == PlaybackState.STATE_PLAYING
         val positionMs = state?.position ?: 0L
 
-        // ponytail: 位置も含めて無変化なら何もしない（シークは位置変化として検出する）
+        // ponytail: 通知の再投稿は曲情報・状態変化のときだけ。位置進みでは再投稿しない
+        // （notify()はsystem_server/SystemUI/surfaceflingerを消費する重い処理）。
+        // Discord側は位置進みでも送って秒をライブに保つ（シークも位置変化として自動反映）。
+        // ループは自パッケージ通知のスキップで断たれているので頻度は外部イベントで上限される。
         val now = NowPlaying(title, artist, album, isPlaying)
-        if (now == lastNow && positionMs == lastPositionMs) return
+        val infoChanged = now != lastNow
+        val positionChanged = positionMs != lastPositionMs
         lastNow = now
         lastPositionMs = positionMs
+        if (!infoChanged && !positionChanged) return
 
         if (controller == null) {
-            MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
-            if (MediaInfoService.isEnabled()) {
-                MediaInfoService.show(this, NowPlaying("", "", "", false))
+            if (infoChanged) {
+                MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
+                if (MediaInfoService.isEnabled()) {
+                    MediaInfoService.show(this, NowPlaying("", "", "", false))
+                }
             }
             return
         }
@@ -109,7 +121,7 @@ class MediaCollectorService : NotificationListenerService() {
             durationMs = durationMs,
             isPlaying = isPlaying,
         )
-        if (MediaInfoService.isEnabled()) {
+        if (infoChanged && MediaInfoService.isEnabled()) {
             MediaInfoService.show(this, now)
         }
     }
