@@ -42,6 +42,9 @@ run = "pnpm install"
 description = "Regenerate third-party licenses"
 run = "pnpm generate-licenses"
 
+[settings]
+cargo.binstall_native = true
+
 [env]
 NDK_VERSION = "29.0.13846066"
 SDK_ROOT = '{% if get_env(name="CI", default="") == "true" %}{{ get_env(name="ANDROID_HOME") }}{% elif os() == "windows" %}{{ env.LOCALAPPDATA }}\Android\Sdk{% elif get_env(name="ANDROID_HOME", default="") != "" %}{{ get_env(name="ANDROID_HOME") }}{% else %}{{ env.HOME }}/Android/Sdk{% endif %}'
