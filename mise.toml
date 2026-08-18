@@ -1,12 +1,12 @@
 [tools]
-infisical = "latest"
+"github:Infisical/cli" = "0.43.121"
 node = "22"
 pnpm = "11.15.1"
 java = "21"
 rust = { version = "1.97", components = ["rust-analyzer"], targets = ["aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android"] }
-"github:StrawberryPerl/Perl-Dist-Strawberry" = { version = "latest", matching = "portable", bin_path = "perl/bin", os = ["windows"] }
+"github:StrawberryPerl/Perl-Dist-Strawberry" = { version = "SP_54231_64bit", matching = "portable", bin_path = "perl/bin", os = ["windows"] }
 "aqua:skaji/relocatable-perl" = { version = "latest", os = ["linux", "macos"] }
-"cargo:cargo-about" = "latest"
+"cargo:cargo-about" = "0.9.1"
 
 [tasks.dev]
 description = "Tauri + Vite dev server"
