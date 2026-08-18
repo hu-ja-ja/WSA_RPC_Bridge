@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -23,6 +24,12 @@ fun keyFrom(name: String, prop: String): String? {
 }
 
 val keystoreFile = keyFrom("KEYSTORE_FILE", "storeFile")?.let { file(it) }
+    ?: keyFrom("KEYSTORE_BASE64", "storeBase64")?.let { b64 ->
+        val decoded = Base64.getDecoder().decode(b64)
+        file("${layout.buildDirectory.get().asFile}/release.keystore")
+            .apply { parentFile.mkdirs() }
+            .also { it.writeBytes(decoded) }
+    }
 
 android {
     compileSdk = 36

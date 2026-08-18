@@ -1,4 +1,5 @@
 [tools]
+infisical = "latest"
 node = "22"
 pnpm = "11.15.1"
 java = "21"
@@ -9,11 +10,11 @@ rust = { version = "1.97", components = ["rust-analyzer"], targets = ["aarch64-l
 
 [tasks.dev]
 description = "Tauri + Vite dev server"
-run = "pnpm tauri dev"
+run = "infisical run -- pnpm tauri dev"
 
 [tasks.build]
 description = "Build release bundle"
-run = "pnpm tauri build"
+run = "infisical run -- pnpm tauri build"
 
 [tasks.lint]
 description = "Run oxlint"
@@ -31,7 +32,7 @@ run = "gradlew.bat test"
 
 [tasks.tauri]
 description = "Pass-through to the tauri CLI"
-run = "pnpm tauri"
+run = "infisical run -- pnpm tauri"
 
 [tasks.deps]
 description = "Install JS dependencies"
