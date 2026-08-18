@@ -7,6 +7,7 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import kotlin.jvm.Synchronized
 import java.util.Timer
 import java.util.TimerTask
 
@@ -63,6 +64,7 @@ class MediaCollectorService : NotificationListenerService() {
         }
     }
 
+    @Synchronized
     private fun pushNow() {
         val sessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         val controllers = sessionManager.getActiveSessions(ComponentName(this, MediaCollectorService::class.java))

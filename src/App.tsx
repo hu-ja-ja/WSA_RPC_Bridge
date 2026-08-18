@@ -258,7 +258,6 @@ function App() {
         }
         if (result.title && rpcEnabled()) {
           await invoke('connect_discord')
-          await invoke('update_discord_presence', { info: result })
         }
       })
       onCleanup(unlistenMedia)

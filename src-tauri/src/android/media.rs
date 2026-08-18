@@ -139,14 +139,19 @@ pub fn set_rpc_enabled(app: &AppHandle, enabled: bool) -> Result<(), String> {
     set_media_rpc_enabled(enabled)?;
     let state = app.state::<AppState>();
     if enabled {
-        discord_connect()?;
-        let info = media_state().lock().expect("media mutex poisoned").clone();
-        if !info.title.is_empty() {
-            if let Err(e) = update_presence_dedup(&info) {
-                log::warn!("android: presence push after rpc enable failed: {e}");
+        if crate::android::rpc_idle() {
+            log::warn!("android: rpc enable skipped (idle disconnect active)");
+            state.discord_connected.store(false, Ordering::Relaxed);
+        } else {
+            discord_connect()?;
+            let info = media_state().lock().expect("media mutex poisoned").clone();
+            if !info.title.is_empty() {
+                if let Err(e) = update_presence_dedup(&info) {
+                    log::warn!("android: presence push after rpc enable failed: {e}");
+                }
             }
+            state.discord_connected.store(true, Ordering::Relaxed);
         }
-        state.discord_connected.store(true, Ordering::Relaxed);
     } else {
         discord_disconnect()?;
         state.discord_connected.store(false, Ordering::Relaxed);
