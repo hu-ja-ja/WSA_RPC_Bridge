@@ -3,7 +3,7 @@ use std::sync::{Mutex, OnceLock};
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::android::discord::{discord_disconnect, update_presence_dedup};
+use crate::android::discord::{discord_connect, discord_disconnect, update_presence_dedup};
 use crate::commands::AppState;
 use crate::models::MediaInfo;
 
@@ -117,6 +117,45 @@ pub fn set_media_notification_enabled(enabled: bool) -> Result<(), String> {
     })
 }
 
+pub fn load_rpc_enabled() -> Result<bool, String> {
+    let class = info_service_class()?;
+    with_jni(|env| {
+        let result = env.call_static_method(class, "isRpcEnabled", "()Z", &[])?;
+        result.z()
+    })
+}
+
+fn set_media_rpc_enabled(enabled: bool) -> Result<(), String> {
+    let class = info_service_class()?;
+    with_jni(|env| {
+        env.call_static_method(class, "setRpcEnabled", "(Z)V", &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)])?;
+        Ok(())
+    })
+}
+
+/// RPC ON/OFF を永続化し、Discord 接続を切替えてイベントを発行する。
+/// 通知ボタン(JNI)と WebView(コマンド)の両方から呼ばれる。
+pub fn set_rpc_enabled(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    set_media_rpc_enabled(enabled)?;
+    let state = app.state::<AppState>();
+    if enabled {
+        discord_connect()?;
+        let info = media_state().lock().expect("media mutex poisoned").clone();
+        if !info.title.is_empty() {
+            if let Err(e) = update_presence_dedup(&info) {
+                log::warn!("android: presence push after rpc enable failed: {e}");
+            }
+        }
+        state.discord_connected.store(true, Ordering::Relaxed);
+    } else {
+        discord_disconnect()?;
+        state.discord_connected.store(false, Ordering::Relaxed);
+    }
+    let _ = app.emit("discord-status-changed", enabled);
+    let _ = app.emit("rpc-enabled-changed", enabled);
+    Ok(())
+}
+
 pub fn list_media_apps() -> Result<Vec<String>, String> {
     call_string_array("listApps")
 }
@@ -199,4 +238,20 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
             log::warn!("android: presence update failed: {e}");
         }
     });
+}
+
+/// 通知ボタンから呼ばれる。永続化は Kotlin 側(MediaInfoService.setRpcEnabled)で済んでいるため、
+/// 接続制御とイベント発行のみ行う。
+#[no_mangle]
+pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_setRpcEnabled(
+    _env: jni::JNIEnv,
+    _this: jni::objects::JObject,
+    enabled: jni::sys::jboolean,
+) {
+    let Some(app) = APP_HANDLE.get().cloned() else {
+        return;
+    };
+    if let Err(e) = set_rpc_enabled(&app, enabled != 0) {
+        log::error!("android: setRpcEnabled JNI failed: {e}");
+    }
 }

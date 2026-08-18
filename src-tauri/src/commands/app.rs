@@ -162,6 +162,18 @@ pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub fn get_rpc_enabled() -> Result<bool, String> {
+    crate::android::load_rpc_enabled()
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn set_rpc_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
+    crate::android::set_rpc_enabled(&app, enabled)
+}
+
+#[tauri::command]
 #[cfg(not(target_os = "android"))]
 pub fn list_media_apps() -> Result<Vec<String>, String> {
     Ok(vec![])

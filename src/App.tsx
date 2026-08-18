@@ -57,7 +57,7 @@ function App() {
   const [drawerOpen, setDrawerOpen] = createSignal(false)
   const [notificationAccess, setNotificationAccess] = createSignal(true)
 
-  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_RPC_KEY) : null
+  const saved = !IS_ANDROID && typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_RPC_KEY) : null
   const [rpcEnabled, setRpcEnabled] = createSignal(saved === 'true')
 
   const [traySettings, setTraySettings] = createSignal<AppSettings>({
@@ -129,6 +129,15 @@ function App() {
 
   async function handleRpcChange(enabled: boolean) {
     setRpcEnabled(enabled)
+    if (IS_ANDROID) {
+      // Androidでは状態はKotlin側(SharedPreferences)が真実。通知ボタンと共有する。
+      try {
+        await invoke('set_rpc_enabled', { enabled })
+      } catch (e) {
+        console.error('rpc toggle failed', e)
+      }
+      return
+    }
     localStorage.setItem(STORAGE_RPC_KEY, String(enabled))
     try {
       if (enabled) {
@@ -209,6 +218,15 @@ function App() {
     onCleanup(unlisten)
 
     await loadSettings()
+
+    if (IS_ANDROID) {
+      try {
+        setRpcEnabled(await invoke<boolean>('get_rpc_enabled'))
+      } catch (e) {
+        console.error('failed to load rpc enabled', e)
+      }
+    }
+
     await fetchMediaInfo()
     if (!IS_ANDROID) {
       await checkStatus()
@@ -249,6 +267,11 @@ function App() {
         setDiscordConnected(event.payload)
       })
       onCleanup(unlistenDiscord)
+
+      const unlistenRpc = await listen<boolean>('rpc-enabled-changed', (event) => {
+        setRpcEnabled(event.payload)
+      })
+      onCleanup(unlistenRpc)
     } else {
       pollingTimer = setInterval(async () => {
         await checkStatus()

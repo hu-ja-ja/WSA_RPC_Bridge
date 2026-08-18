@@ -5,4 +5,6 @@
     <string name="notif_waiting_text">"メディア情報を待機中..."</string>
     <string name="notif_playing">"再生中"</string>
     <string name="notif_paused">"一時停止中"</string>
+    <string name="notif_rpc_on">"RPCを有効にする"</string>
+    <string name="notif_rpc_off">"RPCを無効にする"</string>
 </resources>

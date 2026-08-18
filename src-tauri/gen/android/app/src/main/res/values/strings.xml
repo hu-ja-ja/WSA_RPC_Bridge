@@ -7,4 +7,6 @@
     <string name="notif_waiting_text">"Waiting for media info..."</string>
     <string name="notif_playing">"Playing"</string>
     <string name="notif_paused">"Paused"</string>
+    <string name="notif_rpc_on">"Enable RPC"</string>
+    <string name="notif_rpc_off">"Disable RPC"</string>
 </resources>

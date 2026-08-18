@@ -87,6 +87,10 @@ pub fn run() {
             commands::disconnect_discord,
             commands::update_discord_presence,
             commands::get_discord_status,
+            #[cfg(target_os = "android")]
+            commands::get_rpc_enabled,
+            #[cfg(target_os = "android")]
+            commands::set_rpc_enabled,
             commands::get_settings,
             commands::update_settings,
             commands::list_media_apps,

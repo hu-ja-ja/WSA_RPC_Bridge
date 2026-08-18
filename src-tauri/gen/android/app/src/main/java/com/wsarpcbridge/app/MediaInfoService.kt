@@ -36,6 +36,12 @@ class MediaInfoService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_TOGGLE_RPC) {
+            val enabled = !isRpcEnabled()
+            setRpcEnabled(enabled)
+            MediaBridge.setRpcEnabled(enabled)
+            show(this, lastInfo ?: NowPlaying("", "", "", false))
+        }
         return START_STICKY
     }
 
@@ -47,9 +53,14 @@ class MediaInfoService : Service() {
         const val CHANNEL_ID = "now_playing"
         private const val PREFS_NAME = "media_notification"
         private const val KEY_ENABLED = "enabled"
+        private const val KEY_RPC = "rpc_enabled"
+        const val ACTION_TOGGLE_RPC = "com.wsarpcbridge.app.TOGGLE_RPC"
 
         @Volatile
         private var appContext: Context? = null
+
+        @Volatile
+        private var lastInfo: NowPlaying? = null
 
         @JvmStatic
         fun init(context: Context) {
@@ -82,6 +93,22 @@ class MediaInfoService : Service() {
             }
         }
 
+        @JvmStatic
+        fun isRpcEnabled(): Boolean {
+            val ctx = appContext ?: return false
+            return ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_RPC, false)
+        }
+
+        @JvmStatic
+        fun setRpcEnabled(enabled: Boolean) {
+            val ctx = appContext ?: return
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_RPC, enabled)
+                .apply()
+        }
+
         fun start(context: Context) {
             val intent = Intent(context, MediaInfoService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -111,6 +138,7 @@ class MediaInfoService : Service() {
 
         /** 常駐通知を更新する。サービスが起動していなくても通知は差し替わる。 */
         fun show(context: Context, info: NowPlaying) {
+            lastInfo = info
             val manager = context.getSystemService(NotificationManager::class.java)
             manager.notify(NOTIFICATION_ID, buildNotification(context, info))
         }
@@ -157,6 +185,22 @@ private fun buildNotification(context: Context, info: NowPlaying?): Notification
     if (info != null) {
         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT)
     }
+
+    val actionLabel = if (MediaInfoService.isRpcEnabled()) {
+        context.getString(R.string.notif_rpc_off)
+    } else {
+        context.getString(R.string.notif_rpc_on)
+    }
+    val toggleIntent = PendingIntent.getService(
+        context,
+        1,
+        Intent(context, MediaInfoService::class.java)
+            .setAction(MediaInfoService.ACTION_TOGGLE_RPC),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+    builder.addAction(
+        NotificationCompat.Action.Builder(R.mipmap.ic_launcher, actionLabel, toggleIntent).build()
+    )
 
     return builder.build()
 }

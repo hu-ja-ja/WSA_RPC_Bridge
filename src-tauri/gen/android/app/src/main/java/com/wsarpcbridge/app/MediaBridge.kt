@@ -18,4 +18,7 @@ object MediaBridge {
         durationMs: Long,
         isPlaying: Boolean,
     )
+
+    /** 通知ボタンから RPC を ON/OFF する。永続化は MediaInfoService.setRpcEnabled 側で行う。 */
+    external fun setRpcEnabled(enabled: Boolean)
 }
