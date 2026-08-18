@@ -37,71 +37,19 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 - **Backend**: Rust / Tauri v2
 - **Android native**: Kotlin (media retrieval via notification access / JNI bridge)
 
-## Development Environment
+## Development
 
 Tools are managed with [mise](https://mise.jdx.dev/).
 
-### Windows
-
-1. Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with the **Desktop development with C++** workload and the Windows SDK (or run the command below)
-2. Run `mise trust` (first time only)
-3. Run `mise install` to install Node / pnpm / Rust / Perl / Java
-4. Run `mise run deps` to install JS dependencies
-
 ```bash
-winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.Windows11SDK.26100"
-mise trust
-mise install
-mise run deps
+mise trust        # First time only
+mise install      # Installs Node / pnpm / Rust / Perl / Java
+mise run deps     # Installs JS dependencies
+mise run dev      # Tauri + Vite dev
+mise run build    # Release build
 ```
 
-### Linux
-
-```bash
-sudo apt install libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev
-mise trust
-mise install
-mise run deps
-```
-
-- Perl is managed by mise (Strawberry Perl on Windows / relocatable-perl on Linux & macOS)
-- The Android SDK is auto-detected from `$ANDROID_HOME` (or `~/Android/Sdk` if unset), and mise generates the NDK cross-compilation settings for the current OS
-
-## Build
-
-```bash
-mise run build # Release build
-```
-
-## Development
-
-```bash
-mise run dev    # Tauri + Vite dev
-mise run lint   # oxlint
-mise tauri ...  # Pass-through to the tauri CLI (e.g. mise tauri android dev)
-```
-
-## Testing
-
-```bash
-mise run test              # Unit tests (parser, etc.)
-mise run test -- --ignored # Integration tests requiring a real WSA device
-```
-
-## Android
-
-```bash
-mise tauri android dev    # Run the Android app
-mise tauri android build  # Build an APK / AAB
-```
-
-The tauri CLI auto-detects the Android SDK.
-
-- If the SDK exists at the default location (`%LOCALAPPDATA%\Android\Sdk`), it is used as-is
-- Otherwise it interactively installs cmdline-tools / platform-tools / `platforms;android-36` / `ndk;29.0.13846066`
-- The NDK picks the newest version under `$ANDROID_HOME\ndk`
-- The `ANDROID_HOME` / `NDK_HOME` environment variables are not required (only set them if your SDK lives elsewhere)
-- The JDK is managed via `java = "21"` in mise
+See the [development command reference](docs/development.md) (Japanese only) for the full list of commands and their arguments.
 
 ## Installation
 
