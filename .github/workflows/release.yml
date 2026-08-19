@@ -28,7 +28,9 @@ jobs:
 
       - name: Mask SDK URL
         shell: pwsh
-        run: echo "::add-mask::${{ inputs.sdk_url }}"
+        env:
+          SDK_URL: ${{ inputs.sdk_url }}
+        run: echo "::add-mask::$env:SDK_URL"
 
       - name: Get pnpm store path
         id: pnpm-cache
@@ -59,8 +61,10 @@ jobs:
 
       - name: Sync version from input
         shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          $version = "${{ inputs.version }}"
+          $version = $env:VERSION
 
           $conf = Get-Content src-tauri/tauri.conf.json -Raw
           $conf = $conf -replace '(?m)"version":\s*"[^"]*"', "`"version`": `"$version`""
@@ -85,9 +89,11 @@ jobs:
 
       - name: Download Social SDK
         shell: pwsh
+        env:
+          SDK_URL: ${{ inputs.sdk_url }}
         run: |
           New-Item -ItemType Directory -Force -Path "src-tauri/gen/android/app/libs" | Out-Null
-          Invoke-WebRequest -Uri "${{ inputs.sdk_url }}" -OutFile "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
+          Invoke-WebRequest -Uri "$env:SDK_URL" -OutFile "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
 
       - name: Decode Android signing keystore
         shell: pwsh
@@ -145,8 +151,10 @@ jobs:
       - name: Extract release notes from CHANGELOG.md
         id: changelog
         shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          $version = "${{ inputs.version }}"
+          $version = $env:VERSION
           $content = Get-Content CHANGELOG.md -Raw
           $pattern = "(?ms)^## \[\s*$([regex]::Escape($version))\s*\][^\r\n]*\r?\n(.*?)(?=^## \[\s*|\z)"
           $m = [regex]::Match($content, $pattern)
@@ -160,8 +168,10 @@ jobs:
 
       - name: Generate update.json
         shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          $version = "${{ inputs.version }}"
+          $version = $env:VERSION
           $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
           $sigPath = "$($msi.FullName).sig"
           $sig = ""

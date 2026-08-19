@@ -71,6 +71,7 @@ function App() {
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
   let lastPresenceKey: string | null = null
+  let settingsLoaded = false
   let dragStart: { x: number; y: number } | null = null
   const [dragOffset, setDragOffset] = createSignal<number | null>(null)
 
@@ -119,6 +120,7 @@ function App() {
       setMedia(null)
       setLastFetch(null)
       setError(String(e))
+      lastPresenceKey = null
       if (rpcEnabled()) {
         await invoke('disconnect_discord')
       }
@@ -193,6 +195,7 @@ function App() {
     try {
       const s = await invoke<AppSettings>('get_settings')
       setTraySettings(s)
+      settingsLoaded = true
     } catch (e) {
       console.error('failed to load settings', e)
     }
@@ -201,6 +204,7 @@ function App() {
   async function updateSetting(key: keyof AppSettings, value: boolean | string | string[] | null) {
     const next = { ...traySettings(), [key]: value }
     setTraySettings(next)
+    if (!settingsLoaded) return
     try {
       await invoke('update_settings', { config: next })
     } catch (e) {
@@ -255,6 +259,9 @@ function App() {
         setError(null)
         if (result.position !== null) {
           setLastFetch({ pos: result.position, time: Date.now() })
+        }
+        if (!result.title) {
+          lastPresenceKey = null
         }
         if (result.title && rpcEnabled()) {
           await invoke('connect_discord')

@@ -197,8 +197,8 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
 #[cfg(target_os = "android")]
 pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
     let mut config = state.config.get();
-    config.media_whitelist = crate::android::load_whitelist().unwrap_or_default();
-    config.media_notification = crate::android::load_media_notification_enabled().unwrap_or(false);
+    config.media_whitelist = crate::android::load_whitelist()?;
+    config.media_notification = crate::android::load_media_notification_enabled()?;
     Ok(config)
 }
 
@@ -223,12 +223,8 @@ pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppCo
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn update_settings(_app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
-    if let Err(e) = crate::android::save_whitelist(&config.media_whitelist) {
-        log::warn!("update_settings: failed to save media whitelist: {e}");
-    }
-    if let Err(e) = crate::android::set_media_notification_enabled(config.media_notification) {
-        log::warn!("update_settings: failed to update media notification: {e}");
-    }
+    crate::android::save_whitelist(&config.media_whitelist)?;
+    crate::android::set_media_notification_enabled(config.media_notification)?;
     state.config.set(config.clone());
     log::info!("update_settings: settings updated");
     Ok(())

@@ -307,14 +307,17 @@ pub fn update_presence_dedup(info: &MediaInfo) -> Result<(), String> {
         info.is_playing,
         info.position.unwrap_or(0)
     );
-    let mut last = LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned");
-    if *last == key {
-        log::debug!("android: presence update skipped (dedup key unchanged)");
-        return Ok(());
+    {
+        let last = LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned");
+        if *last == key {
+            log::debug!("android: presence update skipped (dedup key unchanged)");
+            return Ok(());
+        }
     }
-    *last = key;
-    drop(last);
-    discord_update_presence(info)
+    discord_update_presence(info)?;
+    // 送信成功後にのみキーを更新する。失敗時は同一内容を次回リトライできる。
+    *LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned") = key;
+    Ok(())
 }
 
 pub fn discord_disconnect() -> Result<(), String> {
