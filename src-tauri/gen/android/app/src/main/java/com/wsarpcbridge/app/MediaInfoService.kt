@@ -22,6 +22,7 @@ class MediaInfoService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        AppInit.ensureInitialized(this)
         Log.i(TAG, "foreground service started")
         createChannel(this)
         val notification = buildNotification(this, null)

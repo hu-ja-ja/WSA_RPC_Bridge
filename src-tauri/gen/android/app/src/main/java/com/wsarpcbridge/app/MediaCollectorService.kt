@@ -19,6 +19,7 @@ class MediaCollectorService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        AppInit.ensureInitialized(this)
         isConnected = true
         startPolling()
     }

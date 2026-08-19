@@ -11,8 +11,18 @@ static MEDIA_STATE: OnceLock<Mutex<MediaInfo>> = OnceLock::new();
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
+// AppHandle 未設定中(サービスが MainActivity より先に起動)に受けた最新の更新を1件だけ保留する。
+static PENDING_MEDIA: OnceLock<Mutex<Option<MediaInfo>>> = OnceLock::new();
+
+fn pending_media() -> &'static Mutex<Option<MediaInfo>> {
+    PENDING_MEDIA.get_or_init(|| Mutex::new(None))
+}
+
 pub fn set_app_handle(app: AppHandle) {
-    let _ = APP_HANDLE.set(app);
+    let _ = APP_HANDLE.set(app.clone());
+    if let Some(info) = pending_media().lock().expect("pending media mutex poisoned").take() {
+        push_media_update(app, info);
+    }
 }
 
 pub fn app_handle() -> Option<AppHandle> {
@@ -215,8 +225,15 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     *media_state().lock().expect("media mutex poisoned") = info.clone();
 
     let Some(app) = APP_HANDLE.get().cloned() else {
+        // サービスが MainActivity より先に起動した場合(AppHandle 未設定)は最新の1件だけ保留し、
+        // set_app_handle でリプレイする。UI側は起動時に get_media_info で現在値を取得する。
+        *pending_media().lock().expect("pending media mutex poisoned") = Some(info);
         return;
     };
+    push_media_update(app, info);
+}
+
+fn push_media_update(app: AppHandle, info: MediaInfo) {
     tauri::async_runtime::spawn(async move {
         let state = app.state::<AppState>();
         let mut info = info;
