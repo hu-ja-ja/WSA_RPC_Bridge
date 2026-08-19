@@ -3,10 +3,11 @@
 [English](TERMS_OF_SERVICE_en.md) | [日本語](TERMS_OF_SERVICE.md)
 
 制定日: 2026年8月17日
+改定日: 2026年8月19日
 
 ## 1. 適用範囲
 
-本規約は、WSA RPC Bridge のうち、WSA (Windows Subsystem for Android) 上で動作する Android 版に適用されます。デスクトップ版には適用されません。
+本規約は、WSA RPC Bridge のうち、Android 版（Android 端末上で動作するアプリ）に適用されます。デスクトップ版には適用されません。
 
 本アプリの Android 版を利用することで、本規約に同意したものとみなされます。
 

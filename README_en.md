@@ -19,7 +19,7 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 - Auto-resolve app name
 - System tray resident (configurable for startup / minimize / close)
 - Auto-start (Windows)
-- Auto-update
+- Auto-update (desktop only)
 - License viewer tab
 - Multi-language support (Japanese / English)
 

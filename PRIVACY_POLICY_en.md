@@ -3,7 +3,7 @@
 [English](PRIVACY_POLICY_en.md) | [日本語](PRIVACY_POLICY.md)
 
 Effective date: August 5, 2026
-Revised date: August 17, 2026
+Revised date: August 19, 2026
 
 ## 1. Introduction
 
@@ -28,7 +28,7 @@ This app does not collect or transmit personal information to the developer. The
 - Automatic crash report submission
 - External transmission of logs
 
-## 3. Core Required Features
+## 3. Core Features
 
 These features are essential for this app to operate.
 
@@ -42,9 +42,9 @@ This app uses the device's notification access permission and retrieves the curr
 
 Only apps added to the whitelist in the settings are detected.
 
-### Persistent Notification (Android version)
+### Persistent Notification (Android version, optional)
 
-This app runs as a foreground service and displays the currently playing media information (title, artist, album, playback state) as a notification on the device. This is a display on the device only, and the notification content is not transmitted externally.
+Only when the "persistent notification" setting is enabled, this app runs as a foreground service and displays the currently playing media information (title, artist, album, playback state) as a notification on the device. This feature is optional and can be disabled in settings. This is a display on the device only, and the notification content is not transmitted externally.
 
 ### Permissions (Android version)
 

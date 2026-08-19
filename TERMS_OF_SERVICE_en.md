@@ -3,10 +3,11 @@
 [English](TERMS_OF_SERVICE_en.md) | [日本語](TERMS_OF_SERVICE.md)
 
 Effective date: August 17, 2026
+Revised date: August 19, 2026
 
 ## 1. Scope
 
-These Terms apply to the Android version of WSA RPC Bridge, which runs on WSA (Windows Subsystem for Android). They do not apply to the desktop version.
+These Terms apply to the Android version of WSA RPC Bridge (the app that runs on Android devices). They do not apply to the desktop version.
 
 By using the Android version of the App, you agree to be bound by these Terms.
 
