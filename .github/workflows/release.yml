@@ -200,10 +200,16 @@ jobs:
           Write-Output "update.json generated for version $version"
 
       - name: Deploy update.json to GitHub Pages
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\pages" | Out-Null
+          Copy-Item update.json "$env:RUNNER_TEMP\pages\update.json"
+
+      - name: Publish update.json to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ${{ runner.temp }}/pages
           keep_files: false
           destination_dir: .
 
