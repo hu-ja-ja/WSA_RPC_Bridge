@@ -28,7 +28,8 @@ run = "cargo test"
 [tasks.android-test]
 description = "Run Android unit tests (Robolectric). Requires `pnpm tauri android init` on a fresh checkout"
 dir = "src-tauri/gen/android"
-run = "gradlew.bat test"
+run = "./gradlew test"
+run_windows = "gradlew.bat test"
 
 [tasks.tauri]
 description = "Pass-through to the tauri CLI"
