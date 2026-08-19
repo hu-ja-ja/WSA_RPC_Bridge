@@ -2,20 +2,25 @@
 
 [English](README_en.md) | [日本語](README.md)
 
-WSA (Windows Subsystem for Android) 上で動作しているアプリケーションのメディア再生情報を ADB 経由で取得し、Discord Rich Presence に表示するデスクトップアプリ。
+WSA (Windows Subsystem for Android) や Android デバイス上で再生されているメディア情報を取得し、Discord Rich Presence に表示するアプリ（Windows デスクトップ / Android 対応）。
 
 ## 注意
 
-WSA側で、開発者モードを有効にしている必要があります。
-
-![WSA_Config](img/WSA_Config.png)
+- **デスクトップ版**: Windows 11 以上が必要です（WSA は Windows 11 専用）。WSA 側で開発者モードを有効にしている必要があります。WSA の導入には [WSABuilds](https://github.com/MustardChef/WSABuilds) を推奨します。
+- **Android 版**: Android 7.0 以上が必要で、通知アクセス権限の許可が必要です。バージョン依存の仕様と通知アクセス権限の推奨設定は [Android バージョン対応メモ](docs/android-versions.md) を参照してください。
 
 ## 機能
 
-- WSA 上のアプリの再生情報（曲タイトル、アーティスト、アルバム、再生位置）を自動取得
+- 再生情報（曲タイトル、アーティスト、アルバム、再生位置、アルバムアート）の自動取得
+  - デスクトップ版: WSA 上のアプリを ADB 経由で取得
+  - Android 版: 通知アクセス経由で直接取得
 - Discord Rich Presence に再生状況を表示
+- メディアを検出するアプリの選択（ホワイトリスト）
 - アプリ名の自動解決
-- トレイ常駐（タスクトレイに格納可能）
+- トレイ常駐（起動時 / 最小化時 / 閉じる時の格納を設定可能）
+- 自動起動（デスクトップ版）
+- 自動アップデート（デスクトップ版）
+- ライセンス表示タブ
 - マルチ言語対応（日本語 / English）
 
 ## スクリーンショット
@@ -26,34 +31,28 @@ WSA側で、開発者モードを有効にしている必要があります。
 
 ## 技術スタック
 
-- **フロントエンド**: SolidJS + Kobalte + Vite
+- **フロントエンド**: SolidJS + Kobalte + Vite（デスクトップ / Android 共通）
 - **バックエンド**: Rust / Tauri v2
-
-## ビルド
-
-```bash
-pnpm install
-pnpm tauri build
-```
+- **Android ネイティブ**: Kotlin（通知アクセスによるメディア取得 / JNI ブリッジ）
 
 ## 開発
 
-```bash
-pnpm tauri dev # Tauri + Vite dev
-pnpm lint      # oxlint
-```
-
-## テスト
+ツールは [mise](https://mise.jdx.dev/) で管理しています。
 
 ```bash
-cd src-tauri
-cargo test                          # ユニットテスト（パーサーなど）
-cargo test -- --ignored             # WSA 実機が必要な結合テスト
+mise trust        # 初回のみ
+mise install      # Node / pnpm / Rust / Perl / Java を導入
+mise run deps     # JS 依存をインストール
+mise run dev      # Tauri + Vite dev
+mise run build    # リリースビルド
 ```
+
+全コマンドと引数のリファレンスは [開発コマンドリファレンス](docs/development.md) を参照。
 
 ## インストール
 
-[Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新のインストーラをダウンロードして実行してください。
+- **デスクトップ版**: [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新のインストーラをダウンロードして実行してください。アプリ内から自動更新もできます。
+- **Android 版**: [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) から最新の APK をダウンロードしてインストールしてください。
 
 ## 謝辞
 
@@ -69,7 +68,7 @@ cargo test -- --ignored             # WSA 実機が必要な結合テスト
 
 ## プライバシーポリシー
 
-[プライバシーポリシー](PRIVACY_POLICY.md) をご確認ください。
+[プライバシーポリシー](PRIVACY_POLICY.md) と [利用規約](TERMS_OF_SERVICE.md) をご確認ください。
 
 ## ライセンス
 
@@ -80,4 +79,4 @@ MPL-2.0
 詳細は [LICENSE](LICENSE) ファイルを参照してください。
 
 サードパーティライセンスは、アプリ内のサイドバーのライセンスタブから確認できます。
-`pnpm run generate-licenses` で自動生成されています。
+`mise run generate-licenses` で自動生成されています。

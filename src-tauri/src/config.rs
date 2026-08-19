@@ -11,6 +11,9 @@ pub struct AppConfig {
     pub start_in_tray: bool,
     pub minimize_to_tray: bool,
     pub close_to_tray: bool,
+    pub media_whitelist: Vec<String>,
+    /// Android のみで使用。常駐通知の表示トグル (Kotlin 側に永続化)。
+    pub media_notification: bool,
 }
 
 impl Default for AppConfig {
@@ -20,6 +23,8 @@ impl Default for AppConfig {
             start_in_tray: true,
             minimize_to_tray: true,
             close_to_tray: true,
+            media_whitelist: vec![],
+            media_notification: false,
         }
     }
 }

@@ -1,5 +1,5 @@
 import { Show } from 'solid-js'
-import { RefreshCw } from 'lucide-solid'
+import { RefreshCw, Settings } from 'lucide-solid'
 import { t } from '../i18n'
 
 const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="8" fill="#e5e4e7"/><g fill="none" stroke="#9ca3af" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="66" r="10"/><circle cx="66" cy="58" r="10"/><path d="M46 66 V30 L76 22 V58"/></g></svg>`
@@ -21,7 +21,10 @@ interface MediaCardProps {
   loading: boolean
   error: string | null
   displayPosition: number | null
+  android?: boolean
+  whitelistEmpty?: boolean
   onRetry: () => void
+  onOpenSettings?: () => void
 }
 
 function formatTime(ms: number): string {
@@ -34,10 +37,16 @@ function formatTime(ms: number): string {
 export function MediaCard(props: MediaCardProps) {
   return (
     <Show when={props.loading && !props.media} fallback={
-      <Show when={props.media} fallback={
+      <Show when={props.media?.title ? props.media : null} fallback={
         <div class="empty-state">
-          <p>{props.error ?? t("media.none")}</p>
-          <button onClick={props.onRetry} class="btn"><RefreshCw size={16} />{t("media.retry")}</button>
+          <p>{props.error ?? (props.android ? t("media.none_android") : t("media.none"))}</p>
+          <Show when={props.android && props.whitelistEmpty}>
+            <p class="empty-hint">{t("media.none_android_setup")}</p>
+            <button onClick={props.onOpenSettings} class="btn"><Settings size={16} />{t("media.configure_detection")}</button>
+          </Show>
+          <Show when={!props.android}>
+            <button onClick={props.onRetry} class="btn"><RefreshCw size={16} />{t("media.retry")}</button>
+          </Show>
         </div>
       }>
         {(m) => (

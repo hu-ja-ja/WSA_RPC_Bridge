@@ -1,3 +1,4 @@
+import { Show } from 'solid-js'
 import { Smartphone } from 'lucide-solid'
 import { IconBrandDiscord } from '@tabler/icons-solidjs'
 import { MediaCard } from './MediaCard'
@@ -22,7 +23,10 @@ interface DashboardProps {
   adbConnected: boolean
   discordConnected: boolean
   rpcEnabled: boolean
+  android?: boolean
+  whitelistEmpty?: boolean
   onRetry: () => void
+  onOpenSettings?: () => void
 }
 
 function StatusCard(props: {
@@ -49,12 +53,14 @@ export function Dashboard(props: DashboardProps) {
   return (
     <div class="dashboard">
       <section class="status-grid">
-        <StatusCard
-          icon={Smartphone}
-          label="ADB"
-          connected={props.adbConnected}
-          status={props.adbConnected ? t('status.connected') : t('status.disconnected')}
-        />
+        <Show when={!props.android}>
+          <StatusCard
+            icon={Smartphone}
+            label="ADB"
+            connected={props.adbConnected}
+            status={props.adbConnected ? t('status.connected') : t('status.disconnected')}
+          />
+        </Show>
         <StatusCard
           icon={IconBrandDiscord}
           label="Discord RPC"
@@ -76,7 +82,10 @@ export function Dashboard(props: DashboardProps) {
           loading={props.loading}
           error={props.error}
           displayPosition={props.displayPosition}
+          android={props.android}
+          whitelistEmpty={props.whitelistEmpty}
           onRetry={props.onRetry}
+          onOpenSettings={props.onOpenSettings}
         />
       </section>
     </div>

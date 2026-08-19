@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "wsa-rpc-bridge",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "identifier": "com.wsarpcbridge.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeDevCommand": "pnpm generate-licenses && pnpm dev",
+    "beforeBuildCommand": "pnpm generate-licenses && pnpm build"
   },
   "app": {
     "windows": [

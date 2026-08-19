@@ -328,6 +328,17 @@
   padding: 48px 0;
 }
 
+.empty-state p {
+  margin: 0;
+}
+
+.empty-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 420px;
+  text-align: center;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -404,6 +415,15 @@
   color: var(--text-h);
   font-weight: 500;
   font-family: var(--sans);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.switch-label .switch-desc {
+  margin-top: 0;
 }
 
 .switch-track {
@@ -443,6 +463,118 @@
   line-height: 1.5;
   padding: 0;
   margin-top: -2px;
+}
+
+.whitelist-empty {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 4px 0 0;
+}
+
+.whitelist-search {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--sans);
+  outline: none;
+}
+
+.whitelist-search:focus {
+  border-color: var(--accent);
+}
+
+.whitelist-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.whitelist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.whitelist-item:hover {
+  background: var(--card-head-bg);
+}
+
+.whitelist-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.whitelist-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.whitelist-text::-webkit-scrollbar {
+  display: none;
+}
+
+.whitelist-label {
+  color: var(--text-h);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.whitelist-pkg {
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 11.5px;
+  margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.whitelist-no-matches {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
+  margin: 8px 0 0;
+}
+
+.whitelist-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: var(--accent);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
 }
 
 .section-title {
@@ -648,6 +780,65 @@
   margin-top: 2px;
 }
 
+.about-fingerprint {
+  font-size: 12px;
+  color: var(--text);
+  font-family: var(--mono);
+  word-break: break-all;
+  user-select: text;
+}
+
+.fingerprint-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.fingerprint-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fingerprint-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.fingerprint-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  cursor: pointer;
+  font-family: var(--sans);
+  flex-shrink: 0;
+}
+
+.fingerprint-copy:hover {
+  background: var(--accent-border);
+}
+
+.fingerprint-hint {
+  font-size: 11.5px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* ---------- Updates ---------- */
 
 .update-row {
@@ -818,4 +1009,163 @@
   .switch-thumb {
     background: #e5e7eb;
   }
+}
+
+/* ---------- Android ---------- */
+
+#app.shell.android {
+  flex-direction: column;
+  touch-action: pan-y;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(env(safe-area-inset-top) + 10px) 12px 10px;
+  min-height: 52px;
+  background: var(--pane-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.shell.android .sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  transform: translateX(-100%);
+  transition: transform 220ms ease;
+  z-index: 30;
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.shell.android .sidebar.open {
+  transform: translateX(0);
+}
+
+.shell.android .sidebar.collapsed {
+  width: 280px;
+}
+
+.shell.android .sidebar.collapsed .sidebar-title {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.shell.android .sidebar.collapsed .nav-label {
+  opacity: 1;
+  width: auto;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+.perm-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  background: var(--pane-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.perm-banner-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.perm-banner .btn {
+  flex-shrink: 0;
+}
+
+.shell.android .content {
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+.shell.android .nav-item {
+  min-height: 48px;
+  font-size: 15px;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.shell.android .nav-toggle {
+  width: 40px;
+  height: 40px;
+}
+
+.shell.android .sidebar-header {
+  padding: calc(env(safe-area-inset-top) + 6px) 12px 6px;
+  min-height: 60px;
+}
+
+.shell.android .btn,
+.shell.android .link-button,
+.shell.android .btn-update,
+.shell.android .btn-install {
+  min-height: 44px;
+  padding: 10px 18px;
+}
+
+.shell.android .whitelist-item {
+  min-height: 48px;
+}
+
+.shell.android .whitelist-list::-webkit-scrollbar {
+  width: 8px;
+}
+.shell.android .whitelist-list::-webkit-scrollbar-track {
+  background: var(--card-head-bg);
+  border-radius: 4px;
+}
+.shell.android .whitelist-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.shell.android .whitelist-search,
+.shell.android .cache-path-input {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+/* タップ時の青いハイライト/フォーカス枠と長押しコピーを無効化 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#app.shell.android {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app.shell.android input,
+#app.shell.android textarea,
+#app.shell.android .license-text,
+#app.shell.android .license-meta,
+#app.shell.android .about-fingerprint {
+  -webkit-user-select: text;
+  user-select: text;
 }

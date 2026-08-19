@@ -1,11 +1,22 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'アプリのバージョン（例: 0.4.0）'
+        required: true
+        type: string
+      sdk_url:
+        description: 'Discord Social SDK の期限付きダウンロードURL'
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+env:
+  MISE_TASK_OUTPUT: prefix
 
 jobs:
   build:
@@ -13,33 +24,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: jdx/mise-action@v3
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+      - name: Mask SDK URL
+        shell: pwsh
+        env:
+          SDK_URL: ${{ inputs.sdk_url }}
+        run: echo "::add-mask::$env:SDK_URL"
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Get pnpm store path
+        id: pnpm-cache
+        shell: pwsh
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $env:GITHUB_OUTPUT
+      - uses: actions/cache@v4
         with:
-          toolchain: stable
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> src-tauri/target
 
-      - run: pnpm install
-
-      - uses: cargo-bins/cargo-binstall@main
+      - name: Cache Gradle
+        uses: actions/cache@v4
         with:
-          version: 1.21.1
-      - run: cargo binstall cargo-about --no-confirm --force
-      - run: cargo about --version
+          path: |
+            ~\.gradle\caches
+            ~\.gradle\wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('src-tauri/gen/android/**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: Sync version from tag
+      - run: mise run deps
+
+      - name: Sync version from input
         shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          $version = "${{ github.event.release.tag_name }}" -replace '^v', ''
+          $version = $env:VERSION
 
           $conf = Get-Content src-tauri/tauri.conf.json -Raw
           $conf = $conf -replace '(?m)"version":\s*"[^"]*"', "`"version`": `"$version`""
@@ -51,7 +76,47 @@ jobs:
 
           Write-Output "synced version $version"
 
-      - run: pnpm tauri build --bundles msi
+      - name: Set JAVA_HOME
+        shell: pwsh
+        run: echo "JAVA_HOME=$(mise where java)" >> $env:GITHUB_ENV
+
+      - name: Install Android NDK
+        shell: pwsh
+        run: |
+          $sdk = "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat"
+          1..50 | ForEach-Object { 'y' } | & $sdk --licenses
+          & $sdk "ndk;$env:NDK_VERSION"
+
+      - name: Download Social SDK
+        shell: pwsh
+        env:
+          SDK_URL: ${{ inputs.sdk_url }}
+        run: |
+          New-Item -ItemType Directory -Force -Path "src-tauri/gen/android/app/libs" | Out-Null
+          Invoke-WebRequest -Uri "$env:SDK_URL" -OutFile "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
+
+      - name: Decode Android signing keystore
+        shell: pwsh
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if ($env:ANDROID_KEYSTORE_BASE64 -eq "") {
+            Write-Error "ANDROID_KEYSTORE_BASE64 is not set; a signed release APK cannot be produced"
+            exit 1
+          }
+          $keystore = "$env:RUNNER_TEMP\release.keystore"
+          [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+          "KEYSTORE_FILE=$keystore" >> $env:GITHUB_ENV
+          "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $env:GITHUB_ENV
+          "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $env:GITHUB_ENV
+          "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $env:GITHUB_ENV
+          Write-Output "keystore restored to $keystore"
+
+      - name: Build Android APK (aarch64)
+        run: pnpm tauri android build --apk --target aarch64
+
+      - name: Build Windows MSI
+        run: pnpm tauri build --bundles msi
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -65,22 +130,64 @@ jobs:
             "$hash  $($msi.Name)" | Out-File -FilePath "$($msi.FullName).sha256" -Encoding ascii
           }
 
-      - name: Generate update.json
+      - name: Generate APK signing fingerprint
         shell: pwsh
         run: |
-          $version = "${{ github.event.release.tag_name }}" -replace '^v', ''
+          $apk = Get-ChildItem src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk | Select-Object -First 1
+          if (-not $apk) { Write-Warning "no release APK found"; exit 0 }
+          $keystore = "$env:RUNNER_TEMP\release.keystore"
+          if (-not (Test-Path $keystore)) { Write-Warning "no keystore; skipping fingerprint"; exit 0 }
+          $fp = & keytool -list -v -keystore $keystore -alias $env:KEY_ALIAS -storepass $env:KEYSTORE_PASSWORD 2>$null |
+            Select-String -Pattern 'SHA256:' | Select-Object -First 1
+          if ($fp) {
+            $line = $fp.ToString().Trim()
+            $fpValue = ($line -replace '^.*SHA256:\s*', '').Trim()
+            "Signing certificate SHA-256 fingerprint`n$fpValue" | Out-File apk-signing-fingerprint.txt -Encoding ascii
+            Write-Output "fingerprint: $fpValue"
+          } else {
+            Write-Warning "keytool fingerprint extraction failed"
+          }
+
+      - name: Extract release notes from CHANGELOG.md
+        id: changelog
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $version = $env:VERSION
+          $content = Get-Content CHANGELOG.md -Raw
+          $pattern = "(?ms)^## \[\s*$([regex]::Escape($version))\s*\][^\r\n]*\r?\n(.*?)(?=^## \[\s*|\z)"
+          $m = [regex]::Match($content, $pattern)
+          if ($m.Success) {
+            $body = $m.Groups[1].Value.Trim()
+            Set-Content .release-notes.md $body -Encoding utf8
+            Write-Output "has_section=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Output "has_section=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Generate update.json
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $version = $env:VERSION
           $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
           $sigPath = "$($msi.FullName).sig"
           $sig = ""
           if (Test-Path $sigPath) {
             $sig = (Get-Content $sigPath -Raw).Trim()
           }
-          $url = "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/$($msi.Name)"
+          $notes = ""
+          if (Test-Path .release-notes.md) {
+            $notes = Get-Content .release-notes.md -Raw
+          }
+          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/$($msi.Name)"
           $pubDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 
           $json = @{
             version = $version
-            notes   = "${{ github.event.release.body }}"
+            notes   = $notes
             pub_date = $pubDate
             platforms = @{
               "windows-x86_64" = @{
@@ -93,16 +200,41 @@ jobs:
           Write-Output "update.json generated for version $version"
 
       - name: Deploy update.json to GitHub Pages
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\pages" | Out-Null
+          Copy-Item update.json "$env:RUNNER_TEMP\pages\update.json"
+
+      - name: Publish update.json to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ${{ runner.temp }}/pages
           keep_files: false
           destination_dir: .
 
-      - uses: softprops/action-gh-release@v2
+      - name: Create release
+        if: steps.changelog.outputs.has_section == 'true'
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ inputs.version }}
+          body_path: .release-notes.md
           files: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/msi/*.msi.sha256
+            src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
+            apk-signing-fingerprint.txt
+
+      - name: Create release (fallback)
+        if: steps.changelog.outputs.has_section != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          generate_release_notes: true
+          files: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
+            src-tauri/target/release/bundle/msi/*.msi.sha256
+            src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
+            apk-signing-fingerprint.txt
