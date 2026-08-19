@@ -114,3 +114,8 @@ jobs:
           cargo check --manifest-path src-tauri/Cargo.toml
 
       - run: mise run android-test
+
+      - name: Stop Gradle daemon
+        shell: pwsh
+        working-directory: src-tauri/gen/android
+        run: ./gradlew.bat --stop
