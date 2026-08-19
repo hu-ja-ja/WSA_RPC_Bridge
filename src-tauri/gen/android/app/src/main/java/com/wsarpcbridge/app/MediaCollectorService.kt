@@ -75,13 +75,17 @@ class MediaCollectorService : NotificationListenerService() {
         val sessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         val controllers = sessionManager.getActiveSessions(ComponentName(this, MediaCollectorService::class.java))
         // ホワイトリストに含まれるアプリのセッションのみ検出する。空なら何も検出しない。
+        // 複数該当する場合は再生中(STATE_PLAYING)のセッションを優先する。
+        // そうしないと、一時停止中の古いセッションが後発の再生中セッションを隠し続ける。
         val whitelist = MediaWhitelistStore.load().toSet()
-        val controller = controllers.firstOrNull { c ->
-            runCatching {
-                c.packageName in whitelist &&
-                    !c.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrEmpty()
-            }.getOrDefault(false)
-        }
+        val controller = controllers
+            .filter { c ->
+                runCatching {
+                    c.packageName in whitelist &&
+                        !c.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE).isNullOrEmpty()
+                }.getOrDefault(false)
+            }
+            .maxByOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
 
         val metadata = controller?.metadata
         val state = controller?.playbackState

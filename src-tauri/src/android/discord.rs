@@ -229,20 +229,19 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
             (sdk.activity_set_details)(&mut activity, &mut details);
 
             if info.is_playing {
-                if let Some(pos) = info.position.filter(|p| *p > 0) {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0);
-                    let start = now.saturating_sub(pos / 1000);
-                    (sdk.ts_init)(&mut ts);
-                    (sdk.ts_set_start)(&mut ts, start);
-                    if let Some(dur) = info.duration.filter(|d| *d > 0) {
-                        (sdk.ts_set_end)(&mut ts, start + dur / 1000);
-                    }
-                    (sdk.activity_set_timestamps)(&mut activity, &mut ts);
+                // 位置が0/Noneでもタイムスタンプを初期化する。
+                // 省略するとマージ型SDKが前回のタイマー値を保持し、新曲に前曲の残り時間が表示される。
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                let start = now.saturating_sub(info.position.unwrap_or(0) / 1000);
+                (sdk.ts_init)(&mut ts);
+                (sdk.ts_set_start)(&mut ts, start);
+                if let Some(dur) = info.duration.filter(|d| *d > 0) {
+                    (sdk.ts_set_end)(&mut ts, start + dur / 1000);
                 }
-                // 位置なしで再生中: タイマーは前回のまま維持（次の位置付き更新で正しくなる）
+                (sdk.activity_set_timestamps)(&mut activity, &mut ts);
             } else {
                 // 一時停止: マージ型SDKは省略フィールドが旧値維持になるため、明示的に
                 // start=一時停止位置の開始時刻, end=現在時刻 を送りバーを0:00で固定する。

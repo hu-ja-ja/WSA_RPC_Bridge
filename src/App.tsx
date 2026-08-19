@@ -110,7 +110,7 @@ function App() {
       }
       if (rpcEnabled()) {
         await invoke('connect_discord')
-        const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}`
+        const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}|${result.position ?? 0}`
         if (key !== lastPresenceKey) {
           await invoke('update_discord_presence', { info: result })
           lastPresenceKey = key
@@ -266,7 +266,7 @@ function App() {
         if (result.title && rpcEnabled()) {
           await invoke('connect_discord')
           // セッションロスト切断後はRust側のpresence送信がスキップされるため、再接続後に再送する
-          const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}`
+          const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}|${result.position ?? 0}`
           if (key !== lastPresenceKey) {
             await invoke('update_discord_presence', { info: result })
             lastPresenceKey = key
