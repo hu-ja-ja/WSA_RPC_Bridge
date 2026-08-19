@@ -7,9 +7,7 @@ WSA (Windows Subsystem for Android) や Android デバイス上で再生され�
 ## 注意
 
 - **デスクトップ版**: Windows 11 以上が必要です（WSA は Windows 11 専用）。WSA 側で開発者モードを有効にしている必要があります。WSA の導入には [WSABuilds](https://github.com/MustardChef/WSABuilds) を推奨します。
-- **Android 版**: Android 7.0 以上が必要で、通知アクセス権限の許可が必要です。
-
-![WSA_Config](img/WSA_Config.png)
+- **Android 版**: Android 7.0 以上が必要で、通知アクセス権限の許可が必要です。バージョン依存の仕様と通知アクセス権限の推奨設定は [Android バージョン対応メモ](docs/android-versions.md) を参照してください。
 
 ## 機能
 

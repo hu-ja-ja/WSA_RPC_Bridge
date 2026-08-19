@@ -7,9 +7,7 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 ## Notes
 
 - **Desktop**: Windows 11 or later is required (WSA is Windows 11 only). Developer mode must be enabled on the WSA side. [WSABuilds](https://github.com/MustardChef/WSABuilds) is recommended for installing WSA.
-- **Android**: Android 7.0+ is required and notification access permission must be granted.
-
-![WSA_Config](img/WSA_Config.png)
+- **Android**: Android 7.0+ is required and notification access permission must be granted. For version-dependent specs and recommended notification access settings, see [Android version notes](docs/android-versions.md) (Japanese only).
 
 ## Features
 
