@@ -67,7 +67,12 @@ export function Sidebar(props: SidebarProps) {
 
   return (
     <>
-      <nav class={`sidebar ${props.collapsed ? 'collapsed' : ''} ${props.android ? 'android' : ''} ${props.open ? 'open' : ''}`} style={dragStyle()} aria-label="Main navigation">
+      <nav
+        class={`sidebar ${props.collapsed ? 'collapsed' : ''} ${props.android ? 'android' : ''} ${props.open ? 'open' : ''}`}
+        style={dragStyle()}
+        aria-label="Main navigation"
+        inert={props.android && !props.open}
+      >
         <div class="sidebar-header">
           {props.android ? (
             <button class="nav-toggle" onClick={props.onClose} title={t('nav.close')} aria-label={t('nav.close')}>

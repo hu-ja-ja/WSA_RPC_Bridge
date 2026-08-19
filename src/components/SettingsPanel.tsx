@@ -119,6 +119,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
             class="whitelist-search"
             type="text"
             placeholder={t("settings.media_search_placeholder")}
+            aria-label={t("settings.media_search_placeholder")}
             value={query()}
             onInput={(e) => setQuery(e.currentTarget.value)}
           />
