@@ -156,7 +156,7 @@ pub fn set_rpc_enabled(app: &AppHandle, enabled: bool) -> Result<(), String> {
         discord_disconnect()?;
         state.discord_connected.store(false, Ordering::Relaxed);
     }
-    let _ = app.emit("discord-status-changed", enabled);
+    let _ = app.emit("discord-status-changed", state.discord_connected.load(Ordering::Relaxed));
     let _ = app.emit("rpc-enabled-changed", enabled);
     Ok(())
 }

@@ -26,6 +26,12 @@ class MediaCollectorService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         isConnected = false
+        timer?.cancel()
+        timer = null
+        // 最後のメディア状態をクリアし、リバインド時に dedup が初回更新を抑制しないようにする
+        lastNow = null
+        lastPositionMs = -1L
+        MediaBridge.updateMediaInfo("", "", "", "", "", 0L, 0L, false)
         if (MediaInfoService.isEnabled()) {
             MediaInfoService.show(this, NowPlaying("", "", "", false))
         }

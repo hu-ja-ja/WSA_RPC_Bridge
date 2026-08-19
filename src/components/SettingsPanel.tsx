@@ -33,12 +33,17 @@ async function fetchApps(): Promise<MediaApp[]> {
   if (cached) return cached
   if (!inflight) {
     inflight = (async () => {
-      const list = await invoke<string[]>('list_media_apps')
-      cached = list.map((s) => {
-        const [label, pkg] = s.split('\t')
-        return { label, pkg }
-      })
-      return cached
+      try {
+        const list = await invoke<string[]>('list_media_apps')
+        cached = list.map((s) => {
+          const [label, pkg] = s.split('\t')
+          return { label, pkg }
+        })
+        return cached
+      } catch (e) {
+        inflight = null
+        throw e
+      }
     })()
   }
   return inflight
