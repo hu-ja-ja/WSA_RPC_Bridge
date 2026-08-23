@@ -1,0 +1,16 @@
+# WSA RPC Bridge
+
+> WSA / Android のメディア再生情報を Discord Rich Presence に表示するアプリの公式ドキュメント
+
+## Docs
+
+- [変更履歴](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/changelog/): リリース履歴
+- [アーキテクチャ概要](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/architecture/): WSA RPC Bridge の構成と主要コンポーネント
+- [コマンドリファレンス](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/commands/): mise タスクと tauri CLI の全コマンド・引数リファレンス
+- [リリース方針](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release/): GitHub Actions によるリリースの運用フロー
+- [環境構築](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/setup/): 開発環境のセットアップ手順
+- [Android バージョン対応](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/guide/android-versions/): Android 版のバージョン別仕様と通知アクセス権限の推奨設定
+- [しくみ](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/guide/how-it-works/): WSA RPC Bridge の内部動作と Discord へ送信されるデータ
+- [設定](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/guide/settings/): WSA RPC Bridge の全設定項目リファレンス
+- [トラブルシューティング](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/guide/troubleshooting/): 症状別の原因と対処方法
+- [はじめに](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/): WSA RPC Bridge の概要、対象環境、インストール手順

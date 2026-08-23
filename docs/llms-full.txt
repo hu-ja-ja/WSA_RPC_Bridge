@@ -1,0 +1,697 @@
+# 変更履歴
+
+変更履歴は [GitHub の CHANGELOG.md](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md) で管理しています。リリース時のリリースノートもここから生成されます。
+
+最新のリリースは [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases) で確認できます。
+
+---
+
+# アーキテクチャ概要
+
+## レイヤー構成
+
+| レイヤー | 技術 | 役割 |
+|---|---|---|
+| フロントエンド | SolidJS + Kobalte + Vite | UI (ダッシュボード / 設定 / 更新 / ライセンス) |
+| バックエンド | Rust / Tauri v2 | メディア取得・Discord 連携・設定管理 |
+| Android ネイティブ | Kotlin | 通知アクセス・フォアグラウンドサービス・JNI ブリッジ |
+
+## ディレクトリ
+
+```
+src/                          フロントエンド (SolidJS)
+  components/                 パネル・カード等の UI コンポーネント
+  locales/{ja,en}.json        i18n 文言 (起動時に OS 言語から自動選択)
+src-tauri/
+  src/
+    adb/                      ADB クライアントと dumpsys パーサー
+    apk_label/                APK 引き取りによるアプリ名解決 (+ディスクキャッシュ)
+    artwork/                  ArtworkResolver プラグイン群 (ニコニコ等)
+    android/discord.rs        Discord Social SDK の C FFI ラッパー
+    commands/app.rs           フロントエンドへ公開する IPC コマンド
+    tray.rs, config.rs ...    トレイ / 設定 / i18n / シャットダウン対応
+  gen/android/                Android プロジェクト (Kotlin)
+    app/src/main/java/...     MediaCollectorService (通知アクセス) /
+                              MediaInfoService (FGS) / MediaBridge (JNI) ほか
+site/                         ドキュメントサイト (Astro Starlight)
+scripts/                      ビルド支援スクリプト (ライセンス生成など)
+```
+
+## 主要なデータフロー
+
+- **デスクトップ**: `adb` モジュールが `dumpsys media_session` を解析 → IPC コマンド `get_media_info` でフロントエンドが 5 秒間隔で取得 → 変化時のみ Discord IPC へ更新
+- **Android**: Kotlin 側のイベント (通知投稿/削除 + 30 秒の安全タイマー) が JNI `MediaBridge.updateMediaInfo` で Rust へ流れ、Tauri イベント `media-updated` としてフロントエンドへ配信される (ポーリングなし)
+
+## IPC コマンド一覧
+
+フロントエンドから呼び出せる Tauri コマンド (`commands/app.rs`):
+
+| コマンド | 対応環境 | 用途 |
+|---|---|---|
+| `get_adb_status` | デスクトップ | ADB 接続状態の取得 |
+| `get_media_info` | 共通 | 現在のメディア情報の取得 |
+| `connect_discord` / `disconnect_discord` | 共通 | Discord 接続制御 |
+| `update_discord_presence` | 共通 | Rich Presence の更新 |
+| `get_discord_status` | 共通 | Discord 接続状態の取得 |
+| `get_rpc_enabled` / `set_rpc_enabled` | Android | RPC トグルの永続化 |
+| `get_settings` / `update_settings` | 共通 | 設定の読み書き |
+| `list_media_apps` | Android | ホワイトリスト用アプリ一覧 |
+| `get_notification_access_status` / `open_notification_access_settings` | Android | 通知アクセス権限の確認・誘導 |
+| `get_signing_fingerprint` | Android | APK 署名フィンガープリントの取得 |
+
+## 主な外部依存
+
+- [adb_client](https://github.com/cocool97/adb_client) — ADB プロトコル
+- [discord-rich-presence](https://github.com/vionya/discord-rich-presence) — デスクトップの Discord IPC
+- Discord Social SDK (Android) — 規約上リポジトリにコミットしないため、CI が都度ダウンロードする ([リリース方針](../release/) 参照)
+
+設計思想や詳細実装はソースコード内のコメントも参照してください。
+
+---
+
+# コマンドリファレンス
+
+コマンドは [mise](https://mise.jdx.dev/) のタスクとして定義されており、mise が管理するツール (Node / pnpm / Rust / Java / Perl など) が自動で PATH に入ります。
+
+`dev` / `build` / `tauri` タスクは [Infisical](https://infisical.com/) の `infisical run` を経由して実行されます。Infisical が管理しているのはリリース署名用の秘密鍵 (`TAURI_SIGNING_PRIVATE_KEY`、Android keystore など) のみで、通常の開発では必須ではありません。未ログインの場合は [代替コマンド](#infisical-未ログイン時の代替コマンド) を利用してください。
+
+## コマンド一覧
+
+| コマンド | 実体 | 用途 |
+|---|---|---|
+| `mise run deps` | `pnpm install` | JS 依存のインストール |
+| `mise run dev` | `infisical run -- pnpm tauri dev` | デスクトップ版を開発モードで起動 |
+| `mise run build` | `infisical run -- pnpm tauri build` | デスクトップ版リリースビルド |
+| `mise run lint` | `pnpm lint` (oxlint) | フロントエンドの静的解析 |
+| `mise run test` | `cargo test` (src-tauri 内) | Rust ユニットテスト |
+| `mise run android-test` | `gradlew.bat test` (src-tauri/gen/android 内) | Android ユニットテスト (Robolectric) |
+| `mise run tauri` | `infisical run -- pnpm tauri` | tauri CLI へのパススルー |
+| `mise run generate-licenses` | `pnpm generate-licenses` | サードパーティライセンスの再生成 |
+| `mise run docs-dev` | `pnpm dev` (site 内) | ドキュメントサイトの開発サーバー |
+| `mise run docs-build` | `pnpm build` (site 内) | ドキュメントサイトのビルド |
+| `pnpm preview` | `vite preview` | ビルド成果物のローカル確認 |
+
+## 引数の渡し方
+
+`mise run <task> -- <args>` の形式で引数を渡せます (`--` 以降がタスクのコマンドにそのまま渡ります)。`mise run tauri ...` は `mise tauri ...` と略記できます。
+
+## Infisical 未ログイン時の代替コマンド
+
+`dev` / `build` / `tauri` は `infisical run` を挟むため、ログインしていないと失敗します。その場合は pnpm を直接実行してください。`pnpm tauri ...` は `--` 不要で引数がそのまま tauri CLI に渡ります。
+
+| mise タスク | 代替コマンド |
+|---|---|
+| `mise run dev [引数]` | `pnpm tauri dev [引数]` |
+| `mise run build [引数]` | `pnpm tauri build [引数]` |
+| `mise tauri <サブコマンド> [引数]` | `pnpm tauri <サブコマンド> [引数]` |
+
+```bash
+pnpm tauri dev                              # 通常起動
+pnpm tauri dev --release                    # リリースモード
+pnpm tauri build --bundles msi              # MSI のみビルド
+pnpm tauri android build --apk -t aarch64   # Android APK (aarch64)
+```
+
+- runner (cargo など) へ引数を渡す場合のみ `--` が必要: `pnpm tauri dev -- -- [runnerArgs]`
+- `deps` / `lint` / `test` / `android-test` / `generate-licenses` は infisical を使わないため、ログイン状態に関係なく `mise run` で実行できます
+- **注意**: 未ログインビルドには署名用秘密鍵が注入されないため、署名済みの成果物 (署名付き APK / アップデーター署名) は生成されません。開発用の `dev` 実行には影響しません。リリース署名が必要な場合はログインして `mise run build` を使ってください。
+
+## `mise run dev` — デスクトップ版の開発
+
+```bash
+mise run dev                 # 通常起動 (hot-reload 有効)
+mise run dev -- --release    # リリースモードで実行
+mise run dev -- --no-watch   # ファイル監視を無効化
+```
+
+`tauri dev` の主要引数:
+
+| 引数 | 説明 |
+|---|---|
+| `--release` | リリースモードで実行 |
+| `-t, --target <triple>` | ターゲット triple を指定 |
+| `-f, --features <feat>` | cargo の features を有効化 |
+| `--no-watch` | ファイル監視を無効化 |
+| `--no-dev-server` | 組み込み dev server を無効化 |
+| `--port <port>` | 静的ファイル用 dev server のポート (既定 1430) |
+| `-c, --config <path>` | 追加設定ファイルをマージ |
+| `-- [runnerArgs] -- [appArgs]` | `--` で区切ってアプリに引数を渡す |
+
+## `mise run build` — デスクトップ版のリリースビルド
+
+```bash
+mise run build                    # MSI + NSIS を生成
+mise run build -- --bundles msi   # MSI のみ
+mise run build -- --no-bundle     # バンドルなし (バイナリのみ)
+mise run build -- -d              # デバッグビルド
+mise run build -- -t aarch64-pc-windows-msvc  # クロスコンパイル
+```
+
+`tauri build` の主要引数:
+
+| 引数 | 説明 |
+|---|---|
+| `-b, --bundles <msi\|nsis>` | 生成するバンドルの種類 |
+| `--no-bundle` | バンドル生成をスキップ |
+| `-d, --debug` | デバッグフラグ付きでビルド |
+| `-t, --target <triple>` | ターゲット triple を指定 |
+| `-f, --features <feat>` | cargo の features を有効化 |
+| `--no-sign` | コード署名をスキップ |
+| `-c, --config <path>` | 追加設定ファイルをマージ |
+| `--ci` | プロンプトを出さず実行 |
+
+## `mise run lint` — 静的解析
+
+```bash
+mise run lint                     # 通常実行
+mise run lint -- --fix            # 自動修正
+mise run lint -- --quiet          # warning を非表示
+mise run lint -- -D correctness   # カテゴリ単位で指定 (-A 許可 / -W 警告 / -D エラー)
+mise run lint -- -f json          # 出力形式 (default / json / junit / github など)
+mise run lint -- --max-warnings 10
+mise run lint -- src/components/foo.tsx  # ファイル/パスを指定
+```
+
+## `mise run test` — Rust テスト
+
+```bash
+mise run test                        # ユニットテスト (パーサーなど)
+mise run test -- -- --ignored        # WSA 実機が必要な結合テスト
+mise run test -- parser              # テスト名でフィルタ
+mise run test -- -- --nocapture      # println 出力を表示
+```
+
+- 1 つ目の `--` は mise が取り除いてタスクへ渡します。`cargo test` のテストバイナリへの引数 (`--ignored` など) は cargo 自身の `--` も必要なので `-- --` と 2 重になります。
+- `--ignored` のテストは `src-tauri/tests/adb_test.rs` で、WSA が開発者モードで起動し ADB サーバー (127.0.0.1:58526) が応答する環境が必要です。
+
+## `mise run android-test` — Android ユニットテスト
+
+```bash
+mise run android-test                # 全テスト
+mise run android-test -- --tests "クラス名"  # テストを絞り込み
+```
+
+- `src-tauri/gen/android` で `gradlew.bat test` を実行します (Robolectric)。
+- **fresh checkout では事前に `mise run tauri android init` が必要**です (`gen/android` の gradle ファイルと生成 Kotlin コードが gitignore されていて存在しないため)。CI は独自の生成ステップで対応しています。
+
+## `mise run tauri ...` — tauri CLI パススルー
+
+```bash
+mise tauri info                    # 環境情報 (Rust / Node / 設定) の確認
+mise tauri android init            # Android プロジェクトを初期化 (fresh checkout 時に必要)
+mise tauri icon <png>              # アイコン生成
+mise tauri signer generate         # アップデーター用署名キー生成
+```
+
+### `tauri android dev` — Android 版の開発
+
+```bash
+mise tauri android dev                  # 接続中のデバイス/エミュレータで実行
+mise tauri android dev -- -o            # Android Studio を開く
+mise tauri android dev -- --host        # 実機向けに公開アドレスを使う
+mise tauri android dev <device-id>      # デバイスを指定
+mise tauri android dev -- --release     # リリースモード
+```
+
+### `tauri android build` — APK / AAB のビルド
+
+```bash
+mise tauri android build --apk                # APK を生成 (全 ABI)
+mise tauri android build --apk -t aarch64     # aarch64 のみ (リリースで使用)
+mise tauri android build --aab                # AAB を生成
+mise tauri android build --split-per-abi      # ABI ごとに分割
+mise tauri android build -- -o                # 完了後 Android Studio を開く
+```
+
+| 引数 | 説明 |
+|---|---|
+| `--apk` / `--aab` | 生成形式 (既定は両方) |
+| `-t, --target <aarch64\|armv7\|i686\|x86_64>` | 対象 ABI (既定は全部) |
+| `--split-per-abi` | ABI ごとの APK/AAB 分割 |
+| `-d, --debug` | デバッグビルド |
+| `-o, --open` | ビルド後に Android Studio を開く |
+| `--ci` | プロンプトを出さず実行 |
+
+## `mise run generate-licenses` — ライセンス生成
+
+```bash
+mise run generate-licenses
+```
+
+- `scripts/generate-licenses.mjs` が JS と Rust (cargo-about) の依存を収集し、アプリ内ライセンスタブのデータを再生成します。`tauri dev` / `tauri build` の `beforeDevCommand` / `beforeBuildCommand` でも自動実行されます。
+
+## `mise run docs-dev` / `docs-build` — ドキュメントサイト
+
+```bash
+mise run docs-dev              # 開発サーバー (http://localhost:4321)
+mise run docs-build            # 静的サイトをビルド + リンク検証 (site/dist)
+```
+
+- `site/` は [Astro Starlight](https://starlight.astro.build/) で構築されています。
+- デプロイ時は `BASE_PATH=/WSA_RPC_Bridge/docs/` を設定してビルドします (GitHub Pages のサブパス配下で配信するため)。`docs-build` タスクは既定でこの値を使い、環境変数で上書きできます。
+
+## `pnpm preview` — ビルド成果の確認
+
+```bash
+pnpm preview                    # dist をローカルサーバーで配信
+pnpm preview -- --port 8080     # ポート指定
+pnpm preview -- --open          # ブラウザで自動オープン
+```
+
+## CI との対応
+
+ローカルで CI 相当の検証を行う場合、[ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/ci.yml) は以下を順に実行しています:
+
+1. `mise run deps`
+2. `mise run generate-licenses`
+3. `mise run lint`
+4. `mise run build`
+5. `mise run test`
+6. `mise run android-test` (前述の gradle 生成ステップを経由)
+
+リリース ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [リリース方針](../release/)) で使われるビルドコマンド:
+
+```bash
+pnpm tauri android build --apk --target aarch64   # Android APK (aarch64)
+pnpm tauri build --bundles msi                    # Windows MSI
+```
+
+## 関連ドキュメント
+
+- [リリース方針](../release/)
+- [環境構築](../setup/)
+
+---
+
+# リリース方針
+
+GitHub Actions の `workflow_dispatch` からリリースを生成します。
+
+## リリースフロー
+
+1. Discord Developer Portal で Social SDK のダウンロード URL を生成する (約 1 時間で失効する GCS 署名付き URL)
+2. GitHub の Actions タブから `Release` ワークフローを手動起動し、以下を入力する:
+   - `version`: アプリのバージョン (例 `0.4.0`) → タグ `v{version}` としてリリース
+   - `sdk_url`: 上記の期限付き URL
+3. ワークフローが以下を実行する:
+   - バージョンを `tauri.conf.json` / `Cargo.toml` に同期
+   - `sdk_url` から Social SDK を取得し `src-tauri/gen/android/app/libs/discord_partner_sdk.aar` へ配置
+   - Android APK (`aarch64`) + Windows MSI をビルド
+   - CHANGELOG.md から該当バージョンのセクションを抽出し、リリース本文とする (セクションが無い場合はコミット一覧でフォールバック)
+   - リリースを自動作成し、成果物を添付
+   - `update.json` を GitHub Pages にデプロイ (デスクトップのアップデーター用)
+
+## Social SDK の取り扱い
+
+- **公開リポジトリに SDK バイナリをコミットしない。** 利用規約 2.b は SDK 自体の再配布・コピーを禁止しています。アプリへの同梱は規約 2.a でライセンス付与されていますが、単体での公開は再配布に該当します。
+- **期限付き URL を恒久保管しない。** ポータルが発行する失効 URL を迂回してバイナリを private repo などに永続化しないでください。
+- 毎回ポータルで新しく URL を生成し、取得 → 即ビルド → アプリに同梱して公開します。SDK は Discord CDN → CI → 配布アプリ の流れのみを通り、どこにも残りません。
+- `sdk_url` は workflow_dispatch の入力として渡します。ログ流出対策として `::add-mask::` を適用します (失効が早いためリスクは小さい)。
+
+## 変更ログ
+
+- `CHANGELOG.md` を手書きで維持します (追加/変更/削除 のセクション形式)。
+- ワークフローは該当バージョンの `## [version]` セクションを抽出してリリース本文に使うため、GitHub UI で本文を書く必要はありません。
+
+## 成果物
+
+- Windows: MSI + `.sig` + `.sha256`
+- Android: APK (`aarch64` のみ。エミュレータ向け ABI が必要になったら増やす)
+- APK はリリース署名キーで署名され、署名証明書の SHA-256 フィンガープリントが `apk-signing-fingerprint.txt` として添付されます。アプリの「アプリ概要」画面に表示されるフィンガープリントと照合することで、配布 APK の真正性を確認できます。
+
+## Android リリース署名キー
+
+- GitHub リポジトリの Secrets に以下を設定する
+  - `ANDROID_KEYSTORE_BASE64`: release keystore を Base64 化したもの
+  - `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
+
+## CI の Android 環境
+
+- windows-latest の `ANDROID_HOME` は標準搭載です。
+- NDK を sdkmanager でインストールします (`yes | sdkmanager --licenses` → `ndk;29.0.13846066`)。
+- Rust の Android ターゲットは tauri CLI が自動で追加します。
+- 1 時間 URL の失効対策として Android ビルドを先に実行します。
+
+## 注意
+
+- 旧 `release.yml` の `on: release: [published]` トリガーを残すと、新フローが作ったリリースで再ビルドが走るため、**置き換え時に削除します**。
+
+---
+
+# 環境構築
+
+## 必要なツール
+
+ツールは [mise](https://mise.jdx.dev/) で管理しています。
+
+| ツール | バージョン | 用途 |
+|---|---|---|
+| Node.js | 22 | フロントエンド / ドキュメントのビルド |
+| pnpm | 11.x | JS 依存の管理 |
+| Rust | 1.97 | Tauri バックエンド |
+| Java | 21 | Android ビルド |
+| Perl | - | ビルドスクリプト |
+
+## セットアップ
+
+```pwsh
+mise trust        # 初回のみ
+mise install      # Node / pnpm / Rust / Perl / Java を導入
+mise run deps     # JS 依存をインストール
+```
+
+## 開発サーバーの起動
+
+```pwsh
+mise run dev      # Tauri + Vite dev (デスクトップ版)
+```
+
+起動時、`build.beforeDevCommand` (`pnpm generate-licenses && pnpm dev`) が先に実行され、ライセンス生成 → Vite dev server (`http://localhost:5173`) が立ち上がります。
+
+## プロジェクト構成
+
+```
+├─ src/                  # フロントエンド (SolidJS + Kobalte)
+├─ src-tauri/            # Rust / Tauri v2 バックエンド
+│  └─ gen/android/       # Android プロジェクト (Kotlin)
+├─ scripts/              # ビルドスクリプト
+├─ site/                 # ドキュメントサイト (Astro Starlight)
+├─ img/                  # スクリーンショット
+└─ mise.toml             # タスク定義
+```
+
+## よく使うコマンド
+
+| 目的 | コマンド |
+|---|---|
+| 依存インストール | `mise run deps` |
+| デスクトップ版 dev | `mise run dev` |
+| リリースビルド | `mise run build` |
+| 静的解析 | `mise run lint` |
+| Rust テスト | `mise run test` |
+| Android テスト | `mise run android-test` |
+| ドキュメント dev | `mise run docs-dev` |
+| ドキュメントビルド | `mise run docs-build` |
+
+全コマンドと引数のリファレンスは [コマンドリファレンス](../commands/) を参照してください。
+
+---
+
+# Android バージョン対応
+
+Android 版は **Android 7.0 (API 24) 以上** を対象としています。Android の仕様はバージョンによって大きく変わるため、対応状況をまとめています。
+
+## バージョンで変わる仕様と対応状況
+
+| 仕様 | 必要 Android (API) | 対応状況 |
+|---|---|---|
+| 通知チャネル (チャネルなし通知は投稿不可) | 8.0 (26) | 7.x では従来方式で通知 |
+| `startForegroundService()` の必須化 | 8.0 (26) | API 26 以降は `startForegroundService()`、未満は `startService()` に分岐 |
+| フォアグラウンドサービスの型 (`mediaPlayback`) | 10 (29) | API 29 以降のみ型を指定、未満は型なし |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` 権限の必須化 | 14 (34) | Manifest に常時宣言 (14 未満では無視) |
+| `POST_NOTIFICATIONS` ランタイム権限 | 13 (33) | 13 未満では常に許可扱い。13+ で未許可時は FGS 通知が非表示になり、許可後にサービスを再起動して再投稿 |
+| 署名証明書の取得 API | 9 (28) | API 28 以降は `GET_SIGNING_CERTIFICATES`、未満は非推奨の `GET_SIGNATURES` に分岐 |
+| パッケージ可視性 (`<queries>`) | 11 (30) | Manifest に宣言。11 未満では不要 |
+| 通知アクセス設定画面のカテゴリ表示 | 14 (34) | 14+ のみ「リアルタイム / 会話 / 通知 / 消音」が表示 |
+
+## WebView について
+
+UI は Android システムの WebView (Tauri) で描画されます。Android 7.x でも Play ストア経由で WebView を更新できますが、古い WebView のままでは最新の JavaScript 機能 (ES Module など) が動作せず、UI が表示されない可能性があります。対処方法は [トラブルシューティング](../troubleshooting/#アプリの-ui-が真っ白で何も表示されない) を参照してください。
+
+## 通知アクセス権限の推奨設定
+
+通知アクセス権限の画面では、アプリの権限 (サービス自体) に加えて以下のオプションが表示されます。本アプリは通知本文を読み取らず、メディア情報の検出にのみ使用するため、次の設定で問題ありません。
+
+- **リアルタイム**: ON (推奨) — 音楽アプリの再生通知 (進行バー付き) の検出に使用
+- **会話 / 通知 / 消音**: OFF — 通知本文を読み取らないため不要。OFF にすると OS が配信する通知が絞られ、より安全
+
+:::caution
+このカテゴリ分けは **Android 14 (API 34) 以降の設定画面** で表示されます。それ未満の Android ではアプリの許可切替のみが表示され、カテゴリは表示されません。
+:::
+
+---
+
+# しくみ
+
+このページでは、メディア検出から Discord 表示までの流れと、外部へ送信されるデータを説明します。
+
+## 全体像
+
+```
+【デスクトップ版 (Windows)】
+ WSA 内アプリ ──(ADB / 127.0.0.1:58526)──▶ WSA RPC Bridge ──IPC──▶ Discord クライアント
+                5秒ごとに dumpsys を取得        │
+                                               └─ アプリ名解決 (APK取得+キャッシュ)
+                                                  サムネイル解決 (対応アプリのみ)
+
+【Android 版】
+ 音楽アプリの MediaSession ──▶ NotificationListenerService ──JNI▶ Rust ──Discord Social SDK──▶ Discord アプリ
+                                (通知アクセス権限)            端末内で完結、イベント駆動
+```
+
+## デスクトップ版 (WSA)
+
+1. **ADB 接続** — ローカルホストの ADB サーバー (`127.0.0.1:5037`) に接続し、WSA の開発者モードが公開する `127.0.0.1:58526` をターゲットにします。通信は同一 PC 内のみです
+2. **メディア情報の取得** — 5 秒ごとに `adb shell dumpsys media_session` を実行し、アクティブなセッションから曲名・アーティスト・再生状態・再生位置を解析します
+3. **アプリ名の解決** — 再生中アプリの表示名は、APK を ADB で引き取って解析し、`%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` にキャッシュします
+4. **Discord へ送信** — 検出内容に変化があったときだけ、ログイン済み Discord クライアントの IPC に接続して Rich Presence を更新します
+
+## Android 版
+
+1. **メディアセッションの監視** — 通知アクセス権限 (`NotificationListenerService`) を使って `MediaSessionManager` のアクティブセッションを取得します。**ホワイトリスト登録済みアプリのみ**を対象とし、再生中のセッションを優先します
+2. **端末内での処理** — 取得した情報は JNI 経由で Rust 側へ渡され、UI へはイベント配信されます (ポーリングなし)
+3. **常駐** — フォアグラウンドサービス (種別 `mediaPlayback`) がプロセスを維持します。設定で常駐通知の ON/OFF が可能です
+4. **Discord へ送信** — Discord Social SDK (同梱ライブラリー) で端末上の Discord アプリに直接接続し、Rich Presence を更新します。本アプリで Discord にログインする必要はありません
+
+:::caution[アイドル時の自動切断]
+Android 版では、**1 時間以上再生がないと** Rich Presence を消去して Discord との接続を切断します。再開するには RPC トグルの切り替えかアプリの再起動が必要です。
+:::
+
+## Discord に送られるデータ
+
+Rich Presence を有効にしている場合のみ、以下が送信されます。
+
+| 項目 | 内容 |
+|---|---|
+| 曲タイトル | タイトル行として表示 |
+| アーティスト名 | サムネイル画像のキャプションとして表示 |
+| 再生アプリ名 | プレイヤー名として表示 |
+| 再生位置・再生時間 | 進行バー (タイムスタンプ) として表示 |
+| サムネイル画像 URL | 対応アプリのみ ([後述](#サムネイル画像の解決)) |
+
+- アルバム名は検出しますが、**Discord には送信されません** (重複判定と常駐通知の表示にのみ使用)
+- 表示内容は Discord の仕様に従い、フレンドなど他のユーザーからも見える場合があります
+
+## サムネイル画像の解決
+
+対応アプリのプラグイン構造 (`ArtworkResolver`) により、再生中のアプリに応じてサムネイル URL を解決します。
+
+- 現在の対応: ボカコレ (`jp.nicovideo.nicobox`) — 曲タイトルをニコニコの検索 API に送信し、一致する動画のサムネイル URL を取得
+- 画像本体はダウンロード・保存せず、URL のみを一時保持して Discord へ渡します
+- この通信は対応アプリの再生中にのみ発生し、詳細は [プライバシーポリシー](../../legal/privacy/) に記載しています
+
+## ローカルに保存されるデータ
+
+| データ | Windows | Android |
+|---|---|---|
+| 設定 | `%APPDATA%\wsa-rpc-bridge\config.json` | 内部ストレージ |
+| ホワイトリスト | ― (機能なし・全セッション対象) | 内部ストレージ |
+| APK 名解決キャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | ― |
+
+テレメトリ・クラッシュレポートの自動送信・広告は存在しません。
+
+---
+
+# 設定
+
+サイドバーの **設定** タブから変更できます。設定は自動保存され、再起動後も保持されます。
+
+## 共通
+
+### Discord Rich Presence を有効にする
+
+- ON にすると、検出したメディア情報を Discord へ送信します (既定: ON)
+- OFF の間もメディアの検出自体は継続し、アプリ内のダッシュボードには表示されます
+- Discord へ送られるデータの詳細は [しくみ](../how-it-works/#discord-に送られるデータ) を参照
+
+## デスクトップ版のみ
+
+### 自動起動
+
+Windows ログイン時にアプリを自動で起動します。設定変更はすぐに OS へ反映されます。
+
+### トレイで起動
+
+起動直後にウィンドウを開かず、タスクトレイ常駐のみで開始します。
+
+### 最小化時にトレイへ格納
+
+最小化ボタンでウィンドウを閉じず、タスクトレイへ格納します。
+
+### 閉じる時にトレイへ格納
+
+閉じるボタン (×) でもアプリを終了させず、タスクトレイへ格納します。完全に終了するにはトレイメニューから **終了** を選択してください。
+
+:::note[タスクトレイ]
+トレイアイコンの左クリックでウィンドウを表示できます。右クリックのメニューからは **開く / 設定を表示 / 終了** が実行できます。
+:::
+
+### 更新 (タブ)
+
+デスクトップ版ではサイドバーに **更新** タブがあり、以下が行えます。
+
+- 手動でのアップデート確認
+- ダウンロード進捗の表示と、完了後の「インストールして再起動」
+- リポジトリ・変更履歴へのリンク
+
+また、起動時に新しいバージョンがある場合は OS 通知でお知らせします。アップデーターの配信元は GitHub Pages (`update.json`) です。
+
+## Android 版のみ
+
+### 常駐通知
+
+ON にするとフォアグラウンドサービスとして常駐し、「再生中の曲名」を内容とした常駐通知を表示します (既定: ON)。
+
+- プロセスの生存が保証され、長時間の再生でも検出が途切れにくくなります
+- 通知上のボタンで **Discord RPC の ON/OFF** を直接切り替えられます
+- 一部端末 (HyperOS など) では通知アクセス設定画面の挙動が特殊なため、アプリ側から案内する場合があります
+- OFF にしてもメディア検出は動作しますが、OS の省電力機能により検出が停止する可能性があります
+
+### ホワイトリスト
+
+メディアの検出対象とするアプリを選択します。
+
+- インストール済みアプリを名前で検索して追加できます
+- **ホワイトリストが空の場合、どのアプリも検出されません**
+- 追加できるのはメディア再生を行うアプリです (表示名とパッケージ名で管理)
+
+## ライセンス / バージョン (タブ)
+
+- **ライセンス**: アプリが利用しているサードパーティライブラリーの一覧とライセンス文を表示します
+- **バージョン**: アプリのバージョン情報を表示します。Android 版では APK 署名証明書の SHA-256 フィンガープリントも表示され、配布された APK が正規のものであるか ([Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) 添付の `apk-signing-fingerprint.txt` と照合) を確認できます
+
+## 設定ファイルの保存場所
+
+| プラットフォーム | 場所 |
+|---|---|
+| Windows | `%APPDATA%\wsa-rpc-bridge\config.json` |
+| Android | アプリ内部ストレージ (SharedPreferences) |
+
+Windows 版のローカルデータ (APK 名解決キャッシュなど) は `%LOCALAPPDATA%\wsa-rpc-bridge\` に保存されます。アンインストールしても自動削除されないため、手動で削除してください。詳しくは [プライバシーポリシー](../../legal/privacy/) を参照してください。
+
+---
+
+# トラブルシューティング
+
+症状から探して対処してください。解決しない場合は [GitHub Issues](https://github.com/hu-ja-ja/WSA_RPC_Bridge/issues) までお知らせください。
+
+## Android 版
+
+### アプリの UI が真っ白で何も表示されない
+
+Android システムの WebView が古いと、UI の描画に必要な JavaScript 機能 (ES Module など) が動作しません。
+
+- Play ストアから **Android System WebView** を最新に更新してください
+- 更新後、端末を再起動すると改善する場合があります
+
+### 再生しているのに Discord に表示されない
+
+以下を順に確認してください。
+
+1. **通知アクセス権限**が許可されているか — 設定タブ上部のバナーまたは `設定 > アプリ > 特別なアクセス > 通知へのアクセス` から許可できます
+2. **ホワイトリスト**にその音楽アプリが登録されているか — ホワイトリストが空の場合は何も検出されません
+3. **Discord RPC が有効か** — 常駐通知上のボタンやダッシュボードのトグルを確認してください
+4. 端末上の **Discord アプリが起動済み**か
+5. 長時間再生していなかった場合は [アイドル時の自動切断](../how-it-works/#アイドル時の自動切断) が働いています。RPC を OFF→ON するか、アプリを再起動してください
+
+### しばらく操作すると検出が止まる
+
+OS の省電力機能によりバックグラウンド処理が停止した可能性があります。設定で **常駐通知** を ON にすると、フォアグラウンドサービスとして動作し安定します。
+
+### 通知アクセスの設定画面で切り替えられない (HyperOS 等)
+
+一部メーカー環境では設定画面の挙動が特殊なため、アプリ内の案内に従ってシステム設定画面から直接許可してください。
+
+## デスクトップ版 (WSA)
+
+### 再生しているのに検出されない
+
+1. WSA 側で **開発者モード** が有効になっているか確認してください。ADB 接続は開発者モードに依存します
+2. Windows ネイティブのアプリ (PC ブラウザ・デスクトップ音楽アプリ) での再生は **対象外** です。WSA 内のアプリで再生してください
+3. ダッシュボードの ADB 状態表示がオフの場合、WSA が起動していない可能性があります
+
+### Discord に反映されない
+
+1. ログイン済みの **Discord クライアント** が起動しているか
+2. ダッシュボードの **RPC トグル** が有効か
+3. 検出内容に変化があると更新されます (同一楽曲のループ再生など変化がない場合は更新されません)
+
+## 共通
+
+### 表示が数秒遅れる
+
+デスクトップ版は 5 秒間隔でのポーリングにより検出するため、最大数秒の遅延があります。Android 版はイベント駆動のため即時に反映されます。
+
+### アンインストールしてもデータが残る (Windows)
+
+`%APPDATA%\wsa-rpc-bridge\` (設定) と `%LOCALAPPDATA%\wsa-rpc-bridge\` (キャッシュ) は自動削除されません。不要な場合は手動で削除してください。
+
+---
+
+# はじめに
+
+WSA RPC Bridge は、WSA (Windows Subsystem for Android) や Android デバイスで再生中のメディア情報を取得し、Discord Rich Presence に表示するアプリです。
+
+## 何ができるか
+
+- WSA / Android 上の対応アプリでメディアを再生すると、**曲名・アーティスト名・再生アプリ名・再生位置**を Discord のアクティビティとして自動表示
+- デスクトップ版・Android 版のどちらでも動作
+
+![Discord Rich Presence の表示例](../../assets/RPC.png)
+
+## 何ができないか
+
+- **Windows ネイティブのメディア再生には非対応**です。PC のブラウザやデスクトップ音楽アプリの再生は検出できません。本アプリは WSA / Android 上のメディアに特化しています
+- 本アプリ自体で Discord にログインする必要はありませんが、**ログイン済みの Discord クライアント / アプリ**が別途必要です
+
+ダウンロードは [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から行えます。
+
+## 対象環境
+
+| | デスクトップ版 (Windows) | Android 版 |
+|---|---|---|
+| OS | Windows 11 以上 (WSA は Windows 11 専用) | Android 7.0 (API 24) 以上 |
+| 追加要件 | [WSA](https://learn.microsoft.com/windows/android/wsa/) の導入 + 開発者モード | 通知アクセス権限の許可 |
+| Discord | ログイン済みデスクトップクライアント | ログイン済み Discord アプリ |
+| 配布形式 | MSI インストーラー | APK |
+
+## デスクトップ版のセットアップ
+
+1. [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から MSI インストーラーをダウンロードしてインストール
+2. WSA 側で **開発者モード** を有効にする。ADB 接続はこの開発者モードを利用します
+   - WSA が未導入の場合は [WSABuilds](https://github.com/MustardChef/WSABuilds) の利用が簡単です
+3. アプリを起動し、Discord クライアントをログイン済みの状態で起動しておく
+4. WSA 内のアプリで音楽や動画を再生すると、数秒以内に Discord へ反映されます
+
+:::note[補足]
+ADB 接続は同一 PC 上の WSA (`127.0.0.1`) とのローカル通信のみで、外部サーバーへデータが送信されることはありません。
+:::
+
+## Android 版のセットアップ
+
+1. [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から APK をダウンロードしてインストール
+2. アプリを起動し、**通知アクセス権限** を許可する (案内バナーから設定画面へ移動できます)
+3. 設定タブの **ホワイトリスト** に、検出したい音楽アプリを追加する
+4. Discord アプリを起動しておくと、再生中のメディアが Discord へ反映されます
+
+:::caution[ホワイトリストが空の場合]
+Android 版では、ホワイトリストに何も登録されていないと **どのアプリも検出されません**。初回起動後は必ずホワイトリストを設定してください。
+:::
+
+Android 13 以降では、常駐通知を表示するために **通知権限** も許可してください。バージョンごとの仕様の違いは [Android バージョン対応](guide/android-versions/) を参照してください。
+
+## 次のステップ
+
+- 各設定項目の意味は [設定](guide/settings/)
+- 内部動作と送信データの詳細は [しくみ](guide/how-it-works/)
+- うまく動かないときは [トラブルシューティング](guide/troubleshooting/)
