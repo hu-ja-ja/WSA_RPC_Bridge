@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 // astro build 後に dist/ へ llms.txt / llms-full.txt を生成する。
 // 法務ページ (legal/) は旧サイトの llms.exclude と同様に対象外。
+// 英語版 (en/) も対象外 (日本語のみを出力)。
 const docsDir = new URL("../src/content/docs", import.meta.url).pathname
   .replace(/^\/([A-Za-z]:)/, "$1");
 const distDir = new URL("../dist", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
@@ -44,7 +45,10 @@ if (!existsSync(distDir)) {
 }
 
 const files = walk(docsDir)
-  .filter((f) => !f.replace(/\\/g, "/").includes("/legal/"))
+  .filter((f) => {
+    const p = f.replace(/\\/g, "/");
+    return !p.includes("/legal/") && !p.includes("/en/");
+  })
   .sort((a, b) => (slugOf(a) === "index" ? -1 : a.localeCompare(b)));
 
 const full = [];

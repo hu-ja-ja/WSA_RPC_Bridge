@@ -1,0 +1,60 @@
+---
+title: Introduction
+description: Overview of WSA RPC Bridge, supported environments, and installation steps
+---
+
+WSA RPC Bridge is an app that retrieves media playback information from apps running on WSA (Windows Subsystem for Android) or Android devices and displays it as Discord Rich Presence.
+
+## What It Can Do
+
+- When media plays in a supported app on WSA / Android, the **track title, artist name, player app name, and playback position** are automatically displayed as a Discord activity
+- Works with both the desktop and Android versions
+
+![Example of Discord Rich Presence](../../../assets/RPC.png)
+
+## What It Cannot Do
+
+- **Windows-native media playback is not supported.** Playback in PC browsers or desktop music apps cannot be detected. This app is dedicated to media playing on WSA / Android
+- You never log in to Discord from this app itself, but a separately installed **logged-in Discord client / app** is required
+
+Downloads are available from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest).
+
+## Supported Environments
+
+| | Desktop (Windows) | Android |
+|---|---|---|
+| OS | Windows 11 or later (WSA requires Windows 11) | Android 7.0 (API 24) or later |
+| Additional requirements | [WSA](https://learn.microsoft.com/windows/android/wsa/) installed + developer mode | Notification access permission granted |
+| Discord | Logged-in desktop client | Logged-in Discord app |
+| Distribution format | MSI installer | APK |
+
+## Desktop Setup
+
+1. Download the MSI installer from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) and install it
+2. Enable **developer mode** in WSA. The ADB connection relies on this developer mode
+   - If WSA is not installed yet, [WSABuilds](https://github.com/MustardChef/WSABuilds) is an easy way to get it
+3. Launch the app, and have a logged-in Discord client running
+4. Play music or video in an app inside WSA, and it will be reflected on Discord within seconds
+
+:::note[Note]
+The ADB connection is local-only communication with WSA on the same PC (`127.0.0.1`); no data is sent to external servers.
+:::
+
+## Android Setup
+
+1. Download the APK from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) and install it
+2. Launch the app and grant **notification access permission** (the guidance banner takes you to the settings screen)
+3. In the Settings tab, add the music apps you want detected to the **whitelist**
+4. With the Discord app running, currently playing media is reflected on Discord
+
+:::caution[If the whitelist is empty]
+On Android, if nothing is registered in the whitelist, **no app will be detected**. Be sure to configure the whitelist after first launch.
+:::
+
+On Android 13 or later, also grant the **notification permission** so the persistent service notification can be shown. See [Android Version Support](guide/android-versions/) for version-specific differences.
+
+## Next Steps
+
+- What each setting means: [Settings](guide/settings/)
+- Internal behavior and transmitted data: [How It Works](guide/how-it-works/)
+- If something does not work: [Troubleshooting](guide/troubleshooting/)

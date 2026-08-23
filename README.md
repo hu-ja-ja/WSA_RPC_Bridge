@@ -56,7 +56,7 @@ mise run generate-licenses  # サードパーティライセンスの再生成
 
 ## ドキュメントサイト (site/)
 
-ドキュメントは `site/` の [Astro Starlight](https://starlight.astro.build/) プロジェクトで管理しています。日本語のみで運用しています (英語版は今後追加予定)。
+ドキュメントは `site/` の [Astro Starlight](https://starlight.astro.build/) プロジェクトで管理しています。日本語と英語で提供しています (英語は `/en/` 配下)。
 
 ```pwsh
 mise run docs-dev      # ローカル dev server (http://localhost:4321)

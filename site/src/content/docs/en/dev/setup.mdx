@@ -1,0 +1,59 @@
+---
+title: Development Setup
+description: How to set up a development environment
+---
+
+## Required Tools
+
+Tools are managed with [mise](https://mise.jdx.dev/).
+
+| Tool | Version | Purpose |
+|---|---|---|
+| Node.js | 22 | Frontend / docs build |
+| pnpm | 11.x | JS dependency management |
+| Rust | 1.97 | Tauri backend |
+| Java | 21 | Android build |
+| Perl | - | Build scripts |
+
+## Setup
+
+```pwsh
+mise trust        # First time only
+mise install      # Installs Node / pnpm / Rust / Perl / Java
+mise run deps     # Installs JS dependencies
+```
+
+## Starting the Dev Server
+
+```pwsh
+mise run dev      # Tauri + Vite dev (desktop)
+```
+
+On startup, `build.beforeDevCommand` (`pnpm generate-licenses && pnpm dev`) runs first: license generation → Vite dev server (`http://localhost:5173`).
+
+## Project Layout
+
+```
+├─ src/                  # Frontend (SolidJS + Kobalte)
+├─ src-tauri/            # Rust / Tauri v2 backend
+│  └─ gen/android/       # Android project (Kotlin)
+├─ scripts/              # Build scripts
+├─ site/                 # Documentation site (Astro Starlight)
+├─ img/                  # Screenshots
+└─ mise.toml             # Task definitions
+```
+
+## Common Commands
+
+| Purpose | Command |
+|---|---|
+| Install dependencies | `mise run deps` |
+| Desktop dev | `mise run dev` |
+| Release build | `mise run build` |
+| Lint | `mise run lint` |
+| Rust tests | `mise run test` |
+| Android tests | `mise run android-test` |
+| Docs dev | `mise run docs-dev` |
+| Docs build | `mise run docs-build` |
+
+See the [Command Reference](../commands/) for all commands and their arguments.

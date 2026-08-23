@@ -1,8 +1,8 @@
 # WSA RPC Bridge
 
-[English](README_en.md) | [日本語](README.md) | [Documentation](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/) (Japanese)
+[English](README_en.md) | [日本語](README.md) | [Documentation](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/)
 
-An app (Windows desktop / Android) that retrieves media playback information playing on WSA (Windows Subsystem for Android) or Android devices and displays it on Discord Rich Presence. For user-facing setup, features, and legal information, see the [documentation site](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/) (Japanese).
+An app (Windows desktop / Android) that retrieves media playback information playing on WSA (Windows Subsystem for Android) or Android devices and displays it on Discord Rich Presence. For user-facing setup, features, and legal information, see the [documentation site](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/).
 
 ## Screenshots
 
@@ -56,7 +56,7 @@ The `dev` / `build` / `tauri` tasks go through [Infisical](https://infisical.com
 
 ## Documentation Site (site/)
 
-Documentation is maintained in the [Astro Starlight](https://starlight.astro.build/) project under `site/`. Japanese only for now (an English version may be added later).
+Documentation is maintained in the [Astro Starlight](https://starlight.astro.build/) project under `site/`. Available in Japanese and English (English lives under `/en/`).
 
 ```pwsh
 mise run docs-dev      # Local dev server (http://localhost:4321)

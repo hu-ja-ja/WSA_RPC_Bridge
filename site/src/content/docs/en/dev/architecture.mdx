@@ -1,0 +1,63 @@
+---
+title: Architecture Overview
+description: Structure of WSA RPC Bridge and its main components
+---
+
+## Layers
+
+| Layer | Technology | Role |
+|---|---|---|
+| Frontend | SolidJS + Kobalte + Vite | UI (dashboard / settings / updates / licenses) |
+| Backend | Rust / Tauri v2 | Media retrieval, Discord integration, settings management |
+| Android native | Kotlin | Notification access, foreground service, JNI bridge |
+
+## Directories
+
+```
+src/                          Frontend (SolidJS)
+  components/                 UI components (panels, cards, etc.)
+  locales/{ja,en}.json        i18n strings (auto-selected from OS language at startup)
+src-tauri/
+  src/
+    adb/                      ADB client and dumpsys parser
+    apk_label/                App name resolution by pulling APKs (+disk cache)
+    artwork/                  ArtworkResolver plugin group (Niconico etc.)
+    android/discord.rs        C FFI wrapper for the Discord Social SDK
+    commands/app.rs           IPC commands exposed to the frontend
+    tray.rs, config.rs ...    Tray / settings / i18n / shutdown handling
+  gen/android/                Android project (Kotlin)
+    app/src/main/java/...     MediaCollectorService (notification access) /
+                              MediaInfoService (FGS) / MediaBridge (JNI) etc.
+site/                         Documentation site (Astro Starlight)
+scripts/                      Build helper scripts (license generation, etc.)
+```
+
+## Main Data Flows
+
+- **Desktop**: the `adb` module parses `dumpsys media_session` → frontend fetches via the IPC command `get_media_info` every 5 seconds → updates Discord IPC only on change
+- **Android**: Kotlin-side events (notification posted/removed + a 30-second safety timer) flow into Rust through the JNI `MediaBridge.updateMediaInfo` and are delivered to the frontend as the Tauri event `media-updated` (no polling)
+
+## IPC Command List
+
+Tauri commands callable from the frontend (`commands/app.rs`):
+
+| Command | Environment | Purpose |
+|---|---|---|
+| `get_adb_status` | Desktop | Get ADB connection status |
+| `get_media_info` | Common | Get current media information |
+| `connect_discord` / `disconnect_discord` | Common | Control the Discord connection |
+| `update_discord_presence` | Common | Update Rich Presence |
+| `get_discord_status` | Common | Get Discord connection status |
+| `get_rpc_enabled` / `set_rpc_enabled` | Android | Persist the RPC toggle |
+| `get_settings` / `update_settings` | Common | Read/write settings |
+| `list_media_apps` | Android | List apps for the whitelist |
+| `get_notification_access_status` / `open_notification_access_settings` | Android | Check & open notification access permission |
+| `get_signing_fingerprint` | Android | Get the APK signing fingerprint |
+
+## Key External Dependencies
+
+- [adb_client](https://github.com/cocool97/adb_client) — ADB protocol
+- [discord-rich-presence](https://github.com/vionya/discord-rich-presence) — desktop Discord IPC
+- Discord Social SDK (Android) — not committed to the repository due to its terms; CI downloads it each time (see [Release Policy](../release/))
+
+For design philosophy and implementation details, see also the comments in the source code.

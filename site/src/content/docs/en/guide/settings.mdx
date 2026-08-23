@@ -1,0 +1,79 @@
+---
+title: Settings
+description: Reference for every WSA RPC Bridge setting
+---
+
+All settings are available from the **Settings** tab in the sidebar. Settings are saved automatically and persist across restarts.
+
+## Common
+
+### Enable Discord Rich Presence
+
+- When ON, detected media information is sent to Discord (default: ON)
+- While OFF, media detection itself continues and still appears on the in-app dashboard
+- See [How It Works](../how-it-works/#data-sent-to-discord) for details on what is sent to Discord
+
+## Desktop Only
+
+### Launch at Startup
+
+Starts the app automatically when you log in to Windows. Changes take effect immediately.
+
+### Start Minimized to Tray
+
+Starts without opening a window; the app runs only as a taskbar tray icon.
+
+### Minimize to Tray
+
+The minimize button hides the window into the taskbar tray instead of closing it.
+
+### Close to Tray
+
+The close button (×) does not exit the app either; it moves it into the tray. To quit completely, choose **Quit** from the tray menu.
+
+:::note[Taskbar Tray]
+Left-click the tray icon to show the window. The right-click menu provides **Open / Show Settings / Quit**.
+:::
+
+### Updates (Tab)
+
+On desktop, the sidebar has an **Updates** tab where you can:
+
+- Check for updates manually
+- Watch download progress and run "Install & Restart" when complete
+- Open links to the repository and changelog
+
+Also, if a new version is available at launch, an OS notification informs you. The updater downloads from GitHub Pages (`update.json`).
+
+## Android Only
+
+### Persistent Notification
+
+When ON, the app runs as a foreground service and shows a persistent notification containing the "currently playing track" (default: ON).
+
+- Keeps the process alive so detection is less likely to drop during long playback sessions
+- A button on the notification toggles **Discord RPC on/off** directly
+- On some devices (e.g. HyperOS), the notification access settings screen behaves unusually; the app may guide you through it
+- Even when OFF, media detection works, but OS power-saving features may stop it
+
+### Whitelist
+
+Selects which apps' media can be detected.
+
+- You can search installed apps by name and add them
+- **If the whitelist is empty, no app will be detected**
+- Only media playback apps can be added (managed by display name and package name)
+
+## Licenses / Version (Tabs)
+
+- **Licenses**: Lists the third-party libraries used by the app with their license texts
+- **Version**: Shows app version information. On Android, the SHA-256 fingerprint of the APK signing certificate is also shown, letting you verify that the distributed APK is genuine (compare with `apk-signing-fingerprint.txt` attached to [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest))
+
+## Config File Locations
+
+| Platform | Location |
+|---|---|
+| Windows | `%APPDATA%\wsa-rpc-bridge\config.json` |
+| Android | App internal storage (SharedPreferences) |
+
+Local Windows data (such as the APK name resolution cache) is stored under `%LOCALAPPDATA%\wsa-rpc-bridge\`. It is not removed automatically on uninstall, so delete it manually if no longer needed. See the [Privacy Policy](../../legal/privacy/) for details.

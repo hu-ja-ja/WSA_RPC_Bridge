@@ -1,0 +1,123 @@
+---
+title: Privacy Policy
+description: Privacy Policy of WSA RPC Bridge
+---
+
+# Privacy Policy
+
+> This page is a translation of the Japanese original for convenience. In case of any discrepancy, the Japanese version prevails.
+
+Established: August 5, 2026
+Revised: August 19, 2026
+
+## 1. Introduction
+
+WSA RPC Bridge (the "App") retrieves media playback information from applications running on WSA (Windows Subsystem for Android) and displays it as Discord Rich Presence.
+
+The App comes in two forms:
+
+- **Windows version**: A desktop app running on Windows PCs. It retrieves media playback information from WSA via ADB.
+- **Android version**: An app running on Android devices. It retrieves media playback information directly on the device.
+
+This policy explains the data handled by the App and where it is sent.
+
+When using the App, please also review the [Terms of Service](../terms/).
+
+## 2. Collection of Personal Information
+
+The App does not collect or transmit personal information to the developer. None of the following features are implemented:
+
+- Telemetry / analytics
+- Advertising
+- Account creation / login
+- Automatic crash reporting
+- External log transmission
+
+## 3. Core Features
+
+Features essential to the operation of the App.
+
+### Media Playback Information Retrieval (Windows version)
+
+The App uses ADB to retrieve media playback information from WSA. ADB communication is local only (with WSA on the same PC); no data is sent to external servers.
+
+### Media Playback Information Retrieval (Android version)
+
+The App uses the device's notification access permission to retrieve current media playback information directly on the device from Android's MediaSession. Retrieval completes entirely on the device; no data is sent to external servers.
+
+Only apps added to the whitelist in settings are detected as targets.
+
+### Persistent Notification (Android version, optional)
+
+Only when "Persistent notification" is enabled in settings, the App runs as a foreground service and displays currently playing media information (title, artist, album, playback state) as a device notification. This feature is optional and can be disabled in settings. It is displayed on the device only; the notification content is never sent externally.
+
+### Access Permissions (Android version)
+
+The App requests the following permissions:
+
+| Permission | Type | Purpose |
+|---|---|---|
+| Notification access | Special access (granted manually in Settings) | Detect Android's MediaSession to retrieve media playback information |
+| Post notifications (Android 13+) | Runtime permission | Show the persistent notification |
+| Run foreground service | Normal permission | Keep the service alive to continue collecting media playback information |
+| Internet | Normal permission | Send data to Discord and perform thumbnail resolution requests |
+
+Notification access can read other apps' notifications, but this App uses it solely to detect media sessions and **has no feature that reads other apps' notification content**. Notification content is never viewed, saved, sent, or used for any other purpose. This can also be verified in the source code.
+
+### Discord Rich Presence (Common)
+
+This is the App's primary feature. **Only when Discord Rich Presence is enabled in settings**, currently playing media information is sent to Discord and displayed as a Discord activity.
+
+- The Windows version sends it via the Discord client.
+- The Android version connects directly to the Discord app on the device to send it.
+
+Data sent:
+
+- Media title (track / video title)
+- Artist name
+- Name of the playing app
+- Thumbnail image URL
+- Playback position & duration
+
+Displayed content may be visible to other users (friends, etc.) according to Discord's settings. For Discord's handling of data, see [Discord's Privacy Policy](https://discord.com/privacy).
+
+## 4. Optional Third-Party Integration Features
+
+The App provides integration with specific apps through a plugin structure (`ArtworkResolver`). **These features run only while the corresponding app's media is playing, and only then is data sent to an external server.** These integrations work on both the Windows and Android versions.
+
+| Integrated app | Purpose | Data sent | Destination | When sent |
+|---|---|---|---|---|
+| Vocalo Collection (`jp.nicovideo.nicobox`) | Retrieve thumbnail images | Media title (track / video title) | Niconico search API (snapshot.search.nicovideo.jp) | Only during playback |
+
+Retrieved thumbnails are not saved as image files; only the URL is temporarily held in app memory and sent to Discord Rich Presence. The App never fetches or stores the image itself; Discord fetches and displays it.
+
+### Future Integrations
+
+New third-party integrations may be added using the plugin structure above. When one is added, it will be described in this policy, always maintaining the principle of "sent only while the corresponding feature is in use."
+
+## 5. Local Data Retention and Deletion
+
+The App stores the following data locally only:
+
+| Platform | Data | Location | Content |
+|---|---|---|---|
+| Windows | Config file | `%APPDATA%\wsa-rpc-bridge\config.json` | App settings (auto-launch, cache settings, etc.) |
+| Windows | APK cache | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | Temporary files for app name resolution |
+| Android | Settings & whitelist | App internal storage (SharedPreferences) | App settings and the media detection whitelist |
+
+Windows data is not removed automatically when the app is uninstalled. To delete it, remove the `wsa-rpc-bridge` folders listed above manually.
+
+Android data is removed from the device when the app is uninstalled.
+
+## 6. Contact
+
+Questions about this policy can be directed to:
+
+- GitHub Issues: https://github.com/hu-ja-ja/WSA_RPC_Bridge/issues
+- Email: `hujaja.jp@gmail.com`
+
+## 7. Changes to This Policy
+
+This policy may be revised in response to feature additions/changes or changes in applicable law. When revised, this page will be updated along with the revision date.
+
+Changes may take effect without individual notice.

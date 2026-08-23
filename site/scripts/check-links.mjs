@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 // astro build 後に dist/ 内の全 HTML について、内部リンク (<a href> / <img src>)
@@ -27,7 +27,9 @@ function walk(dir) {
 function resolveFile(urlPath) {
   let p = urlPath.split("?")[0].split("#")[0];
   if (!p.endsWith("/")) {
-    if (existsSync(join(distDir, p))) return p;
+    // ディレクトリは index.html 解決が必要なためファイルのみ早期リターン
+    const direct = join(distDir, p);
+    if (existsSync(direct) && statSync(direct).isFile()) return p;
     p += "/";
   }
   const idx = join(distDir, p, "index.html").replace(/\\/g, "/");

@@ -1,0 +1,55 @@
+---
+title: Release Policy
+description: Release workflow operated with GitHub Actions
+---
+
+Releases are generated from GitHub Actions' `workflow_dispatch`.
+
+## Release Flow
+
+1. Generate the Social SDK download URL in the Discord Developer Portal (a GCS signed URL that expires in about 1 hour)
+2. Start the `Release` workflow manually from the Actions tab on GitHub, entering:
+   - `version`: the app version (e.g. `0.4.0`) → released as tag `v{version}`
+   - `sdk_url`: the expiring URL above
+3. The workflow then:
+   - Syncs the version into `tauri.conf.json` / `Cargo.toml`
+   - Fetches the Social SDK from `sdk_url` and places it at `src-tauri/gen/android/app/libs/discord_partner_sdk.aar`
+   - Builds the Android APK (`aarch64`) + Windows MSI
+   - Extracts the section for that version from CHANGELOG.md as the release body (falls back to a commit list if absent)
+   - Creates the release automatically and attaches artifacts
+   - Deploys `update.json` to GitHub Pages (for the desktop updater)
+
+## Handling of the Social SDK
+
+- **Never commit SDK binaries to a public repository.** Clause 2.b of the terms prohibits redistribution or copying of the SDK itself. Bundling it into the app is licensed under clause 2.a, but publishing it standalone counts as redistribution.
+- **Never store the expiring URL permanently.** Do not work around the portal's expiring URLs to persist the binary in a private repo or similar.
+- Generate a fresh URL in the portal each time: fetch → build immediately → bundle into the app and publish. The SDK only travels Discord CDN → CI → distributed app and is never retained anywhere.
+- Pass `sdk_url` as a `workflow_dispatch` input. It is masked with `::add-mask::` against log leaks (risk is small since it expires quickly).
+
+## Changelog
+
+- `CHANGELOG.md` is maintained by hand (with Added / Changed / Removed sections).
+- The workflow extracts the `## [version]` section for the given version and uses it as the release body, so there is no need to write the body in the GitHub UI.
+
+## Artifacts
+
+- Windows: MSI + `.sig` + `.sha256`
+- Android: APK (`aarch64` only; add more ABIs if emulators are ever needed)
+- The APK is signed with the release signing key, and the SHA-256 fingerprint of its signing certificate is attached as `apk-signing-fingerprint.txt`. You can verify the authenticity of a distributed APK by comparing it with the fingerprint shown on the app's "About" screen.
+
+## Android Release Signing Key
+
+- Configure the following in the GitHub repository's Secrets:
+  - `ANDROID_KEYSTORE_BASE64`: Base64-encoded release keystore
+  - `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
+
+## Android Environment on CI
+
+- `ANDROID_HOME` is preinstalled on windows-latest.
+- The NDK is installed with sdkmanager (`yes | sdkmanager --licenses` → `ndk;29.0.13846066`).
+- Rust Android targets are added automatically by the tauri CLI.
+- The Android build runs first to beat the 1-hour URL expiry.
+
+## Notes
+
+- If the old `release.yml`'s `on: release: [published]` trigger were kept, the new flow's releases would trigger rebuilds, so it was **removed when replacing the flow**.

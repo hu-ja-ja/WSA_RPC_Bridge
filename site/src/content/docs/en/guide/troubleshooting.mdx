@@ -1,0 +1,57 @@
+---
+title: Troubleshooting
+description: Causes and fixes organized by symptom
+---
+
+Find your symptom below. If nothing helps, please report it on [GitHub Issues](https://github.com/hu-ja-ja/WSA_RPC_Bridge/issues).
+
+## Android Version
+
+### The App UI Is Blank and Nothing Is Displayed
+
+An outdated Android System WebView cannot run the JavaScript features (ES modules, etc.) required to render the UI.
+
+- Update **Android System WebView** to the latest version from the Play Store
+- Rebooting the device afterwards may improve the situation
+
+### Media Is Playing but Nothing Appears on Discord
+
+Check the following in order:
+
+1. Is **notification access permission** granted? — Grant it from the banner at the top of the Settings tab or via `Settings > Apps > Special app access > Notification access`
+2. Is the music app registered in the **whitelist**? — Nothing is detected when the whitelist is empty
+3. Is **Discord RPC enabled**? — Check the button on the persistent notification or the dashboard toggle
+4. Is the **Discord app running** on the device?
+5. If playback has been idle for a long time, [automatic disconnect when idle](../how-it-works/#android-version) is active. Toggle RPC off→on or restart the app
+
+### Detection Stops After a While
+
+Background processing was likely suspended by OS power-saving features. Turning ON **Persistent Notification** in settings runs the app as a foreground service, which makes it stable.
+
+### Cannot Toggle Notification Access in Its Settings Screen (HyperOS, etc.)
+
+On some vendor environments this settings screen behaves unusually. Follow the in-app guidance and grant the permission directly from the system settings screen.
+
+## Desktop Version (WSA)
+
+### Playback Is Not Detected
+
+1. Make sure **developer mode** is enabled in WSA. The ADB connection depends on it
+2. Playback in Windows-native apps (PC browsers, desktop music apps) is **out of scope**. Play media in an app inside WSA
+3. If the ADB status indicator on the dashboard is off, WSA may not be running
+
+### Nothing Is Reflected on Discord
+
+1. Is a logged-in **Discord client** running?
+2. Is the **RPC toggle** on the dashboard enabled?
+3. The presence updates only when detected content changes (no update for unchanged content such as looping the same track)
+
+## Common
+
+### Display Lags by a Few Seconds
+
+The desktop version detects media by polling every 5 seconds, so there can be up to a few seconds of delay. The Android version is event-driven and reflects changes immediately.
+
+### Data Remains After Uninstalling (Windows)
+
+`%APPDATA%\wsa-rpc-bridge\` (settings) and `%LOCALAPPDATA%\wsa-rpc-bridge\` (cache) are not removed automatically. Delete them manually if you no longer need them.

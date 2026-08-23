@@ -1,0 +1,34 @@
+---
+title: Android Version Support
+description: Version-specific behavior of the Android app and recommended notification access settings
+---
+
+The Android version targets **Android 7.0 (API 24) or later**. Android's behavior changes significantly between versions, so this page summarizes compatibility status.
+
+## Version-Specific Behavior and Compatibility
+
+| Feature | Required Android (API) | Status |
+|---|---|---|
+| Notification channels (posting without a channel is not allowed) | 8.0 (26) | On 7.x, notifications are posted the legacy way |
+| Mandatory `startForegroundService()` | 8.0 (26) | API 26+ uses `startForegroundService()`, below branches to `startService()` |
+| Foreground service type (`mediaPlayback`) | 10 (29) | Type is specified only on API 29+, none below |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permission requirement | 14 (34) | Always declared in the Manifest (ignored below 14) |
+| `POST_NOTIFICATIONS` runtime permission | 13 (33) | Treated as granted below 13. On 13+, without the grant the FGS notification is hidden; after granting, the service restarts and reposts it |
+| Signing certificate retrieval API | 9 (28) | API 28+ uses `GET_SIGNING_CERTIFICATES`, below branches to deprecated `GET_SIGNATURES` |
+| Package visibility (`<queries>`) | 11 (30) | Declared in the Manifest; not needed below 11 |
+| Category display in notification access settings | 14 (34) | Only on 14+ are "Real-time / Conversations / Notifications / Silent" shown |
+
+## About WebView
+
+The UI is rendered by Android's system WebView (Tauri). WebView can be updated via the Play Store even on Android 7.x, but with an old WebView modern JavaScript features (ES modules, etc.) will not run and the UI may not appear. See [Troubleshooting](../troubleshooting/#the-app-ui-is-blank-and-nothing-is-displayed) for how to fix this.
+
+## Recommended Notification Access Settings
+
+On the notification access screen, in addition to the app's permission (the service itself), the following options are shown. This app does not read notification text and uses the permission only for media detection, so these settings are fine:
+
+- **Real-time**: ON (recommended) — used to detect playback notifications from music apps (with progress bars)
+- **Conversations / Notifications / Silent**: OFF — unnecessary because no notification text is read. Turning them OFF narrows the notifications delivered by the OS, which is safer
+
+:::caution
+This categorization appears in the settings screen on **Android 14 (API 34) or later**. On earlier versions only the per-app toggle is shown; categories do not exist.
+:::
