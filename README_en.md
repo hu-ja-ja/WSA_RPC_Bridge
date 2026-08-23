@@ -1,8 +1,8 @@
 # WSA RPC Bridge
 
-[English](README_en.md) | [日本語](README.md)
+[English](README_en.md) | [日本語](README.md) | [Documentation](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/) (Japanese)
 
-An app (Windows desktop / Android) that retrieves media playback information playing on WSA (Windows Subsystem for Android) or Android devices and displays it on Discord Rich Presence.
+An app (Windows desktop / Android) that retrieves media playback information playing on WSA (Windows Subsystem for Android) or Android devices and displays it on Discord Rich Presence. For user-facing setup, features, and legal information, see the [documentation site](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/) (Japanese).
 
 ## Screenshots
 
@@ -10,48 +10,29 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 
 ![RPC](img/RPC.png)
 
-## Quick Start
-
-### Desktop (WSA)
-
-1. Download the installer from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest)
-2. Install and launch
-3. Play music on WSA — it shows up on Discord automatically
-
-> Developer mode must be enabled on WSA.
-
-### Android
-
-1. Download the APK from [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest)
-2. Install and grant notification access
-
-> Requires Android 7.0+. See [Android version notes](docs/android-versions.md).
-
-## Features
-
-- **Auto-detect** — Catches whatever's playing on WSA or Android
-- **Discord display** — Shows song info as a Rich Presence in real time
-- **Cross-platform** — Works on desktop (WSA) and Android
-- **Whitelist** — Pick exactly which apps to detect from (Android only)
-- **No login required** — No need to log in to Discord through this app
-- **Zero config** — Install, launch, done
-
-### Notes
-
-- **Desktop**: Windows 11 or later is required (WSA is Windows 11 only). Developer mode must be enabled on the WSA side. [WSABuilds](https://github.com/MustardChef/WSABuilds) is recommended for installing WSA.
-- **Android**: Android 7.0+ is required and notification access permission must be granted. For version-dependent specs and recommended notification access settings, see [Android version notes](docs/android-versions.md) (Japanese only).
-
 ## Tech Stack
 
 | Layer          | Tech                                      |
 |----------------|-------------------------------------------|
-| Frontend       | SolidJS + [Kobalte](https://kobalte.dev/) + Vite                  |
+| Frontend       | SolidJS + [Kobalte](https://kobalte.dev/) + Vite |
 | Backend        | Rust / Tauri v2                           |
 | Android Native | Kotlin (Notification Access / JNI Bridge) |
+| Documentation  | Astro Starlight (site/)                   |
+
+## Repository Layout
+
+```
+src/                  SolidJS frontend (Vite SPA)
+src-tauri/            Rust / Tauri app + Android (gen/android)
+docs/                 Legacy Markdown docs. Migrated to site/
+site/                 Documentation site (Astro Starlight). Deployed to /docs/ on GitHub Pages
+scripts/              Build helper scripts (license generation, etc.)
+.github/workflows/    CI / release / documentation automation
+```
 
 ## Development
 
-Tools are managed with [mise](https://mise.jdx.dev/).
+Tools are managed with [mise](https://mise.jdx.dev/). Commands are defined as mise tasks; pass arguments with `mise run <task> -- <args>`.
 
 ```pwsh
 mise trust        # First time only
@@ -59,35 +40,30 @@ mise install      # Installs Node / pnpm / Rust / Perl / Java
 mise run deps     # Installs JS dependencies
 mise run dev      # Tauri + Vite dev
 mise run build    # Release build
+mise run lint     # oxlint
+mise run test     # Rust unit tests
+mise run android-test  # Android unit tests (Robolectric)
+mise run generate-licenses  # Regenerate third-party licenses
 ```
 
-See the [development command reference](docs/development.md) (Japanese only) for the full list of commands and their arguments.
+The `dev` / `build` / `tauri` tasks go through [Infisical](https://infisical.com/) `infisical run` (manages release signing secrets). If you are not logged in, run `pnpm tauri ...` directly. See the [command reference](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/commands) for the full list.
 
-## FAQ
+## CI
 
-### Will you be support for songs played using software on Windows?
+- **ci.yml** — lint / build / test / android-test on push to main and PRs
+- **release.yml** — manual releases via `workflow_dispatch`. Builds APK (aarch64) + MSI and deploys `update.json` to the Pages root. See the [release policy](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
+- **docs.yml** — deploys the documentation site to `/docs/` on Pages when site/ changes
 
-No. This app is focused on WSA / Android media only. For Windows native music detection.
+## Documentation Site (site/)
 
-### Do I need to log in to Discord?
+Documentation is maintained in the [Astro Starlight](https://starlight.astro.build/) project under `site/`. Japanese only for now (an English version may be added later).
 
-Both the desktop and Android versions require a Discord client or app that you're already logged into, but you do not need to log in to Discord within this app itself.
+```pwsh
+mise run docs-dev      # Local dev server (http://localhost:4321)
+mise run docs-build    # Build for Pages deployment (BASE_PATH=/WSA_RPC_Bridge/docs/)
+```
 
-## Acknowledgments
-
-### Inspiration
-
-- [Kizzy](https://github.com/dead8309/Kizzy)
-
-### Key Crates
-
-- [adb_client](https://github.com/cocool97/adb_client)
-- [apk-info](https://github.com/delvinru/apk-info)
-- [discord-rich-presence](https://github.com/vionya/discord-rich-presence)
-
-## Privacy Policy
-
-Please see the [Privacy Policy](PRIVACY_POLICY_en.md) and [Terms of Service](TERMS_OF_SERVICE_en.md).
+Build with `BASE_PATH='/WSA_RPC_Bridge/docs/' pnpm --dir site build`, output goes to `site/dist/`. Subpath deployment on GitHub Pages uses Astro's native `base` option.
 
 ## License
 

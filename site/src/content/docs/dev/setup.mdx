@@ -1,0 +1,59 @@
+---
+title: 環境構築
+description: 開発環境のセットアップ手順
+---
+
+## 必要なツール
+
+ツールは [mise](https://mise.jdx.dev/) で管理しています。
+
+| ツール | バージョン | 用途 |
+|---|---|---|
+| Node.js | 22 | フロントエンド / ドキュメントのビルド |
+| pnpm | 11.x | JS 依存の管理 |
+| Rust | 1.97 | Tauri バックエンド |
+| Java | 21 | Android ビルド |
+| Perl | - | ビルドスクリプト |
+
+## セットアップ
+
+```pwsh
+mise trust        # 初回のみ
+mise install      # Node / pnpm / Rust / Perl / Java を導入
+mise run deps     # JS 依存をインストール
+```
+
+## 開発サーバーの起動
+
+```pwsh
+mise run dev      # Tauri + Vite dev (デスクトップ版)
+```
+
+起動時、`build.beforeDevCommand` (`pnpm generate-licenses && pnpm dev`) が先に実行され、ライセンス生成 → Vite dev server (`http://localhost:5173`) が立ち上がります。
+
+## プロジェクト構成
+
+```
+├─ src/                  # フロントエンド (SolidJS + Kobalte)
+├─ src-tauri/            # Rust / Tauri v2 バックエンド
+│  └─ gen/android/       # Android プロジェクト (Kotlin)
+├─ scripts/              # ビルドスクリプト
+├─ site/                 # ドキュメントサイト (Astro Starlight)
+├─ img/                  # スクリーンショット
+└─ mise.toml             # タスク定義
+```
+
+## よく使うコマンド
+
+| 目的 | コマンド |
+|---|---|
+| 依存インストール | `mise run deps` |
+| デスクトップ版 dev | `mise run dev` |
+| リリースビルド | `mise run build` |
+| 静的解析 | `mise run lint` |
+| Rust テスト | `mise run test` |
+| Android テスト | `mise run android-test` |
+| ドキュメント dev | `mise run docs-dev` |
+| ドキュメントビルド | `mise run docs-build` |
+
+全コマンドと引数のリファレンスは [コマンドリファレンス](../commands/) を参照してください。

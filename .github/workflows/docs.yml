@@ -1,0 +1,39 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v3
+
+      - name: Install dependencies
+        run: pnpm --dir site install --frozen-lockfile
+
+      - name: Build docs
+        run: BASE_PATH='/WSA_RPC_Bridge/docs/' pnpm --dir site build
+
+      - name: Deploy to GitHub Pages /docs
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: site/dist
+          keep_files: false
+          destination_dir: docs

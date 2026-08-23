@@ -1,0 +1,63 @@
+---
+title: アーキテクチャ概要
+description: WSA RPC Bridge の構成と主要コンポーネント
+---
+
+## レイヤー構成
+
+| レイヤー | 技術 | 役割 |
+|---|---|---|
+| フロントエンド | SolidJS + Kobalte + Vite | UI (ダッシュボード / 設定 / 更新 / ライセンス) |
+| バックエンド | Rust / Tauri v2 | メディア取得・Discord 連携・設定管理 |
+| Android ネイティブ | Kotlin | 通知アクセス・フォアグラウンドサービス・JNI ブリッジ |
+
+## ディレクトリ
+
+```
+src/                          フロントエンド (SolidJS)
+  components/                 パネル・カード等の UI コンポーネント
+  locales/{ja,en}.json        i18n 文言 (起動時に OS 言語から自動選択)
+src-tauri/
+  src/
+    adb/                      ADB クライアントと dumpsys パーサー
+    apk_label/                APK 引き取りによるアプリ名解決 (+ディスクキャッシュ)
+    artwork/                  ArtworkResolver プラグイン群 (ニコニコ等)
+    android/discord.rs        Discord Social SDK の C FFI ラッパー
+    commands/app.rs           フロントエンドへ公開する IPC コマンド
+    tray.rs, config.rs ...    トレイ / 設定 / i18n / シャットダウン対応
+  gen/android/                Android プロジェクト (Kotlin)
+    app/src/main/java/...     MediaCollectorService (通知アクセス) /
+                              MediaInfoService (FGS) / MediaBridge (JNI) ほか
+site/                         ドキュメントサイト (Astro Starlight)
+scripts/                      ビルド支援スクリプト (ライセンス生成など)
+```
+
+## 主要なデータフロー
+
+- **デスクトップ**: `adb` モジュールが `dumpsys media_session` を解析 → IPC コマンド `get_media_info` でフロントエンドが 5 秒間隔で取得 → 変化時のみ Discord IPC へ更新
+- **Android**: Kotlin 側のイベント (通知投稿/削除 + 30 秒の安全タイマー) が JNI `MediaBridge.updateMediaInfo` で Rust へ流れ、Tauri イベント `media-updated` としてフロントエンドへ配信される (ポーリングなし)
+
+## IPC コマンド一覧
+
+フロントエンドから呼び出せる Tauri コマンド (`commands/app.rs`):
+
+| コマンド | 対応環境 | 用途 |
+|---|---|---|
+| `get_adb_status` | デスクトップ | ADB 接続状態の取得 |
+| `get_media_info` | 共通 | 現在のメディア情報の取得 |
+| `connect_discord` / `disconnect_discord` | 共通 | Discord 接続制御 |
+| `update_discord_presence` | 共通 | Rich Presence の更新 |
+| `get_discord_status` | 共通 | Discord 接続状態の取得 |
+| `get_rpc_enabled` / `set_rpc_enabled` | Android | RPC トグルの永続化 |
+| `get_settings` / `update_settings` | 共通 | 設定の読み書き |
+| `list_media_apps` | Android | ホワイトリスト用アプリ一覧 |
+| `get_notification_access_status` / `open_notification_access_settings` | Android | 通知アクセス権限の確認・誘導 |
+| `get_signing_fingerprint` | Android | APK 署名フィンガープリントの取得 |
+
+## 主な外部依存
+
+- [adb_client](https://github.com/cocool97/adb_client) — ADB プロトコル
+- [discord-rich-presence](https://github.com/vionya/discord-rich-presence) — デスクトップの Discord IPC
+- Discord Social SDK (Android) — 規約上リポジトリにコミットしないため、CI が都度ダウンロードする ([リリース方針](../release/) 参照)
+
+設計思想や詳細実装はソースコード内のコメントも参照してください。

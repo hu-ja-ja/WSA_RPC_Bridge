@@ -1,0 +1,60 @@
+---
+title: はじめに
+description: WSA RPC Bridge の概要、対象環境、インストール手順
+---
+
+WSA RPC Bridge は、WSA (Windows Subsystem for Android) や Android デバイスで再生中のメディア情報を取得し、Discord Rich Presence に表示するアプリです。
+
+## 何ができるか
+
+- WSA / Android 上の対応アプリでメディアを再生すると、**曲名・アーティスト名・再生アプリ名・再生位置**を Discord のアクティビティとして自動表示
+- デスクトップ版・Android 版のどちらでも動作
+
+![Discord Rich Presence の表示例](../../assets/RPC.png)
+
+## 何ができないか
+
+- **Windows ネイティブのメディア再生には非対応**です。PC のブラウザやデスクトップ音楽アプリの再生は検出できません。本アプリは WSA / Android 上のメディアに特化しています
+- 本アプリ自体で Discord にログインする必要はありませんが、**ログイン済みの Discord クライアント / アプリ**が別途必要です
+
+ダウンロードは [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から行えます。
+
+## 対象環境
+
+| | デスクトップ版 (Windows) | Android 版 |
+|---|---|---|
+| OS | Windows 11 以上 (WSA は Windows 11 専用) | Android 7.0 (API 24) 以上 |
+| 追加要件 | [WSA](https://learn.microsoft.com/windows/android/wsa/) の導入 + 開発者モード | 通知アクセス権限の許可 |
+| Discord | ログイン済みデスクトップクライアント | ログイン済み Discord アプリ |
+| 配布形式 | MSI インストーラー | APK |
+
+## デスクトップ版のセットアップ
+
+1. [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から MSI インストーラーをダウンロードしてインストール
+2. WSA 側で **開発者モード** を有効にする。ADB 接続はこの開発者モードを利用します
+   - WSA が未導入の場合は [WSABuilds](https://github.com/MustardChef/WSABuilds) の利用が簡単です
+3. アプリを起動し、Discord クライアントをログイン済みの状態で起動しておく
+4. WSA 内のアプリで音楽や動画を再生すると、数秒以内に Discord へ反映されます
+
+:::note[補足]
+ADB 接続は同一 PC 上の WSA (`127.0.0.1`) とのローカル通信のみで、外部サーバーへデータが送信されることはありません。
+:::
+
+## Android 版のセットアップ
+
+1. [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から APK をダウンロードしてインストール
+2. アプリを起動し、**通知アクセス権限** を許可する (案内バナーから設定画面へ移動できます)
+3. 設定タブの **ホワイトリスト** に、検出したい音楽アプリを追加する
+4. Discord アプリを起動しておくと、再生中のメディアが Discord へ反映されます
+
+:::caution[ホワイトリストが空の場合]
+Android 版では、ホワイトリストに何も登録されていないと **どのアプリも検出されません**。初回起動後は必ずホワイトリストを設定してください。
+:::
+
+Android 13 以降では、常駐通知を表示するために **通知権限** も許可してください。バージョンごとの仕様の違いは [Android バージョン対応](guide/android-versions/) を参照してください。
+
+## 次のステップ
+
+- 各設定項目の意味は [設定](guide/settings/)
+- 内部動作と送信データの詳細は [しくみ](guide/how-it-works/)
+- うまく動かないときは [トラブルシューティング](guide/troubleshooting/)

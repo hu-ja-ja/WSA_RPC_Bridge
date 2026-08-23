@@ -43,6 +43,17 @@ run = "pnpm install"
 description = "Regenerate third-party licenses"
 run = "pnpm generate-licenses"
 
+[tasks.docs-dev]
+description = "Run the Astro Starlight docs dev server on port 4321"
+dir = "site"
+run = "pnpm dev"
+
+[tasks.docs-build]
+description = "Build the Astro Starlight docs site for GitHub Pages /docs (BASE_PATH overridable)"
+dir = "site"
+env = { BASE_PATH = "{{ get_env(name='BASE_PATH', default='/WSA_RPC_Bridge/docs/') }}" }
+run = "pnpm build"
+
 [settings]
 cargo.binstall_native = true
 

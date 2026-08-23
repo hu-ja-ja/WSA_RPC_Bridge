@@ -4,22 +4,17 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { getVersion } from '@tauri-apps/api/app'
 import { IconBrandGithub } from '@tabler/icons-solidjs'
 import { BadgeInfo, Check, Copy, ScrollText, Handshake } from 'lucide-solid'
-import { t, locale } from '../i18n'
+import { t } from '../i18n'
 
 const APP_NAME = 'WSA RPC Bridge'
 const [appVersion] = createResource(async () => `v${await getVersion()}`)
 const [fingerprint] = createResource(async () => await invoke<string | null>('get_signing_fingerprint'))
 const COPYRIGHT = 'Copyright (C) 2026 hu-ja-ja'
 
-const privacyPolicyUrl =
-  locale === 'ja'
-    ? 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY.md'
-    : 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/PRIVACY_POLICY_en.md'
+// ponytail: 法務ページは日本語版のみ公開。英語版復活時に locale 分岐を戻す
+const privacyPolicyUrl = 'https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/legal/privacy'
 
-const termsOfServiceUrl =
-  locale === 'ja'
-    ? 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/TERMS_OF_SERVICE.md'
-    : 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/TERMS_OF_SERVICE_en.md'
+const termsOfServiceUrl = 'https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/legal/terms'
 
 const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
 const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'

@@ -1,8 +1,8 @@
 # WSA RPC Bridge
 
-[English](README_en.md) | [日本語](README.md)
+[English](README_en.md) | [日本語](README.md) | [ドキュメント](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/)
 
-WSA (Windows Subsystem for Android) や Android デバイス上で再生されているメディア情報を取得し、Discord Rich Presence に表示するアプリ (Windows デスクトップ / Android 対応) 。
+WSA (Windows Subsystem for Android) や Android デバイスで再生されているメディア情報を取得し、Discord Rich Presence に表示するアプリ (Windows デスクトップ / Android 対応) 。ユーザー向けの導入・機能・法務情報は [ドキュメントサイト](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/) を参照してください。
 
 ## スクリーンショット
 
@@ -10,48 +10,29 @@ WSA (Windows Subsystem for Android) や Android デバイス上で再生され�
 
 ![RPC](img/RPC.png)
 
-## クイックスタート
-
-### デスクトップ版 (WSA)
-
-1. [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) からインストーラをダウンロード
-2. インストール → 起動
-3. WSA で音楽を再生すれば、自動で Discord に反映される
-
-> WSA の開発者モードの有効化が必要です。
-
-### Android 版
-
-1. [Releases](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) から APK をダウンロード
-2. インストール → 通知アクセスを許可
-
-> Android 7.0 以上が必要です。[バージョン対応メモ](docs/android-versions.md) も参照してください。
-
-## 機能
-
-- **自動検出** — WSA / Android で再生中の曲を自動でキャッチ
-- **Discord 表示** — リッチプレゼンスに曲情報をリアルタイム表示
-- **マルチプラットフォーム** — デスクトップ (WSA) と Android 両対応
-- **ホワイトリスト** — 検出したいアプリだけ選べる (Android版のみ)
-- **ログイン不要** — 本アプリで Discord にログインする必要はありません
-- **かんたん設定** — インストールして起動するだけ、あとは自動
-
-### 注意
-
-- **デスクトップ版**: Windows 11 以上が必要です (WSA は Windows 11 専用) 。WSA 側で開発者モードを有効にしている必要があります。WSA の導入には [WSABuilds](https://github.com/MustardChef/WSABuilds) を推奨します。
-- **Android 版**: Android 7.0 以上が必要で、通知アクセス権限の許可が必要です。バージョン依存の仕様と通知アクセス権限の推奨設定は [Android バージョン対応メモ](docs/android-versions.md) を参照してください。
-
 ## 技術スタック
 
 | レイヤー           | 技術                                  |
 |--------------------|---------------------------------------|
-| フロントエンド     | SolidJS + [Kobalte](https://kobalte.dev/) + Vite              |
+| フロントエンド     | SolidJS + [Kobalte](https://kobalte.dev/) + Vite |
 | バックエンド       | Rust / Tauri v2                       |
-| Android ネイティブ | Kotlin（通知アクセス / JNI ブリッジ） |
+| Android ネイティブ | Kotlin (通知アクセス / JNI ブリッジ)  |
+| ドキュメント       | Astro Starlight (site/)               |
+
+## リポジトリ構成
+
+```
+src/                  SolidJS フロントエンド (Vite SPA)
+src-tauri/            Rust / Tauri 本体 + Android (gen/android)
+docs/                 ※ 旧 Markdown ドキュメント。現在は site/ に移行
+site/                 ドキュメントサイト (Astro Starlight)。GitHub Pages の /docs/ にデプロイ
+scripts/              ビルド支援スクリプト (ライセンス生成など)
+.github/workflows/     CI / リリース / ドキュメントの自動化
+```
 
 ## 開発
 
-ツールは [mise](https://mise.jdx.dev/) で管理しています。
+ツールは [mise](https://mise.jdx.dev/) で管理しています。コマンドは mise のタスクとして定義され、`mise run <task> -- <args>` で引数を渡せます。
 
 ```pwsh
 mise trust        # 初回のみ
@@ -59,35 +40,30 @@ mise install      # Node / pnpm / Rust / Perl / Java を導入
 mise run deps     # JS 依存をインストール
 mise run dev      # Tauri + Vite dev
 mise run build    # リリースビルド
+mise run lint     # oxlint
+mise run test     # Rust ユニットテスト
+mise run android-test  # Android ユニットテスト (Robolectric)
+mise run generate-licenses  # サードパーティライセンスの再生成
 ```
 
-全コマンドと引数のリファレンスは [開発コマンドリファレンス](docs/development.md) を参照。
+`dev` / `build` / `tauri` タスクは [Infisical](https://infisical.com/) の `infisical run` を経由します (リリース署名用の秘密鍵の管理)。未ログイン時は `pnpm tauri ...` を直接実行してください。全コマンドの詳細は [コマンドリファレンス](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/commands) を参照。
 
-## FAQ
+## CI
 
-### Windows 上のソフトウェアで再生している曲に対応する予定はありますか？
+- **ci.yml** — main への push / PR で lint / build / test / android-test を実行
+- **release.yml** — `workflow_dispatch` から手動リリース。APK (aarch64) + MSI をビルドし、`update.json` を Pages ルートへデプロイ。詳細は [リリース方針](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
+- **docs.yml** — site/ の変更でドキュメントサイトを Pages の `/docs/` へデプロイ
 
-いいえ。本アプリは WSA / Android 上のメディアに特化しています。
+## ドキュメントサイト (site/)
 
-### Discord へのログインは必要ですか？
+ドキュメントは `site/` の [Astro Starlight](https://starlight.astro.build/) プロジェクトで管理しています。日本語のみで運用しています (英語版は今後追加予定)。
 
-デスクトップ版、Android版ともに、ログイン済みの Discord クライアント/アプリが必要ですが、本アプリ自体でDiscordにログインする必要はありません。
+```pwsh
+mise run docs-dev      # ローカル dev server (http://localhost:4321)
+mise run docs-build    # Pages デプロイ用ビルド (BASE_PATH=/WSA_RPC_Bridge/docs/)
+```
 
-## 謝辞
-
-### アイデア
-
-- [Kizzy](https://github.com/dead8309/Kizzy)
-
-### 主要Crates
-
-- [adb_client](https://github.com/cocool97/adb_client)
-- [apk-info](https://github.com/delvinru/apk-info)
-- [discord-rich-presence](https://github.com/vionya/discord-rich-presence)
-
-## プライバシーポリシー
-
-[プライバシーポリシー](PRIVACY_POLICY.md) と [利用規約](TERMS_OF_SERVICE.md) をご確認ください。
+ビルドは `BASE_PATH='/WSA_RPC_Bridge/docs/' pnpm --dir site build` で行い、`site/dist/` に出力されます。GitHub Pages のサブパス配信には Astro の `base` 設定を使用しています。
 
 ## ライセンス
 
