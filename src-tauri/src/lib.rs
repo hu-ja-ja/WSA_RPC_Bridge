@@ -58,6 +58,18 @@ pub fn run() {
 
     let mut artwork_registry = ArtworkRegistry::new();
     artwork_registry.register(Box::new(artwork::nicobox::NicoboxResolver::new()));
+    artwork_registry.register(Box::new(artwork::youtube::YoutubeResolver::new(
+        "com.google.android.youtube",
+    )));
+    artwork_registry.register(Box::new(artwork::youtube::YoutubeResolver::new(
+        "com.google.android.apps.youtube.music",
+    )));
+    artwork_registry.register(Box::new(artwork::youtube::YoutubeResolver::new(
+        "app.morphe.android.youtube",
+    )));
+    artwork_registry.register(Box::new(artwork::youtube::YoutubeResolver::new(
+        "app.morphe.android.apps.youtube.music",
+    )));
 
     let builder = tauri::Builder::default();
 

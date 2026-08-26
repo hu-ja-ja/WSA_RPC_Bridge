@@ -1,4 +1,5 @@
 pub mod nicobox;
+pub mod youtube;
 
 use std::collections::HashMap;
 
