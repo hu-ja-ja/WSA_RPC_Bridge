@@ -3,6 +3,7 @@ package com.wsarpcbridge.app
 import android.content.ComponentName
 import android.content.Context
 import android.media.MediaMetadata
+import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.service.notification.NotificationListenerService
@@ -16,12 +17,53 @@ class MediaCollectorService : NotificationListenerService() {
     private var timer: Timer? = null
     private var lastNow: NowPlaying? = null
     private var lastPositionMs: Long = -1L
+    private var sessionManager: MediaSessionManager? = null
+    private val watchedControllers = mutableListOf<MediaController>()
+
+    // 再生状態・曲情報の変化はセッションコールバックで即時検知する。
+    // 再生/一時停止は通知の投稿を伴わないため、通知イベントだけでは拾えない。
+    private val controllerCallback = object : MediaController.Callback() {
+        override fun onPlaybackStateChanged(state: PlaybackState?) = pushNow()
+        override fun onMetadataChanged(metadata: MediaMetadata?) = pushNow()
+    }
+
+    private val sessionsChangedListener =
+        MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+            watchSessions(controllers)
+            pushNow()
+        }
+
+    private fun watchSessions(controllers: List<MediaController>?) {
+        watchedControllers.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
+        watchedControllers.clear()
+        controllers?.forEach { c ->
+            runCatching {
+                c.registerCallback(controllerCallback)
+                watchedControllers.add(c)
+            }
+        }
+    }
+
+    private fun stopWatching() {
+        watchSessions(emptyList())
+        runCatching { sessionManager?.removeOnActiveSessionsChangedListener(sessionsChangedListener) }
+        sessionManager = null
+    }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
         AppInit.ensureInitialized(this)
         isConnected = true
         startPolling()
+        runCatching {
+            val sm = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+            sessionManager = sm
+            sm.addOnActiveSessionsChangedListener(
+                sessionsChangedListener,
+                ComponentName(this, MediaCollectorService::class.java)
+            )
+            watchSessions(sm.getActiveSessions(ComponentName(this, MediaCollectorService::class.java)))
+        }
     }
 
     override fun onListenerDisconnected() {
@@ -29,6 +71,7 @@ class MediaCollectorService : NotificationListenerService() {
         isConnected = false
         timer?.cancel()
         timer = null
+        stopWatching()
         // 最後のメディア状態をクリアし、リバインド時に dedup が初回更新を抑制しないようにする
         lastNow = null
         lastPositionMs = -1L
@@ -54,6 +97,7 @@ class MediaCollectorService : NotificationListenerService() {
     override fun onDestroy() {
         isConnected = false
         timer?.cancel()
+        stopWatching()
         super.onDestroy()
     }
 
@@ -145,7 +189,7 @@ class MediaCollectorService : NotificationListenerService() {
         var isConnected: Boolean = false
             private set
 
-        // 保険のポーリング。通常は onNotificationPosted/Removed のイベント駆動で更新される。
+        // 保険のポーリング。通常はセッションコールバックと通知イベントで更新される。
         private const val POLL_INTERVAL_MS = 30_000L
 
         fun isNotificationAccessGranted(context: Context): Boolean {
