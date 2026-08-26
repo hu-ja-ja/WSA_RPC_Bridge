@@ -43,9 +43,16 @@ impl ArtworkResolver for YoutubeResolver {
         // Plain title kept as fallback for phrase-mismatch cases.
         for query in [format!("\"{}\"", info.title), info.title.clone()] {
             let videos = self.search(&query).await;
-            if let Some(id) = pick_video(&videos, &info.title, &info.artist) {
+            if let Some((id, tier)) = pick_video(&videos, &info.title, &info.artist) {
                 let url = format!("https://i.ytimg.com/vi/{id}/mqdefault.jpg");
-                log::info!("youtube: resolved thumbnail: {}", url);
+                if cfg!(debug_assertions) {
+                    log::info!(
+                        "youtube: resolved videoId={} tier={} query={:?} title={:?} artist={:?}",
+                        id, tier, query, info.title, info.artist
+                    );
+                } else {
+                    log::info!("youtube: resolved thumbnail: {}", url);
+                }
                 return Some(url);
             }
             log::debug!(
@@ -222,18 +229,13 @@ fn artist_candidates(artist: &str) -> Vec<String> {
     out
 }
 
-fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option<&'a str> {
+fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option<(&'a str, u8)> {
     // Tier 1: exact author + exact title
     if let Some(v) = videos.iter().find(|(_, t, a, _)| t == title && a == artist) {
-        return Some(&v.0);
+        return Some((&v.0, 1));
     }
 
-    // Tier 2: unique exact title
-    let exact: Vec<&VideoEntry> = videos.iter().filter(|(_, t, _, _)| t == title).collect();
-    if exact.len() == 1 {
-        return Some(&exact[0].0);
-    }
-
+    // Tier 2: fuzzy title + author match, most viewed wins
     let nt = normalize(title);
     if nt.is_empty() {
         return None;
@@ -253,7 +255,8 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
         candidates.iter().any(|c| m.contains(c.as_str()) || c.contains(m.as_str()))
     };
 
-    // Tier 3: fuzzy title + author match, most viewed wins (first in search order breaks ties)
+    // ponytail: removed old Tier 2 (unique exact title w/o author check) — Topic channel
+    // uploads with clean titles were beating official MVs.
     let mut best: Option<&VideoEntry> = None;
     for v in videos.iter() {
         if title_hit(&v.1) && author_hit(&v.2) && best.map_or(true, |b| v.3 > b.3) {
@@ -261,13 +264,13 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
         }
     }
     if let Some(v) = best {
-        return Some(&v.0);
+        return Some((&v.0, 2));
     }
 
-    // Tier 4: unique fuzzy title regardless of author
+    // Tier 3: unique fuzzy title regardless of author
     let hits: Vec<&VideoEntry> = videos.iter().filter(|v| title_hit(&v.1)).collect();
     if hits.len() == 1 {
-        return Some(&hits[0].0);
+        return Some((&hits[0].0, 3));
     }
     None
 }
@@ -364,25 +367,16 @@ mod tests {
         let videos = collect_videos(&fixture());
         assert_eq!(
             pick_video(&videos, "Never Gonna Give You Up (Live)", "Other Channel"),
-            Some("dupe0000000")
+            Some(("dupe0000000", 1))
         );
     }
 
     #[test]
-    fn pick_tier2_unique_exact_title_even_with_author_mismatch() {
-        let videos = collect_videos(&fixture());
-        assert_eq!(
-            pick_video(&videos, "Rick Astley - Never Gonna Give You Up (Official Video)", "リック・アストリー"),
-            Some("dQw4w9WgXcQ")
-        );
-    }
-
-    #[test]
-    fn pick_tier3_fuzzy_author_match_picks_most_viewed() {
+    fn pick_tier2_fuzzy_author_match_picks_most_viewed() {
         let videos = collect_videos(&fixture());
         assert_eq!(
             pick_video(&videos, "Never Gonna Give You Up", "Rick Astley"),
-            Some("dQw4w9WgXcQ")
+            Some(("dQw4w9WgXcQ", 2))
         );
     }
 
@@ -399,18 +393,17 @@ mod tests {
 
     #[test]
     fn pick_collab_jp_artist_matches_each_channel() {
-        // 名前順序に依らずauthor候補がヒットし、再生回数最大の方が選ばれる
         let a_first = vec![
             entry("v1", "コラボ楽曲 (Music Video)", "星野源", 500_000_000),
             entry("v2", "コラボ楽曲 (Official Audio)", "米津玄師 - Topic", 100_000_000),
         ];
-        assert_eq!(pick_video(&a_first, "コラボ楽曲", "星野源、米津玄師"), Some("v1"));
+        assert_eq!(pick_video(&a_first, "コラボ楽曲", "星野源、米津玄師"), Some(("v1", 2)));
 
         let b_first = vec![
             entry("v1", "コラボ楽曲 (Music Video)", "星野源", 100_000_000),
             entry("v2", "コラボ楽曲 (Official Audio)", "米津玄師 - Topic", 500_000_000),
         ];
-        assert_eq!(pick_video(&b_first, "コラボ楽曲", "星野源、米津玄師"), Some("v2"));
+        assert_eq!(pick_video(&b_first, "コラボ楽曲", "星野源、米津玄師"), Some(("v2", 2)));
     }
 
     #[test]
@@ -419,12 +412,12 @@ mod tests {
             entry("v1", "Collab Song (Music Video)", "Artist A", 100_000_000),
             entry("v2", "Collab Song (Official Audio)", "Artist B - Topic", 50_000_000),
         ];
-        assert_eq!(pick_video(&videos, "Collab Song", "Artist A, Artist B"), Some("v1"));
+        assert_eq!(pick_video(&videos, "Collab Song", "Artist A, Artist B"), Some(("v1", 2)));
     }
 
     #[test]
     fn pick_full_artist_string_survives_commas_in_name() {
         let videos = vec![entry("ewf", "September (Remastered)", "Earth, Wind & Fire", 900_000)];
-        assert_eq!(pick_video(&videos, "September", "Earth, Wind & Fire"), Some("ewf"));
+        assert_eq!(pick_video(&videos, "September", "Earth, Wind & Fire"), Some(("ewf", 2)));
     }
 }
