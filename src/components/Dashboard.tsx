@@ -17,6 +17,7 @@ interface MediaInfo {
 
 interface DashboardProps {
   media: MediaInfo | null
+  thumbnailUrl: string | null
   loading: boolean
   error: string | null
   displayPosition: number | null
@@ -79,6 +80,7 @@ export function Dashboard(props: DashboardProps) {
         <h2 class="page-heading">{t('dashboard.now_playing')}</h2>
         <MediaCard
           media={props.media}
+          thumbnailUrl={props.thumbnailUrl}
           loading={props.loading}
           error={props.error}
           displayPosition={props.displayPosition}

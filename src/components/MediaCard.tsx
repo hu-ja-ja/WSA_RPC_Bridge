@@ -18,6 +18,7 @@ interface MediaInfo {
 
 interface MediaCardProps {
   media: MediaInfo | null
+  thumbnailUrl: string | null
   loading: boolean
   error: string | null
   displayPosition: number | null
@@ -51,18 +52,21 @@ export function MediaCard(props: MediaCardProps) {
       }>
         {(m) => (
           <div class="media-card">
-            <Show when={m().thumbnail_url}>
-              <img
-                src={m().thumbnail_url!}
-                alt="album art"
-                class="thumb"
-                onerror={(e) => {
-                  const img = e.currentTarget
-                  if (img.src !== NOART_URI) {
-                    img.src = NOART_URI
-                  }
-                }}
-              />
+            {/* ponytail: 情報とサムネ完全分離 — サムネは別signal */}
+            <Show when={props.thumbnailUrl} keyed>
+              {(url) => (
+                <img
+                  src={url}
+                  alt="album art"
+                  class="thumb"
+                  onerror={(e) => {
+                    const img = e.currentTarget
+                    if (img.src !== NOART_URI) {
+                      img.src = NOART_URI
+                    }
+                  }}
+                />
+              )}
             </Show>
             <div class="media-body">
               <div class="track-title">

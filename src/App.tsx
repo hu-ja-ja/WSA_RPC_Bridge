@@ -39,15 +39,24 @@ const TICK_INTERVAL = 1000
 const STORAGE_RPC_KEY = 'rpcEnabled'
 const EVENT_SHOW_SETTINGS = 'show-settings'
 const EVENT_MEDIA_UPDATED = 'media-updated'
+const EVENT_THUMB_UPDATED = 'thumbnail-updated'
 const EVENT_DISCORD_STATUS = 'discord-status-changed'
 const EVENT_NOTIFICATION_ACCESS = 'notification-access-changed'
 // AndroidではRust側(JNI)がイベントでプッシュするためポーリングしない。デスクトップはADBの都合でポーリング。
 const IS_ANDROID = typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
 
+interface ThumbnailPayload {
+  package_name: string
+  title: string
+  artist: string
+  thumbnail_url: string
+}
+
 function App() {
   const [adbConnected, setAdbConnected] = createSignal(false)
   const [discordConnected, setDiscordConnected] = createSignal(false)
   const [media, setMedia] = createSignal<MediaInfo | null>(null)
+  const [thumbUrl, setThumbUrl] = createSignal<string | null>(null)
   const [error, setError] = createSignal<string | null>(null)
   const [loading, setLoading] = createSignal(false)
   const [lastFetch, setLastFetch] = createSignal<{ pos: number; time: number } | null>(null)
@@ -103,10 +112,14 @@ function App() {
     try {
       const result = await invoke<MediaInfo>('get_media_info')
       setMedia(result)
+      // ponytail: 情報とサムネ完全分離
+      setThumbUrl(result.thumbnail_url ?? null)
       setError(null)
       setAdbConnected(true)
       if (result.position !== null) {
         setLastFetch({ pos: result.position, time: Date.now() })
+      } else {
+        setLastFetch(null)
       }
       if (rpcEnabled()) {
         await invoke('connect_discord')
@@ -118,6 +131,7 @@ function App() {
       }
     } catch (e) {
       setMedia(null)
+      setThumbUrl(null)
       setLastFetch(null)
       setError(String(e))
       lastPresenceKey = null
@@ -255,17 +269,31 @@ function App() {
 
       const unlistenMedia = await listen<MediaInfo>(EVENT_MEDIA_UPDATED, async (event) => {
         const result = event.payload
+        const prev = media()
         setMedia(result)
         setError(null)
+        // ponytail: 情報とサムネ完全分離 — サムネ到着では lastFetch を更新しない
         if (result.position !== null) {
-          setLastFetch({ pos: result.position, time: Date.now() })
+          const posChanged = prev?.position !== result.position
+          const trackChanged = !prev || prev.title !== result.title || prev.artist !== result.artist || prev.package_name !== result.package_name
+          const playChanged = prev?.is_playing !== result.is_playing
+          if (posChanged || trackChanged || playChanged) {
+            setLastFetch({ pos: result.position, time: Date.now() })
+          }
+        } else {
+          setLastFetch(null)
+        }
+        // トラック切替で旧サムネをクリア、thumbnail-updated 到着まで placeholder
+        if (!prev || prev.title !== result.title || prev.artist !== result.artist || prev.package_name !== result.package_name) {
+          setThumbUrl(null)
         }
         if (!result.title) {
+          setThumbUrl(null)
           lastPresenceKey = null
         }
-        if (result.title && rpcEnabled()) {
+        // AndroidのDiscordはRust側でサムネ後に送るためフロントからは送らない
+        if (!IS_ANDROID && result.title && rpcEnabled()) {
           await invoke('connect_discord')
-          // セッションロスト切断後はRust側のpresence送信がスキップされるため、再接続後に再送する
           const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}|${result.position ?? 0}`
           if (key !== lastPresenceKey) {
             await invoke('update_discord_presence', { info: result })
@@ -274,6 +302,15 @@ function App() {
         }
       })
       onCleanup(unlistenMedia)
+
+      const unlistenThumb = await listen<ThumbnailPayload>(EVENT_THUMB_UPDATED, (event) => {
+        const p = event.payload
+        const cur = media()
+        // stale なサムネは破棄
+        if (!cur || cur.title !== p.title || cur.artist !== p.artist || cur.package_name !== p.package_name) return
+        setThumbUrl(p.thumbnail_url)
+      })
+      onCleanup(unlistenThumb)
 
       const unlistenDiscord = await listen<boolean>(EVENT_DISCORD_STATUS, (event) => {
         setDiscordConnected(event.payload)
@@ -346,6 +383,7 @@ function App() {
         <Show when={activeTab() === 'dashboard'}>
           <Dashboard
             media={media()}
+            thumbnailUrl={thumbUrl()}
             loading={loading()}
             error={error()}
             displayPosition={displayPosition()}

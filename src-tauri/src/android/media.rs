@@ -1,11 +1,22 @@
 use std::sync::atomic::Ordering;
 use std::sync::{Mutex, OnceLock};
 
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::android::discord::{discord_connect, discord_disconnect, update_presence_dedup};
+use crate::android::discord::{
+    discord_connect, discord_disconnect, discord_update_presence, update_presence_dedup,
+};
 use crate::commands::AppState;
 use crate::models::MediaInfo;
+
+#[derive(Clone, Serialize)]
+struct ThumbnailPayload {
+    package_name: String,
+    title: String,
+    artist: String,
+    thumbnail_url: String,
+}
 
 static MEDIA_STATE: OnceLock<Mutex<MediaInfo>> = OnceLock::new();
 
@@ -229,6 +240,7 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     } else {
         log::debug!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
     }
+    // ponytail: 情報とサムネは完全分離 — media_state はサムネを持たない
     *media_state().lock().expect("media mutex poisoned") = info.clone();
 
     let Some(app) = APP_HANDLE.get().cloned() else {
@@ -249,21 +261,8 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
     }
     tauri::async_runtime::spawn(async move {
         let state = app.state::<AppState>();
-        let mut info = info;
-        if cfg!(debug_assertions) {
-            log::info!(
-                "android: resolve: start title={:?} artist={:?} pkg={:?}",
-                info.title, info.artist, info.package_name
-            );
-        }
-        if let Some(url) = state.artwork.lock().await.resolve(&info).await {
-            if cfg!(debug_assertions) {
-                log::info!("android: resolve: got thumbnail url={}", url);
-            }
-            info.thumbnail_url = Some(url);
-        } else if cfg!(debug_assertions) {
-            log::info!("android: resolve: no thumbnail for title={:?}", info.title);
-        }
+
+        // ponytail: 情報とサムネ完全分離 — 情報は即時、サムネは別イベント
         let _ = app.emit("media-updated", &info);
 
         if info.title.is_empty() {
@@ -276,12 +275,65 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
             }
             return;
         }
+
+        // 曲切替時はDiscord即時送信（サムネ無しでOK）
+        if state.discord_connected.load(Ordering::Relaxed) {
+            if let Err(e) = update_presence_dedup(&info) {
+                log::warn!("android: presence immediate update failed: {e}");
+            }
+        }
+
+        if cfg!(debug_assertions) {
+            log::info!(
+                "android: resolve: start title={:?} artist={:?} pkg={:?}",
+                info.title, info.artist, info.package_name
+            );
+        }
+        let url_opt = state.artwork.lock().await.resolve(&info).await;
+        if cfg!(debug_assertions) {
+            if let Some(ref url) = url_opt {
+                log::info!("android: resolve: got thumbnail url={}", url);
+            } else {
+                log::info!("android: resolve: no thumbnail for title={:?}", info.title);
+            }
+        }
+
+        // ponytail: 別曲に遷移済みなら誤サムネを出さず破棄
+        {
+            let cur = media_state().lock().expect("media mutex poisoned").clone();
+            if cur.package_name != info.package_name
+                || cur.title != info.title
+                || cur.artist != info.artist
+            {
+                log::debug!(
+                    "android: resolve result discarded (stale) resolve_for={:?} cur={:?}",
+                    info.title, cur.title
+                );
+                return;
+            }
+        }
+        let Some(url) = url_opt else {
+            // サムネ取得失敗時は即時送信済みなので追加送信不要
+            return;
+        };
+        // サムネは別イベントで配信 — 情報の lastFetch/秒数に影響しない
+        let payload = ThumbnailPayload {
+            package_name: info.package_name.clone(),
+            title: info.title.clone(),
+            artist: info.artist.clone(),
+            thumbnail_url: url.clone(),
+        };
+        let _ = app.emit("thumbnail-updated", &payload);
+
         if !state.discord_connected.load(Ordering::Relaxed) {
             log::debug!("android: presence update skipped (not connected)");
             return;
         }
-        if let Err(e) = update_presence_dedup(&info) {
-            log::warn!("android: presence update failed: {e}");
+        // サムネ付きでDiscord更新（即時送信と同一キーでdedupされるため直接送信）
+        let mut with_thumb = info.clone();
+        with_thumb.thumbnail_url = Some(url);
+        if let Err(e) = discord_update_presence(&with_thumb) {
+            log::warn!("android: presence thumb update failed: {e}");
         }
     });
 }

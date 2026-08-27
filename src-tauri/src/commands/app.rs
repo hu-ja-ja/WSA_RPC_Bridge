@@ -1,4 +1,6 @@
 use tauri::{AppHandle, State};
+#[cfg(target_os = "android")]
+use tauri::Manager;
 #[cfg(not(target_os = "android"))]
 use tauri_plugin_autostart::ManagerExt;
 #[cfg(target_os = "android")]
@@ -76,18 +78,54 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
 
 #[tauri::command]
 #[cfg(target_os = "android")]
-pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
-    let mut info = crate::android::media_state()
+pub async fn get_media_info(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<MediaInfo, String> {
+    let info = crate::android::media_state()
         .lock()
         .expect("media mutex poisoned")
         .clone();
 
-    let mut registry = state.artwork.lock().await;
-    if let Some(url) = registry.resolve(&info).await {
-        info.thumbnail_url = Some(url);
+    log::info!("get_media_info: android title={:?}, artist={:?}", info.title, info.artist);
+
+    // ponytail: 情報は即時返し、サムネは別イベントで後送 — 秒数リセットを防ぐ
+    if !info.title.is_empty() {
+        let app_clone = app.clone();
+        let info_clone = info.clone();
+        tauri::async_runtime::spawn(async move {
+            let state = app_clone.state::<AppState>();
+            let url_opt = state.artwork.lock().await.resolve(&info_clone).await;
+            if let Some(url) = url_opt {
+                // stale check
+                let cur = crate::android::media_state()
+                    .lock()
+                    .expect("media mutex poisoned")
+                    .clone();
+                if cur.package_name != info_clone.package_name
+                    || cur.title != info_clone.title
+                    || cur.artist != info_clone.artist
+                {
+                    return;
+                }
+                #[derive(serde::Serialize, Clone)]
+                struct Payload {
+                    package_name: String,
+                    title: String,
+                    artist: String,
+                    thumbnail_url: String,
+                }
+                let payload = Payload {
+                    package_name: info_clone.package_name,
+                    title: info_clone.title,
+                    artist: info_clone.artist,
+                    thumbnail_url: url,
+                };
+                let _ = app_clone.emit("thumbnail-updated", &payload);
+            }
+        });
     }
 
-    log::info!("get_media_info: android title={:?}, artist={:?}", info.title, info.artist);
     Ok(info)
 }
 
