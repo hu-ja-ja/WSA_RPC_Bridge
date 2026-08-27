@@ -221,7 +221,14 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
         is_playing: is_playing != 0,
     };
 
-    log::debug!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
+    if cfg!(debug_assertions) {
+        log::info!(
+            "android: media update: title={:?} artist={:?} pkg={:?} playing={}",
+            info.title, info.artist, info.package_name, info.is_playing
+        );
+    } else {
+        log::debug!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
+    }
     *media_state().lock().expect("media mutex poisoned") = info.clone();
 
     let Some(app) = APP_HANDLE.get().cloned() else {
@@ -234,11 +241,28 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
 }
 
 fn push_media_update(app: AppHandle, info: MediaInfo) {
+    if cfg!(debug_assertions) {
+        log::info!(
+            "android: push_media_update: title={:?} artist={:?} pkg={:?} playing={}",
+            info.title, info.artist, info.package_name, info.is_playing
+        );
+    }
     tauri::async_runtime::spawn(async move {
         let state = app.state::<AppState>();
         let mut info = info;
+        if cfg!(debug_assertions) {
+            log::info!(
+                "android: resolve: start title={:?} artist={:?} pkg={:?}",
+                info.title, info.artist, info.package_name
+            );
+        }
         if let Some(url) = state.artwork.lock().await.resolve(&info).await {
+            if cfg!(debug_assertions) {
+                log::info!("android: resolve: got thumbnail url={}", url);
+            }
             info.thumbnail_url = Some(url);
+        } else if cfg!(debug_assertions) {
+            log::info!("android: resolve: no thumbnail for title={:?}", info.title);
         }
         let _ = app.emit("media-updated", &info);
 

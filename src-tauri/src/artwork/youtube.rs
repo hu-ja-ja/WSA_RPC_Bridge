@@ -9,7 +9,7 @@ use crate::models::MediaInfo;
 
 const SEARCH_ENDPOINT: &str = "https://www.youtube.com/youtubei/v1/search";
 // ponytail: static client version, bump if YouTube starts rejecting it
-const CLIENT_VERSION: &str = "2.20250101.00.00";
+const CLIENT_VERSION: &str = "2.20241202.00.00";
 
 type VideoEntry = (String, String, String, u64); // (videoId, title, author, views)
 
@@ -55,13 +55,28 @@ impl ArtworkResolver for YoutubeResolver {
                 }
                 return Some(url);
             }
-            log::debug!(
-                "youtube: no match for query {:?} ({} results)",
-                query,
-                videos.len()
-            );
+            if cfg!(debug_assertions) {
+                log::info!(
+                    "youtube: no match for query {:?} ({} results)",
+                    query,
+                    videos.len()
+                );
+                if videos.is_empty() {
+                    log::info!("youtube: no results - likely API key/version rejected for query {:?}", query);
+                }
+            } else {
+                log::debug!(
+                    "youtube: no match for query {:?} ({} results)",
+                    query,
+                    videos.len()
+                );
+            }
         }
-        log::debug!("youtube: no matching video for {:?}", info.title);
+        if cfg!(debug_assertions) {
+            log::info!("youtube: no matching video for {:?}", info.title);
+        } else {
+            log::debug!("youtube: no matching video for {:?}", info.title);
+        }
         None
     }
 }
@@ -78,12 +93,19 @@ impl YoutubeResolver {
             "query": query,
         });
 
-        log::debug!("youtube: searching innertube for {:?}", query);
+        if cfg!(debug_assertions) {
+            log::info!("youtube: searching innertube for {:?}", query);
+        } else {
+            log::debug!("youtube: searching innertube for {:?}", query);
+        }
 
         let resp = self
             .client
             .post(SEARCH_ENDPOINT)
             .header("User-Agent", concat!("wsa_rpc_bridge/", env!("CARGO_PKG_VERSION")))
+            .header("Content-Type", "application/json")
+            .header("Origin", "https://www.youtube.com")
+            .header("Referer", "https://www.youtube.com/")
             .json(&body)
             .send()
             .await;
@@ -98,14 +120,24 @@ impl YoutubeResolver {
 
         let status = resp.status();
         if !status.is_success() {
-            log::warn!("youtube: search API returned {}", status);
+            let body = resp.text().await.unwrap_or_default();
+            let snippet = body.chars().take(400).collect::<String>();
+            log::warn!("youtube: search API returned {} body={:?}", status, snippet);
             return Vec::new();
         }
 
-        let json: Value = match resp.json().await {
+        let text = match resp.text().await {
+            Ok(t) => t,
+            Err(e) => {
+                log::warn!("youtube: failed to read search response: {e}");
+                return Vec::new();
+            }
+        };
+        let json: Value = match serde_json::from_str(&text) {
             Ok(j) => j,
             Err(e) => {
-                log::warn!("youtube: failed to decode search response: {e}");
+                let snippet = text.chars().take(400).collect::<String>();
+                log::warn!("youtube: failed to decode search response: {e} body={:?}", snippet);
                 return Vec::new();
             }
         };

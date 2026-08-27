@@ -30,7 +30,11 @@ impl ArtworkResolver for NicoboxResolver {
              _sort=-viewCounter&_offset=0&_limit=1&_context=wsa_rpc_bridge"
         );
 
-        log::debug!("nicobox: searching niconico API: {}", url);
+        if cfg!(debug_assertions) {
+            log::info!("nicobox: searching niconico API: {}", url);
+        } else {
+            log::debug!("nicobox: searching niconico API: {}", url);
+        }
 
         let resp = self
             .client
@@ -42,16 +46,23 @@ impl ArtworkResolver for NicoboxResolver {
 
         let status = resp.status();
         if !status.is_success() {
-            log::warn!("nicobox: API returned {}", status);
+            let body = resp.text().await.unwrap_or_default();
+            let snippet = body.chars().take(400).collect::<String>();
+            log::warn!("nicobox: API returned {} body={:?}", status, snippet);
             return None;
         }
 
-        let json: serde_json::Value = resp.json().await.ok()?;
+        let text = resp.text().await.ok()?;
+        let json: serde_json::Value = serde_json::from_str(&text).ok()?;
 
         let data = &json["data"][0];
         let title = data["title"].as_str()?;
         if title != info.title {
-            log::debug!("nicobox: title mismatch: got \"{title}\", expected \"{}\"", info.title);
+            if cfg!(debug_assertions) {
+                log::info!("nicobox: title mismatch: got \"{title}\", expected \"{}\"", info.title);
+            } else {
+                log::debug!("nicobox: title mismatch: got \"{title}\", expected \"{}\"", info.title);
+            }
             return None;
         }
 

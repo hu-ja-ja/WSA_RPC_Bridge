@@ -67,8 +67,12 @@ impl ArtworkRegistry {
             return Some(u.clone());
         }
 
-        log::debug!("artwork: no resolver found for {}, using placeholder", info.package_name);
-        self.in_memory.insert(key, Some(PLACEHOLDER_URL.to_string()));
+        if cfg!(debug_assertions) {
+            log::info!("artwork: no thumbnail for {} - {} (resolver={}) using placeholder", info.package_name, info.title, resolver.is_some());
+        } else {
+            log::debug!("artwork: no resolver found for {}, using placeholder", info.package_name);
+        }
+        // ponytail: don't cache placeholder - transient failure should retry next time
         Some(PLACEHOLDER_URL.to_string())
     }
 }
