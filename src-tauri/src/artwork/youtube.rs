@@ -7,7 +7,8 @@ use serde_json::Value;
 use crate::artwork::ArtworkResolver;
 use crate::models::MediaInfo;
 
-const SEARCH_ENDPOINT: &str = "https://www.youtube.com/youtubei/v1/search";
+const SEARCH_ENDPOINT: &str =
+    "https://www.youtube.com/youtubei/v1/search?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 // ponytail: static client version, bump if YouTube starts rejecting it
 const CLIENT_VERSION: &str = "2.20241202.00.00";
 
@@ -41,8 +42,19 @@ impl ArtworkResolver for YoutubeResolver {
 
         // ponytail: quoted first — YouTube treats "-x" as an exclusion operator; quoting disables it.
         // Plain title kept as fallback for phrase-mismatch cases.
-        for query in [format!("\"{}\"", info.title), info.title.clone()] {
-            let videos = self.search(&query).await;
+        // Third query adds artist to disambiguate generic titles like "ORACLE".
+        let third = if info.artist.trim().is_empty() {
+            String::new()
+        } else {
+            format!("{} {}", info.title, info.artist)
+        };
+        let queries = [
+            format!("\"{}\"", info.title),
+            info.title.clone(),
+            third,
+        ];
+        for query in queries.iter().filter(|q| !q.is_empty()) {
+            let videos = self.search(query).await;
             if let Some((id, tier)) = pick_video(&videos, &info.title, &info.artist) {
                 let url = format!("https://i.ytimg.com/vi/{id}/mqdefault.jpg");
                 if cfg!(debug_assertions) {
@@ -63,6 +75,13 @@ impl ArtworkResolver for YoutubeResolver {
                 );
                 if videos.is_empty() {
                     log::info!("youtube: no results - likely API key/version rejected for query {:?}", query);
+                } else {
+                    for (i, v) in videos.iter().take(3).enumerate() {
+                        log::info!(
+                            "youtube: candidate {} id={} title={:?} author={:?} views={}",
+                            i, v.0, v.1, v.2, v.3
+                        );
+                    }
                 }
             } else {
                 log::debug!(
@@ -83,18 +102,30 @@ impl ArtworkResolver for YoutubeResolver {
 
 impl YoutubeResolver {
     async fn search(&self, query: &str) -> Vec<VideoEntry> {
+        // ponytail: use system locale for hl/gl so author names match user's language (Fujii Kaze <-> 藤井 風)
+        let locale = sys_locale::get_locale().unwrap_or_else(|| "ja-JP".to_string());
+        let (hl, gl) = {
+            let mut parts = locale.split(|c| c == '-' || c == '_');
+            let hl = parts.next().unwrap_or("ja").to_ascii_lowercase();
+            let hl = if hl.is_empty() { "ja".to_string() } else { hl };
+            let gl_raw = parts.next().unwrap_or(if hl == "ja" { "JP" } else { "US" });
+            (hl, gl_raw.to_ascii_uppercase())
+        };
+        let accept_lang = format!("{}, en;q=0.5", locale);
         let body = serde_json::json!({
             "context": {
                 "client": {
                     "clientName": "WEB",
                     "clientVersion": CLIENT_VERSION,
+                    "hl": hl,
+                    "gl": gl,
                 }
             },
             "query": query,
         });
 
         if cfg!(debug_assertions) {
-            log::info!("youtube: searching innertube for {:?}", query);
+            log::info!("youtube: searching innertube hl={} gl={} for {:?}", hl, gl, query);
         } else {
             log::debug!("youtube: searching innertube for {:?}", query);
         }
@@ -106,6 +137,7 @@ impl YoutubeResolver {
             .header("Content-Type", "application/json")
             .header("Origin", "https://www.youtube.com")
             .header("Referer", "https://www.youtube.com/")
+            .header("Accept-Language", accept_lang)
             .json(&body)
             .send()
             .await;
@@ -229,6 +261,21 @@ fn normalize(s: &str) -> String {
         match c {
             '(' | '[' | '\u{3010}' | '\u{FF08}' => depth += 1,
             ')' | ']' | '\u{3011}' | '\u{FF09}' => depth = depth.saturating_sub(1),
+            // quote brackets: strip bracket chars only, keep inner text (as space separator)
+            '\u{300E}' | '\u{300F}' | '\u{300C}' | '\u{300D}' | '"' | '\'' | '`' | '“' | '”' | '‘' | '’' => {
+                if !prev_space {
+                    out.push(' ');
+                    prev_space = true;
+                }
+                continue;
+            }
+            // separators like dash/colon that often split title/artist: normalize to space
+            '-' | '–' | '—' | ':' | '：' | '・' | '.' | '·' | '_' | '/' | '／' => {
+                if !prev_space {
+                    out.push(' ');
+                    prev_space = true;
+                }
+            }
             _ if depth > 0 => {}
             c if c.is_whitespace() => {
                 if !prev_space {
@@ -250,12 +297,20 @@ fn artist_candidates(artist: &str) -> Vec<String> {
     let mut out = Vec::new();
     let full = normalize(artist);
     if !full.is_empty() {
-        out.push(full);
+        out.push(full.clone());
+        let nospace = full.replace(' ', "").replace('　', "");
+        if !nospace.is_empty() && !out.contains(&nospace) {
+            out.push(nospace);
+        }
     }
     for part in artist.split([',', '\u{3001}', '\u{FF0C}']) {
         let n = normalize(part);
         if !n.is_empty() && !out.contains(&n) {
-            out.push(n);
+            out.push(n.clone());
+            let ns = n.replace(' ', "").replace('　', "");
+            if !ns.is_empty() && !out.contains(&ns) {
+                out.push(ns);
+            }
         }
     }
     out
@@ -276,22 +331,54 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
 
     let title_hit =
         |t: &str| !normalize(t).is_empty() && (normalize(t).contains(&nt) || nt.contains(&normalize(t)));
+    let candidates_for_author = candidates.clone();
     let author_hit = move |a: &str| {
-        if candidates.is_empty() {
+        if candidates_for_author.is_empty() {
             return true;
         }
         let m = normalize(a);
         if m.is_empty() {
             return false;
         }
-        candidates.iter().any(|c| m.contains(c.as_str()) || c.contains(m.as_str()))
+        let mn = m.replace(' ', "").replace('　', "");
+        candidates_for_author.iter().any(|c| {
+            let cn = c.replace(' ', "").replace('　', "");
+            m.contains(c.as_str()) || c.contains(m.as_str()) || mn.contains(&cn) || cn.contains(&mn)
+        })
     };
 
     // ponytail: removed old Tier 2 (unique exact title w/o author check) — Topic channel
     // uploads with clean titles were beating official MVs.
+    // fallback: if author field is localized (Fujii Kaze vs 藤井 風), check title contains artist
+    // also check raw title for bracketed artist like 【アマギセーラ】 which normalize strips
+    let title_contains_artist = |t: &str| {
+        if candidates.is_empty() {
+            return false;
+        }
+        // raw check for bracketed artist
+        let t_lower = t.to_lowercase();
+        let artist_lower = artist.to_lowercase();
+        if !artist_lower.trim().is_empty() && t_lower.contains(&artist_lower) {
+            return true;
+        }
+        for cand in &candidates {
+            if !cand.is_empty() && t_lower.contains(&cand.to_lowercase()) {
+                return true;
+            }
+        }
+        let mt = normalize(t);
+        if mt.is_empty() {
+            return false;
+        }
+        let mt_nospace = mt.replace(' ', "").replace('　', "");
+        candidates.iter().any(|c| {
+            let cn = c.replace(' ', "").replace('　', "");
+            mt.contains(c.as_str()) || c.contains(mt.as_str()) || mt_nospace.contains(&cn) || cn.contains(&mt_nospace)
+        })
+    };
     let mut best: Option<&VideoEntry> = None;
     for v in videos.iter() {
-        if title_hit(&v.1) && author_hit(&v.2) && best.map_or(true, |b| v.3 > b.3) {
+        if title_hit(&v.1) && (author_hit(&v.2) || title_contains_artist(&v.1)) && best.map_or(true, |b| v.3 > b.3) {
             best = Some(v);
         }
     }
@@ -303,6 +390,12 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
     let hits: Vec<&VideoEntry> = videos.iter().filter(|v| title_hit(&v.1)).collect();
     if hits.len() == 1 {
         return Some((&hits[0].0, 3));
+    }
+    // Tier 4: translation fallback — search TOP is same artist even if title mismatch
+    if let Some(top) = videos.first() {
+        if author_hit(&top.2) || title_contains_artist(&top.1) {
+            return Some((&top.0, 4));
+        }
     }
     None
 }
