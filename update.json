@@ -1,11 +1,11 @@
 {
-  "notes": "# Changelog\r\n\r\n## [0.3.2] - 2026-08-12\r\n\r\n### 変更\r\n\r\n- GUIを一部調整\r\n- PCシャットダウン時に発生する可能性のあったエラーを修正\r\n- 細かいパフォーマンス改善\r\n\r\n**Full Changelog**: https://github.com/hu-ja-ja/WSA_RPC_Bridge/compare/0.3.1...0.3.2",
+  "notes": "### 追加\n\n- Android版を追加\n- YouTube / YouTube Music のサムネイル取得を追加\n- ダッシュボードに再接続ボタンを追加\n- 利用規約を追加\n\n### 変更\n\n- Discord接続処理を改善（起動時の再試行・自動再接続）\n- プライバシーポリシーを改定\n- その他細かい変更\r\n",
+  "pub_date": "2026-09-09T13:57:09Z",
+  "version": "0.4.0",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.3.2/wsa-rpc-bridge_0.3.2_x64_en-US.msi",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDdheUExdjdJajhkeEJtRnFmYnAzTzBVbFMya3djYU0wL2FSUG4xUXdNR25OYXgxWDFzc0dPOVhOdVJsbUt6Uk15L1NCS0MxQTBoTk9wUGJabjF1YUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2NDc1MDQxCWZpbGU6d3NhLXJwYy1icmlkZ2VfMC4zLjJfeDY0X2VuLVVTLm1zaQo0bDJHQUtNcElpbCtMbkRjWVkxc0NKVzlKYjh1MDZjRktSQ2QxZnd6WXdFcTlOeFRqTnh1Zk9YbzdHL2lWbGJSZkQ2WFNWeG9WR21ZOEZremhORHVDZz09Cg=="
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDlONG9UdmNhODFZZUMreS82Z3dLQjZXMzh4QUhpbjlIMWtsanlxYy9OSzdWZnlKRTdXeTRyK0RWRFJXaTlCUVl0dU5nejNzZldSY3UvRHlZSllNSVFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTYyMjI2CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjBfeDY0X2VuLVVTLm1zaQpUbUhSRlR2M0x1S2FhODd2REdITC9Wdi9xWWZwOXR5ZGUyZ2RkNWpOU051d3pIZHJPQVNrUHZpS2RwelpLRGZhRjM2c3crUlFZSE96UmNVcW96TjJDdz09Cg==",
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/v0.4.0/wsa-rpc-bridge_0.4.0_x64_en-US.msi"
     }
-  },
-  "version": "0.3.2",
-  "pub_date": "2026-08-11T19:04:02Z"
+  }
 }
