@@ -8,12 +8,14 @@ Releases are generated from GitHub Actions' `workflow_dispatch`.
 ## Release Flow
 
 1. Generate the Social SDK download URL in the Discord Developer Portal (a GCS signed URL that expires in about 1 hour)
-2. Start the `Release` workflow manually from the Actions tab on GitHub, entering:
+2. Run `pwsh scripts/release.ps1` locally and enter the following interactively:
    - `version`: the app version (e.g. `0.4.0`) → released as tag `v{version}`
-   - `sdk_url`: the expiring URL above
+   - `SDK URL`: the expiring URL above (input is hidden; never stored in arguments, history, or logs)
+   - The script registers the URL as a single-use secret → dispatches the workflow → waits → deletes the secret
+   - Sign in to `gh` with an authorized account beforehand (`gh auth login`, then verify with `gh auth status`)
 3. The workflow then:
    - Syncs the version into `tauri.conf.json` / `Cargo.toml`
-   - Fetches the Social SDK from `sdk_url` and places it at `src-tauri/gen/android/app/libs/discord_partner_sdk.aar`
+   - Fetches the Social SDK from the single-use secret and places it at `src-tauri/gen/android/app/libs/discord_partner_sdk.aar`
    - Builds the Android APK (`aarch64`) + Windows MSI
    - Extracts the section for that version from CHANGELOG.md as the release body (falls back to a commit list if absent)
    - Creates the release automatically and attaches artifacts
@@ -24,7 +26,7 @@ Releases are generated from GitHub Actions' `workflow_dispatch`.
 - **Never commit SDK binaries to a public repository.** Clause 2.b of the terms prohibits redistribution or copying of the SDK itself. Bundling it into the app is licensed under clause 2.a, but publishing it standalone counts as redistribution.
 - **Never store the expiring URL permanently.** Do not work around the portal's expiring URLs to persist the binary in a private repo or similar.
 - Generate a fresh URL in the portal each time: fetch → build immediately → bundle into the app and publish. The SDK only travels Discord CDN → CI → distributed app and is never retained anywhere.
-- Pass `sdk_url` as a `workflow_dispatch` input. It is masked with `::add-mask::` against log leaks (risk is small since it expires quickly).
+- The expiring URL is registered by `scripts/release.ps1` as a single-use secret and deleted afterwards. It is never passed as a plaintext input (input values persist in the run view and logs). A manual dispatch from the Actions tab fails without the secret.
 
 ## Changelog
 
