@@ -1,4 +1,4 @@
-import { Show } from 'solid-js'
+import { Show, type JSX } from 'solid-js'
 import { Smartphone } from 'lucide-solid'
 import { IconBrandDiscord } from '@tabler/icons-solidjs'
 import { MediaCard } from './MediaCard'
@@ -27,6 +27,7 @@ interface DashboardProps {
   android?: boolean
   whitelistEmpty?: boolean
   onRetry: () => void
+  onReconnect?: () => void
   onOpenSettings?: () => void
 }
 
@@ -35,6 +36,7 @@ function StatusCard(props: {
   label: string
   connected: boolean
   status: string
+  action?: JSX.Element
 }) {
   return (
     <div class={`status-card ${props.connected ? 'connected' : ''}`}>
@@ -46,6 +48,7 @@ function StatusCard(props: {
           {props.status}
         </span>
       </div>
+      {props.action}
     </div>
   )
 }
@@ -72,6 +75,13 @@ export function Dashboard(props: DashboardProps) {
               : props.rpcEnabled
                 ? t('status.waiting')
                 : t('status.disconnected')
+          }
+          action={
+            <Show when={!props.android && props.rpcEnabled && props.onReconnect}>
+              <button class="btn btn-card-action" onClick={() => props.onReconnect!()}>
+                {t('dashboard.reconnect')}
+              </button>
+            </Show>
           }
         />
       </section>

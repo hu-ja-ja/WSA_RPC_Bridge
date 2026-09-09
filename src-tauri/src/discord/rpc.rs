@@ -16,6 +16,29 @@ enum DiscordCmd {
     Disconnect,
 }
 
+// ponytail: 起動時競合に単発で負けないよう数回だけ即時再試行。無限にしない
+const CONNECT_ATTEMPTS: u32 = 3;
+
+fn connect_client(cid: &str) -> Option<DiscordIpcClient> {
+    for attempt in 1..=CONNECT_ATTEMPTS {
+        let mut c = DiscordIpcClient::new(cid);
+        match c.connect() {
+            Ok(()) => return Some(c),
+            Err(e) => {
+                if attempt < CONNECT_ATTEMPTS {
+                    log::warn!(
+                        "Discord IPC connect failed (attempt {attempt}/{CONNECT_ATTEMPTS}): {e}; retrying"
+                    );
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                } else {
+                    log::error!("Discord IPC connect failed after {CONNECT_ATTEMPTS} attempts: {e}");
+                }
+            }
+        }
+    }
+    None
+}
+
 pub struct DiscordRpc {
     tx: mpsc::SyncSender<DiscordCmd>,
     connected: Arc<AtomicBool>,
@@ -35,35 +58,34 @@ impl DiscordRpc {
                 while let Ok(cmd) = rx.recv() {
                     match cmd {
                         DiscordCmd::Connect => {
-                            if client.is_some() {
+                            if client.is_some()
+                                && connected_clone.load(Ordering::Relaxed)
+                            {
                                 continue;
                             }
-                            let mut c = DiscordIpcClient::new(&cid);
-                            match c.connect() {
-                                Ok(()) => {
+                            // 死んだハンドル温存を避けるため作り直す
+                            let _ = client.take();
+                            match connect_client(&cid) {
+                                Some(c) => {
                                     log::info!("Discord IPC connected");
                                     client = Some(c);
                                     connected_clone.store(true, Ordering::Relaxed);
                                 }
-                                Err(e) => {
-                                    log::error!("Discord IPC connect failed: {e}");
+                                None => {
+                                    connected_clone.store(false, Ordering::Relaxed);
                                 }
                             }
                         }
                         DiscordCmd::UpdatePresence(info) => {
                             if client.is_none() {
                                 log::info!("Discord not connected, attempting reconnect");
-                                let mut c = DiscordIpcClient::new(&cid);
-                                match c.connect() {
-                                    Ok(()) => {
+                                match connect_client(&cid) {
+                                    Some(c) => {
                                         log::info!("Discord IPC reconnected");
                                         client = Some(c);
                                         connected_clone.store(true, Ordering::Relaxed);
                                     }
-                                    Err(e) => {
-                                        log::warn!("Discord IPC reconnect failed: {e}");
-                                        continue;
-                                    }
+                                    None => continue,
                                 }
                             }
                             let c = match client.as_mut() {
@@ -141,7 +163,8 @@ impl DiscordRpc {
     }
 
     pub fn update_presence(&self, info: &MediaInfo) {
-        let _ = self.tx.try_send(DiscordCmd::UpdatePresence(info.clone()));
+        // ponytail: try_send だと満杯時に黙って捨てられ frontend は成功扱いでキーを消費してしまうため blocking 送達にする
+        let _ = self.tx.send(DiscordCmd::UpdatePresence(info.clone()));
     }
 
     pub fn disconnect(&self) {

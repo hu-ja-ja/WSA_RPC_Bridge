@@ -94,7 +94,7 @@ function App() {
     return lf.pos + elapsed
   })
 
-  async function checkStatus() {
+  async function checkStatus(): Promise<boolean> {
     try {
       const [adb, dc] = await Promise.all([
         invoke<boolean>('get_adb_status'),
@@ -102,8 +102,10 @@ function App() {
       ])
       setAdbConnected(adb)
       setDiscordConnected(dc)
+      return dc
     } catch (e) {
       console.error('status check failed', e)
+      return false
     }
   }
 
@@ -124,19 +126,27 @@ function App() {
       if (rpcEnabled()) {
         await invoke('connect_discord')
         const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}|${result.position ?? 0}`
-        if (key !== lastPresenceKey) {
+        // ponytail: 切断中に取りこぼした presence を救うため、未接続観測時はキー一致でも送り直す
+        if (key !== lastPresenceKey || !discordConnected()) {
           await invoke('update_discord_presence', { info: result })
           lastPresenceKey = key
         }
       }
     } catch (e) {
+      const msg = String(e)
+      // ponytail: 無音は正常なので切断しない。異常時のみ後片付けする
+      const silent = msg.startsWith('NO_SESSION:')
       setMedia(null)
       setThumbUrl(null)
       setLastFetch(null)
-      setError(String(e))
+      setError(silent ? null : msg)
       lastPresenceKey = null
-      if (rpcEnabled()) {
-        await invoke('disconnect_discord')
+      if (rpcEnabled() && !silent) {
+        try {
+          await invoke('disconnect_discord')
+        } catch (err) {
+          console.error('disconnect on error failed', err)
+        }
       }
     } finally {
       setLoading(false)
@@ -167,6 +177,23 @@ function App() {
       }
     } catch (e) {
       console.error('rpc toggle failed', e)
+    }
+  }
+
+  async function handleReconnect() {
+    if (IS_ANDROID) return
+    try {
+      await invoke('disconnect_discord')
+      await invoke('connect_discord')
+      lastPresenceKey = null
+      const current = media()
+      if (rpcEnabled() && current) {
+        await invoke('update_discord_presence', { info: current })
+        lastPresenceKey = `${current.title}|${current.artist}|${current.album}|${current.is_playing}|${current.position ?? 0}`
+      }
+      await checkStatus()
+    } catch (e) {
+      console.error('rpc reconnect failed', e)
     }
   }
 
@@ -323,7 +350,15 @@ function App() {
       onCleanup(unlistenRpc)
     } else {
       pollingTimer = setInterval(async () => {
-        await checkStatus()
+        const dc = await checkStatus()
+        // ponytail: メディア有無と独立に再接続。無音中に Discord が起動しても追いつく
+        if (rpcEnabled() && !dc) {
+          try {
+            await invoke('connect_discord')
+          } catch (e) {
+            console.error('periodic connect_discord failed', e)
+          }
+        }
         await fetchMediaInfo()
       }, POLL_INTERVAL)
       onCleanup(() => {
@@ -392,6 +427,7 @@ function App() {
             rpcEnabled={rpcEnabled()}
             android={IS_ANDROID}
             whitelistEmpty={traySettings().media_whitelist.length === 0}
+            onReconnect={handleReconnect}
             onRetry={fetchMediaInfo}
             onOpenSettings={() => setActiveTab('settings')}
           />

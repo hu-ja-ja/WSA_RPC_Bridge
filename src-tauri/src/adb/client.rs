@@ -147,7 +147,8 @@ impl AdbClient {
                     output_str.len()
                 );
                 log::debug!("ADB dumpsys output:\n{}", &output_str[..output_str.len().min(DEBUG_TRUNCATE_LEN)]);
-                Err(anyhow::anyhow!("{}", tr("adb.no_session")))
+                // ponytail: 無音は正常。frontend が切断と区別できるよう固定接頭辞を付ける
+                Err(anyhow::anyhow!("NO_SESSION: {}", tr("adb.no_session")))
             }
         }
     }

@@ -237,6 +237,12 @@
   background: #6b7280;
 }
 
+.btn-card-action {
+  margin-left: auto;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+
 .dashboard-now {
   display: flex;
   flex-direction: column;
