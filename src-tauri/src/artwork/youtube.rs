@@ -4,12 +4,12 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
 
-use crate::artwork::ArtworkResolver;
+use crate::artwork::{ArtworkResolver, PLACEHOLDER_URL};
 use crate::models::MediaInfo;
 
 const SEARCH_ENDPOINT: &str =
     "https://www.youtube.com/youtubei/v1/search?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
-// ponytail: static client version, bump if YouTube starts rejecting it
+// ponytail: static client version, bump if requests start getting rejected
 const CLIENT_VERSION: &str = "2.20241202.00.00";
 
 type VideoEntry = (String, String, String, u64); // (videoId, title, author, views)
@@ -39,24 +39,66 @@ impl ArtworkResolver for YoutubeResolver {
         if info.title.trim().is_empty() {
             return None;
         }
+        // ponytail: artist empty skip — some apps send title first, artist 100ms later; empty artist causes generic hits
+        if info.artist.trim().is_empty() {
+            return None;
+        }
 
-        // ponytail: quoted first — YouTube treats "-x" as an exclusion operator; quoting disables it.
+        // ponytail: quoted first — search treats "-x" as an exclusion operator; quoting disables it.
         // Plain title kept as fallback for phrase-mismatch cases.
-        // Third query adds artist to disambiguate generic titles like "ORACLE".
-        let third = if info.artist.trim().is_empty() {
-            String::new()
+        // ponytail: 2↔3 swap — artist付きplainを先にし汎用タイトルの誤検出を防ぐ
+        // ponytail: search words are washed first (video-type tail, reissue tail,
+        // quality tail, channel tail, second and later names); raw values kept for logs only
+        let washed_title = wash_title(&info.title);
+        let washed_artist = wash_artist(&info.artist);
+        let title_q = if washed_title.is_empty() {
+            info.title.trim().to_string()
         } else {
-            format!("{} {}", info.title, info.artist)
+            washed_title.clone()
         };
-        let queries = [
-            format!("\"{}\"", info.title),
-            info.title.clone(),
-            third,
-        ];
-        for query in queries.iter().filter(|q| !q.is_empty()) {
+        let artist_q = if washed_artist.is_empty() {
+            info.artist.trim().to_string()
+        } else {
+            washed_artist.clone()
+        };
+        // ponytail: name-title order first — single keyword hits the official upload better
+        let queries: Vec<String> = if artist_q.trim().is_empty() {
+            vec![format!("\"{title_q}\""), title_q.clone()]
+        } else {
+            vec![
+                format!("\"{artist_q} - {title_q}\""),
+                format!("\"{title_q}\""),
+                format!("{title_q} {artist_q}"),
+                title_q.clone(),
+            ]
+        };
+        // ponytail: 作者不一致は確定的なのでplaceholder明示返却（キャッシュ可）。空結果は一時的失敗としてNone維持。
+        let mut had_results = false;
+        for query in queries.iter() {
             let videos = self.search(query).await;
-            if let Some((id, tier)) = pick_video(&videos, &info.title, &info.artist) {
+            if !videos.is_empty() {
+                had_results = true;
+            }
+            if let Some((id, tier)) = pick_video(&videos, &title_q, &artist_q) {
                 let url = format!("https://i.ytimg.com/vi/{id}/mqdefault.jpg");
+                // TMPLOG: 誤検出切り分け用一時ログ（原因特定後に削除）
+                if cfg!(debug_assertions) {
+                    if let Some(m) = videos.iter().find(|v| v.0 == id) {
+                        log::info!(
+                            "youtube: TMPLOG matched title={:?} author={:?} views={} is_topic={}",
+                            m.1,
+                            m.2,
+                            m.3,
+                            m.2.to_lowercase().contains("topic")
+                        );
+                    }
+                    for (i, v) in videos.iter().take(3).enumerate() {
+                        log::info!(
+                            "youtube: TMPLOG candidate {} id={} title={:?} author={:?} views={}",
+                            i, v.0, v.1, v.2, v.3
+                        );
+                    }
+                }
                 if cfg!(debug_assertions) {
                     log::info!(
                         "youtube: resolved videoId={} tier={} query={:?} title={:?} artist={:?}",
@@ -96,13 +138,16 @@ impl ArtworkResolver for YoutubeResolver {
         } else {
             log::debug!("youtube: no matching video for {:?}", info.title);
         }
+        if had_results {
+            return Some(PLACEHOLDER_URL.to_string());
+        }
         None
     }
 }
 
 impl YoutubeResolver {
     async fn search(&self, query: &str) -> Vec<VideoEntry> {
-        // ponytail: use system locale for hl/gl so author names match user's language (Fujii Kaze <-> 藤井 風)
+        // ponytail: use system locale for hl/gl so author names match user's language
         let locale = sys_locale::get_locale().unwrap_or_else(|| "ja-JP".to_string());
         let (hl, gl) = {
             let mut parts = locale.split(|c| c == '-' || c == '_');
@@ -252,17 +297,101 @@ fn parse_views(text: &str) -> u64 {
     (n * mult) as u64
 }
 
-// ponytail: lowercase + strip bracketed decorations, no NFKC; add unicode-normalization if width variants bite
+// ponytail: wash before search — drop trailing tails that pollute matching
+fn wash_title(raw: &str) -> String {
+    let mut cur = raw.trim().to_string();
+    loop {
+        let next = strip_one_trailing_group(&cur);
+        if next.len() == cur.len() {
+            break;
+        }
+        cur = next;
+        if cur.trim().is_empty() {
+            return String::new();
+        }
+    }
+    cur.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn strip_one_trailing_group(s: &str) -> String {
+    const PAIRS: [(char, char); 6] = [
+        ('(', ')'),
+        ('[', ']'),
+        ('\u{3010}', '\u{3011}'),
+        ('\u{300c}', '\u{300d}'),
+        ('\u{300e}', '\u{300f}'),
+        ('\u{ff08}', '\u{ff09}'),
+    ];
+    let trimmed = s.trim_end();
+    let close = match trimmed.chars().last() {
+        Some(c) => c,
+        None => return s.to_string(),
+    };
+    let open = match PAIRS.iter().find(|(_, cl)| *cl == close) {
+        Some((op, _)) => *op,
+        None => return s.to_string(),
+    };
+    let open_at = match trimmed.rfind(open) {
+        Some(i) => i,
+        None => return s.to_string(),
+    };
+    let inner = &trimmed[open_at + open.len_utf8()..trimmed.len() - close.len_utf8()];
+    if !is_washable_tail(inner) {
+        return s.to_string();
+    }
+    trimmed[..open_at].trim_end().to_string()
+}
+
+fn is_washable_tail(inner: &str) -> bool {
+    const LONG: [&str; 8] = [
+        "official", "video", "audio", "visual", "lyric", "remaster", "mono", "stereo",
+    ];
+    const SHORT: [&str; 5] = ["mv", "hq", "hd", "4k", "8k"];
+    let low = inner.to_lowercase();
+    if LONG.iter().any(|m| low.contains(m)) {
+        return true;
+    }
+    low.split(|c: char| !c.is_alphanumeric()).any(|tok| SHORT.contains(&tok))
+}
+
+// ponytail: channel tail + second and later names cut for search words only
+fn wash_artist(raw: &str) -> String {
+    let mut cur = raw.trim().to_string();
+    if cur.to_lowercase().ends_with("- topic") {
+        let cut = cur.len() - "- topic".len();
+        cur = cur[..cut].trim_end().trim_end_matches('-').trim_end().to_string();
+    }
+    let low = cur.to_lowercase();
+    let mut cut_at: Option<usize> = None;
+    const HARD: [&str; 6] = [" & ", ",", "\u{3001}", "\u{ff0c}", ";", "\u{ff1b}"];
+    for sep in HARD {
+        if let Some(i) = cur.find(sep) {
+            if i > 0 && cut_at.map_or(true, |c| i < c) {
+                cut_at = Some(i);
+            }
+        }
+    }
+    const SOFT: [&str; 7] = [" feat", " ft", " with ", " vs ", " plus ", " x ", " \u{00d7} "];
+    for sep in SOFT {
+        if let Some(i) = low.find(sep) {
+            if i > 0 && cut_at.map_or(true, |c| i < c) {
+                cut_at = Some(i);
+            }
+        }
+    }
+    if let Some(i) = cut_at {
+        cur = cur[..i].to_string();
+    }
+    cur.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+// ponytail: lowercase + normalize brackets/separators to space, keep inner text (version distinction like feat)
 fn normalize(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
-    let mut depth = 0usize;
     let mut prev_space = true;
     for c in s.chars() {
         match c {
-            '(' | '[' | '\u{3010}' | '\u{FF08}' => depth += 1,
-            ')' | ']' | '\u{3011}' | '\u{FF09}' => depth = depth.saturating_sub(1),
-            // quote brackets: strip bracket chars only, keep inner text (as space separator)
-            '\u{300E}' | '\u{300F}' | '\u{300C}' | '\u{300D}' | '"' | '\'' | '`' | '“' | '”' | '‘' | '’' => {
+            '(' | '[' | '\u{3010}' | '\u{FF08}' | '\u{300E}' | '\u{300C}' | ')' | ']' | '\u{3011}' | '\u{FF09}' | '\u{300F}' | '\u{300D}' | '"' | '\'' | '`' | '“' | '”' | '‘' | '’' => {
                 if !prev_space {
                     out.push(' ');
                     prev_space = true;
@@ -276,7 +405,6 @@ fn normalize(s: &str) -> String {
                     prev_space = true;
                 }
             }
-            _ if depth > 0 => {}
             c if c.is_whitespace() => {
                 if !prev_space {
                     out.push(' ');
@@ -322,6 +450,41 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
         return Some((&v.0, 1));
     }
 
+    // Tier 1.5: author contains (loose) + title hit, most viewed — official prior
+    let full_norm = normalize(artist);
+    if !full_norm.is_empty() {
+        let nt15 = normalize(title);
+        if !nt15.is_empty() {
+            let title_hit15 = |t: &str| {
+                let mt = normalize(t);
+                !mt.is_empty() && (mt.contains(&nt15) || nt15.contains(&mt))
+            };
+            let full_ns = full_norm.replace(' ', "").replace('　', "");
+            let author_loose = |a: &str| {
+                let m = normalize(a);
+                if m.is_empty() {
+                    return false;
+                }
+                let mn = m.replace(' ', "").replace('　', "");
+                m.contains(&full_norm)
+                    || full_norm.contains(&m)
+                    || mn.contains(&full_ns)
+                    || full_ns.contains(&mn)
+                    || m.contains(&full_ns)
+                    || full_ns.contains(&mn)
+            };
+            let mut best15: Option<&VideoEntry> = None;
+            for v in videos.iter() {
+                if title_hit15(&v.1) && author_loose(&v.2) && best15.map_or(true, |b| v.3 > b.3) {
+                    best15 = Some(v);
+                }
+            }
+            if let Some(v) = best15 {
+                return Some((&v.0, 15));
+            }
+        }
+    }
+
     // Tier 2: fuzzy title + author match, most viewed wins
     let nt = normalize(title);
     if nt.is_empty() {
@@ -347,10 +510,12 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
         })
     };
 
-    // ponytail: removed old Tier 2 (unique exact title w/o author check) — Topic channel
-    // uploads with clean titles were beating official MVs.
-    // fallback: if author field is localized (Fujii Kaze vs 藤井 風), check title contains artist
-    // also check raw title for bracketed artist like 【アマギセーラ】 which normalize strips
+    // ponytail: removed old Tier 2 (unique exact title w/o author check) — auto-generated
+    // uploads with clean titles were beating official uploads.
+    // fallback: if author field is localized, check title contains artist
+    // also check raw title for bracketed artist names which normalize strips
+    // ponytail: title言及はtopic含有限定 — カバーの誤検出防止
+    let is_topic = |a: &str| a.to_lowercase().contains("topic");
     let title_contains_artist = |t: &str| {
         if candidates.is_empty() {
             return false;
@@ -378,7 +543,10 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
     };
     let mut best: Option<&VideoEntry> = None;
     for v in videos.iter() {
-        if title_hit(&v.1) && (author_hit(&v.2) || title_contains_artist(&v.1)) && best.map_or(true, |b| v.3 > b.3) {
+        if title_hit(&v.1)
+            && (author_hit(&v.2) || (is_topic(&v.2) && title_contains_artist(&v.1)))
+            && best.map_or(true, |b| v.3 > b.3)
+        {
             best = Some(v);
         }
     }
@@ -386,14 +554,10 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
         return Some((&v.0, 2));
     }
 
-    // Tier 3: unique fuzzy title regardless of author
-    let hits: Vec<&VideoEntry> = videos.iter().filter(|v| title_hit(&v.1)).collect();
-    if hits.len() == 1 {
-        return Some((&hits[0].0, 3));
-    }
+    // ponytail: Tier 3廃止 — 作者一致なしはplaceholderへリダイレクト（誤サムネ防止）
     // Tier 4: translation fallback — search TOP is same artist even if title mismatch
     if let Some(top) = videos.first() {
-        if author_hit(&top.2) || title_contains_artist(&top.1) {
+        if author_hit(&top.2) || (is_topic(&top.2) && title_contains_artist(&top.1)) {
             return Some((&top.0, 4));
         }
     }
@@ -416,26 +580,26 @@ mod tests {
                                     "itemSectionRenderer": {
                                         "contents": [
                                             { "videoRenderer": {
-                                                "videoId": "dQw4w9WgXcQ",
-                                                "title": { "runs": [{ "text": "Rick Astley - Never Gonna Give You Up (Official Video)" }] },
-                                                "ownerText": { "runs": [{ "text": "Rick Astley" }] },
+                                                "videoId": "test0000001",
+                                                "title": { "runs": [{ "text": "Artist A - Test Song (Official Video)" }] },
+                                                "ownerText": { "runs": [{ "text": "Artist A" }] },
                                                 "viewCountText": { "simpleText": "1.6B views" }
                                             }},
                                             { "videoRenderer": {
                                                 "videoId": "abc123XYZ_-",
-                                                "title": { "simpleText": "Never Gonna Give You Up (Official Audio)" },
-                                                "longBylineText": { "runs": [{ "text": "Rick Astley - Topic" }] },
+                                                "title": { "simpleText": "Test Song (Official Audio)" },
+                                                "longBylineText": { "runs": [{ "text": "Artist A - Topic" }] },
                                                 "shortViewCountText": { "simpleText": "320万回視聴" }
                                             }},
                                             { "videoRenderer": {
                                                 "videoId": "xyz789_____",
-                                                "title": { "runs": [{ "text": "Never Gonna Give You Up (Live)" }] },
-                                                "ownerText": { "runs": [{ "text": "Rick Astley" }] },
+                                                "title": { "runs": [{ "text": "Test Song (Live)" }] },
+                                                "ownerText": { "runs": [{ "text": "Artist A" }] },
                                                 "viewCountText": { "simpleText": "12M views" }
                                             }},
                                             { "videoRenderer": {
                                                 "videoId": "dupe0000000",
-                                                "title": { "runs": [{ "text": "Never Gonna Give You Up (Live)" }] },
+                                                "title": { "runs": [{ "text": "Test Song (Live)" }] },
                                                 "ownerText": { "runs": [{ "text": "Other Channel" }] },
                                                 "viewCountText": { "simpleText": "1,234,567 views" }
                                             }}
@@ -457,14 +621,14 @@ mod tests {
         assert_eq!(
             videos[0],
             (
-                "dQw4w9WgXcQ".into(),
-                "Rick Astley - Never Gonna Give You Up (Official Video)".into(),
-                "Rick Astley".into(),
+                "test0000001".into(),
+                "Artist A - Test Song (Official Video)".into(),
+                "Artist A".into(),
                 1_600_000_000
             )
         );
-        assert_eq!(videos[1].1, "Never Gonna Give You Up (Official Audio)");
-        assert_eq!(videos[1].2, "Rick Astley - Topic");
+        assert_eq!(videos[1].1, "Test Song (Official Audio)");
+        assert_eq!(videos[1].2, "Artist A - Topic");
         assert_eq!(videos[1].3, 3_200_000);
     }
 
@@ -481,17 +645,20 @@ mod tests {
 
     #[test]
     fn normalizes_case_brackets_and_spaces() {
-        assert_eq!(normalize("Never Gonna Give You Up (Official Video)"), "never gonna give you up");
-        assert_eq!(normalize("タイトル【特典付き】"), "タイトル");
+        assert_eq!(
+            normalize("Test Song (Official Video)"),
+            "test song official video"
+        );
+        assert_eq!(normalize("タイトル【特典付き】"), "タイトル 特典付き");
         assert_eq!(normalize("  A   B  "), "a b");
-        assert_eq!(normalize("（全角）"), "");
+        assert_eq!(normalize("（全角）"), "全角");
     }
 
     #[test]
     fn pick_tier1_exact_author_beats_more_viewed_fuzzy() {
         let videos = collect_videos(&fixture());
         assert_eq!(
-            pick_video(&videos, "Never Gonna Give You Up (Live)", "Other Channel"),
+            pick_video(&videos, "Test Song (Live)", "Other Channel"),
             Some(("dupe0000000", 1))
         );
     }
@@ -500,16 +667,39 @@ mod tests {
     fn pick_tier2_fuzzy_author_match_picks_most_viewed() {
         let videos = collect_videos(&fixture());
         assert_eq!(
-            pick_video(&videos, "Never Gonna Give You Up", "Rick Astley"),
-            Some(("dQw4w9WgXcQ", 2))
+            pick_video(&videos, "Test Song", "Artist A"),
+            Some(("test0000001", 2))
         );
     }
 
     #[test]
     fn pick_rejects_when_no_author_match_and_fuzzy_hits_are_many() {
         let videos = collect_videos(&fixture());
-        assert_eq!(pick_video(&videos, "Never Gonna Give You Up", "無関係なチャンネル"), None);
-        assert_eq!(pick_video(&videos, "存在しないタイトル", "Rick Astley"), None);
+        assert_eq!(pick_video(&videos, "Test Song", "無関係なチャンネル"), None);
+        assert_eq!(pick_video(&videos, "存在しないタイトル", "Artist A"), None);
+    }
+
+    #[test]
+    fn pick_rejects_single_hit_without_author_match() {
+        let videos = vec![entry("v1", "固有タイトル", "別人チャンネル", 100)];
+        assert_eq!(pick_video(&videos, "固有タイトル", "本物作者"), None);
+    }
+
+    #[test]
+    fn pick_rejects_cover_whose_title_mentions_artist() {
+        let videos = vec![entry(
+            "cover1",
+            "テスト楽曲 (テスト作者) をフルートで吹いた場合 | Flute cover",
+            "Cover Channel",
+            999_999_999,
+        )];
+        assert_eq!(pick_video(&videos, "テスト楽曲", "テスト作者"), None);
+    }
+
+    #[test]
+    fn pick_keeps_topic_rescue_via_title_mention() {
+        let videos = vec![entry("t1", "テスト楽曲 - テスト作者", "Test Author - Topic", 10)];
+        assert!(pick_video(&videos, "テスト楽曲", "テスト作者").is_some());
     }
 
     fn entry(id: &str, title: &str, author: &str, views: u64) -> VideoEntry {
@@ -519,16 +709,16 @@ mod tests {
     #[test]
     fn pick_collab_jp_artist_matches_each_channel() {
         let a_first = vec![
-            entry("v1", "コラボ楽曲 (Music Video)", "星野源", 500_000_000),
-            entry("v2", "コラボ楽曲 (Official Audio)", "米津玄師 - Topic", 100_000_000),
+            entry("v1", "テスト楽曲 (Music Video)", "テスト作者A", 500_000_000),
+            entry("v2", "テスト楽曲 (Official Audio)", "テスト作者B - Topic", 100_000_000),
         ];
-        assert_eq!(pick_video(&a_first, "コラボ楽曲", "星野源、米津玄師"), Some(("v1", 2)));
+        assert_eq!(pick_video(&a_first, "テスト楽曲", "テスト作者A、テスト作者B"), Some(("v1", 2)));
 
         let b_first = vec![
-            entry("v1", "コラボ楽曲 (Music Video)", "星野源", 100_000_000),
-            entry("v2", "コラボ楽曲 (Official Audio)", "米津玄師 - Topic", 500_000_000),
+            entry("v1", "テスト楽曲 (Music Video)", "テスト作者A", 100_000_000),
+            entry("v2", "テスト楽曲 (Official Audio)", "テスト作者B - Topic", 500_000_000),
         ];
-        assert_eq!(pick_video(&b_first, "コラボ楽曲", "星野源、米津玄師"), Some(("v2", 2)));
+        assert_eq!(pick_video(&b_first, "テスト楽曲", "テスト作者A、テスト作者B"), Some(("v2", 2)));
     }
 
     #[test]
@@ -542,7 +732,24 @@ mod tests {
 
     #[test]
     fn pick_full_artist_string_survives_commas_in_name() {
-        let videos = vec![entry("ewf", "September (Remastered)", "Earth, Wind & Fire", 900_000)];
-        assert_eq!(pick_video(&videos, "September", "Earth, Wind & Fire"), Some(("ewf", 2)));
+        let videos = vec![entry("ewf", "Test Song (Remastered)", "Test Artist, Test Group", 900_000)];
+        assert_eq!(pick_video(&videos, "Test Song", "Test Artist, Test Group"), Some(("ewf", 2)));
+    }
+
+    #[test]
+    fn wash_title_strips_tails_only() {
+        assert_eq!(wash_title("Song Name (Official Video)"), "Song Name");
+        assert_eq!(wash_title("Song Name [Remastered]"), "Song Name");
+        assert_eq!(wash_title("Song Name (HD)"), "Song Name");
+        assert_eq!(wash_title("Song Name (Live)"), "Song Name (Live)");
+        assert_eq!(wash_title("Song Name"), "Song Name");
+    }
+
+    #[test]
+    fn wash_artist_keeps_first_only() {
+        assert_eq!(wash_artist("Someone - Topic"), "Someone");
+        assert_eq!(wash_artist("A, B"), "A");
+        assert_eq!(wash_artist("A & B"), "A");
+        assert_eq!(wash_artist("Solo"), "Solo");
     }
 }

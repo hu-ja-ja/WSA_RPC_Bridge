@@ -7,7 +7,7 @@ use async_trait::async_trait;
 
 use crate::models::MediaInfo;
 
-const PLACEHOLDER_URL: &str = "https://placehold.co/100x100/000000/000000.png";
+pub(crate) const PLACEHOLDER_URL: &str = "https://placehold.co/100x100/000000/000000.png";
 const CACHE_MAX: usize = 256;
 
 #[async_trait]
