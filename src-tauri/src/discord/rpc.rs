@@ -31,7 +31,9 @@ fn connect_client(cid: &str) -> Option<DiscordIpcClient> {
                     );
                     std::thread::sleep(std::time::Duration::from_secs(1));
                 } else {
-                    log::error!("Discord IPC connect failed after {CONNECT_ATTEMPTS} attempts: {e}");
+                    log::error!(
+                        "Discord IPC connect failed after {CONNECT_ATTEMPTS} attempts: {e}"
+                    );
                 }
             }
         }

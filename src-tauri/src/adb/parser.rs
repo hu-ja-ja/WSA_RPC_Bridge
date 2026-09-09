@@ -8,9 +8,15 @@ fn normalize_whitespace(s: &str) -> String {
 
 fn extract_package(line: &str) -> Option<String> {
     let b = line.as_bytes();
-    if b.len() < 5 { return None; }
-    if b[0] != b' ' || b[1] != b' ' || b[2] != b' ' || b[3] != b' ' { return None; }
-    if b[4] == b' ' { return None; }
+    if b.len() < 5 {
+        return None;
+    }
+    if b[0] != b' ' || b[1] != b' ' || b[2] != b' ' || b[3] != b' ' {
+        return None;
+    }
+    if b[4] == b' ' {
+        return None;
+    }
 
     let content = &line[4..];
     let mut parts = content.split_whitespace();
@@ -101,11 +107,7 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
             if let Some((state_val, pos)) = extract_state_data(trimmed) {
                 is_playing = state_val == PLAYBACK_STATE_PLAYING;
                 position = Some(pos);
-                log::debug!(
-                    "ADB parser: state={}, position={:?}",
-                    state_val,
-                    position,
-                );
+                log::debug!("ADB parser: state={}, position={:?}", state_val, position,);
             }
 
             if let Some(raw_desc) = extract_description_raw(trimmed) {
@@ -113,7 +115,11 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                     title = parsed.0;
                     artist = parsed.1;
                     album = parsed.2;
-                    log::debug!("ADB parser: metadata title={:?}, artist={:?}", title, artist);
+                    log::debug!(
+                        "ADB parser: metadata title={:?}, artist={:?}",
+                        title,
+                        artist
+                    );
                 }
             }
 
@@ -239,10 +245,8 @@ Media session config:
 
     #[test]
     fn test_parse_description_japanese() {
-        let (title, artist, album) = parse_description(
-            "楽曲タイトル / アーティストA, アーティストB, null",
-        )
-        .unwrap();
+        let (title, artist, album) =
+            parse_description("楽曲タイトル / アーティストA, アーティストB, null").unwrap();
         assert_eq!(title, "楽曲タイトル / アーティストA");
         assert_eq!(artist, "アーティストB");
         assert_eq!(album, "");
@@ -251,7 +255,8 @@ Media session config:
     #[test]
     fn test_parse_description_without_slash() {
         let (title, artist, album) =
-            parse_description("MV「タイトル」アーティストA feat.サンプル, アーティストA, null").unwrap();
+            parse_description("MV「タイトル」アーティストA feat.サンプル, アーティストA, null")
+                .unwrap();
         assert_eq!(title, "MV「タイトル」アーティストA feat.サンプル");
         assert_eq!(artist, "アーティストA");
         assert_eq!(album, "");

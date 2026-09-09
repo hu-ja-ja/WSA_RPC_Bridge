@@ -83,7 +83,10 @@ impl AdbClient {
 
         let response = String::from_utf8_lossy(&buf);
         let trimmed = response.trim();
-        log::info!("ADB echo test: {trimmed:?} (elapsed: {:?})", start.elapsed());
+        log::info!(
+            "ADB echo test: {trimmed:?} (elapsed: {:?})",
+            start.elapsed()
+        );
 
         if trimmed != "adb_ok" {
             log::warn!("ADB echo response unexpected: {trimmed:?}");
@@ -96,15 +99,11 @@ impl AdbClient {
     }
 
     fn dump_media_session(&mut self) -> Result<Vec<u8>> {
-        let device = self
-            .device
-            .as_mut()
-            .context("ADB not connected")?;
+        let device = self.device.as_mut().context("ADB not connected")?;
 
         let mut raw = Vec::new();
         let start = Instant::now();
-        device
-            .shell_command(&"dumpsys media_session", Some(&mut raw), None)?;
+        device.shell_command(&"dumpsys media_session", Some(&mut raw), None)?;
         let elapsed = start.elapsed();
         log::info!("ADB dumpsys returned {} bytes ({:?})", raw.len(), elapsed);
         Ok(raw)
@@ -123,13 +122,13 @@ impl AdbClient {
                 self.connected = false;
                 self.device = None;
                 self.connect().await?;
-                self.dump_media_session().context(tr("adb.dumpsys_failed"))?
+                self.dump_media_session()
+                    .context(tr("adb.dumpsys_failed"))?
             }
             Err(e) => return Err(e.context(tr("adb.dumpsys_failed"))),
         };
 
-        let output_str =
-            String::from_utf8(raw).context(tr("adb.utf8_decode_failed"))?;
+        let output_str = String::from_utf8(raw).context(tr("adb.utf8_decode_failed"))?;
 
         match parse_media_session(&output_str) {
             Some(info) => {
@@ -146,7 +145,10 @@ impl AdbClient {
                     "ADB no active media session (dumpsys: {} chars)",
                     output_str.len()
                 );
-                log::debug!("ADB dumpsys output:\n{}", &output_str[..output_str.len().min(DEBUG_TRUNCATE_LEN)]);
+                log::debug!(
+                    "ADB dumpsys output:\n{}",
+                    &output_str[..output_str.len().min(DEBUG_TRUNCATE_LEN)]
+                );
                 // ponytail: 無音は正常。frontend が切断と区別できるよう固定接頭辞を付ける
                 Err(anyhow::anyhow!("NO_SESSION: {}", tr("adb.no_session")))
             }
@@ -191,8 +193,9 @@ fn ensure_adb_server_running(server_addr: SocketAddrV4) {
 
 /// Send a raw `host:` command to the adb server and return the response body.
 fn adb_host_command(server_addr: SocketAddrV4, cmd: &str) -> Result<Vec<u8>> {
-    let mut stream = TcpStream::connect_timeout(&SocketAddr::V4(server_addr), Duration::from_millis(500))
-        .with_context(|| format!("adb server unreachable at {server_addr}"))?;
+    let mut stream =
+        TcpStream::connect_timeout(&SocketAddr::V4(server_addr), Duration::from_millis(500))
+            .with_context(|| format!("adb server unreachable at {server_addr}"))?;
     stream.write_all(format!("{:04x}{cmd}", cmd.len()).as_bytes())?;
 
     let mut status = [0u8; 4];

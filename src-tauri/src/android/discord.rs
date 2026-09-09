@@ -60,15 +60,21 @@ type Cb = unsafe extern "C" fn(*mut Discord_ClientResult, *mut c_void);
 struct Sdk {
     client_init: unsafe extern "C" fn(*mut Discord_Client),
     client_set_application_id: unsafe extern "C" fn(*mut Discord_Client, u64),
-    client_update_rich_presence:
-        unsafe extern "C" fn(*mut Discord_Client, *mut Discord_Activity, Cb, *mut c_void, *mut c_void),
+    client_update_rich_presence: unsafe extern "C" fn(
+        *mut Discord_Client,
+        *mut Discord_Activity,
+        Cb,
+        *mut c_void,
+        *mut c_void,
+    ),
     client_drop: unsafe extern "C" fn(*mut Discord_Client),
     activity_init: unsafe extern "C" fn(*mut Discord_Activity),
     activity_set_name: unsafe extern "C" fn(*mut Discord_Activity, Discord_String),
     activity_set_type: unsafe extern "C" fn(*mut Discord_Activity, i32),
     activity_set_state: unsafe extern "C" fn(*mut Discord_Activity, *mut Discord_String),
     activity_set_details: unsafe extern "C" fn(*mut Discord_Activity, *mut Discord_String),
-    activity_set_timestamps: unsafe extern "C" fn(*mut Discord_Activity, *mut Discord_ActivityTimestamps),
+    activity_set_timestamps:
+        unsafe extern "C" fn(*mut Discord_Activity, *mut Discord_ActivityTimestamps),
     activity_set_assets: unsafe extern "C" fn(*mut Discord_Activity, *mut Discord_ActivityAssets),
     activity_drop: unsafe extern "C" fn(*mut Discord_Activity),
     ts_init: unsafe extern "C" fn(*mut Discord_ActivityTimestamps),
@@ -132,7 +138,8 @@ fn load_sdk() -> Result<&'static Sdk, String> {
             set_free_threaded: load_symbol(handle, "Discord_SetFreeThreaded")?,
         }
     };
-    SDK.set(sdk).map_err(|_| "discord sdk already initialized".to_string())?;
+    SDK.set(sdk)
+        .map_err(|_| "discord sdk already initialized".to_string())?;
     Ok(SDK.get().unwrap())
 }
 
@@ -205,7 +212,8 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
     // name=title, details=display_name??package_name, state=title, type=Listening,
     // start=now-pos/1000, end=start+dur/1000 (再生中), large_image=thumbnail, large_text=artist
     let mut name = to_discord_string(&info.title)?;
-    let mut details = to_discord_string(info.display_name.as_deref().unwrap_or(&info.package_name))?;
+    let mut details =
+        to_discord_string(info.display_name.as_deref().unwrap_or(&info.package_name))?;
     let mut state = to_discord_string(&info.title)?;
     let mut artist_str: Option<Discord_String> = None;
     let mut thumb_str: Option<Discord_String> = None;
@@ -265,8 +273,19 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
                 (sdk.activity_set_assets)(&mut activity, &mut assets);
             }
 
-            (sdk.client_update_rich_presence)(c_ptr, &mut activity, update_presence_cb, std::ptr::null_mut(), std::ptr::null_mut());
-            log::debug!("discord: presence update sent: {} - {} (playing={})", info.title, info.artist, info.is_playing);
+            (sdk.client_update_rich_presence)(
+                c_ptr,
+                &mut activity,
+                update_presence_cb,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            );
+            log::debug!(
+                "discord: presence update sent: {} - {} (playing={})",
+                info.title,
+                info.artist,
+                info.is_playing
+            );
         }
         Ok::<(), String>(())
     })();
@@ -307,7 +326,9 @@ pub fn update_presence_dedup(info: &MediaInfo) -> Result<(), String> {
         info.position.unwrap_or(0)
     );
     {
-        let last = LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned");
+        let last = LAST_PRESENCE_KEY
+            .lock()
+            .expect("presence key mutex poisoned");
         if *last == key {
             log::debug!("android: presence update skipped (dedup key unchanged)");
             return Ok(());
@@ -315,13 +336,17 @@ pub fn update_presence_dedup(info: &MediaInfo) -> Result<(), String> {
     }
     discord_update_presence(info)?;
     // 送信成功後にのみキーを更新する。失敗時は同一内容を次回リトライできる。
-    *LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned") = key;
+    *LAST_PRESENCE_KEY
+        .lock()
+        .expect("presence key mutex poisoned") = key;
     Ok(())
 }
 
 pub fn discord_disconnect() -> Result<(), String> {
     RPC_IDLE.store(false, Ordering::SeqCst);
-    *LAST_PRESENCE_KEY.lock().expect("presence key mutex poisoned") = String::new();
+    *LAST_PRESENCE_KEY
+        .lock()
+        .expect("presence key mutex poisoned") = String::new();
     do_disconnect()
 }
 

@@ -37,7 +37,9 @@ pub extern "system" fn Java_com_wsarpcbridge_app_NotificationBridge_notifyAccess
 }
 
 fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
-    let vm = JVM.get().ok_or("JVM not initialized (NotificationBridge.init not called)")?;
+    let vm = JVM
+        .get()
+        .ok_or("JVM not initialized (NotificationBridge.init not called)")?;
     let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
     match f(&mut env) {
         Ok(v) => Ok(v),
@@ -49,9 +51,9 @@ fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Re
 }
 
 fn bridge_class() -> Result<&'static jni::objects::GlobalRef, String> {
-    BRIDGE_CLASS
-        .get()
-        .ok_or_else(|| "NotificationBridge class not cached (NotificationBridge.init not called)".to_string())
+    BRIDGE_CLASS.get().ok_or_else(|| {
+        "NotificationBridge class not cached (NotificationBridge.init not called)".to_string()
+    })
 }
 
 pub fn get_notification_access_status() -> Result<bool, String> {

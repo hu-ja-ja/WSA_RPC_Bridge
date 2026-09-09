@@ -12,7 +12,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let quit = MenuItem::with_id(app, "quit", tr("tray.quit"), true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &settings, &quit])?;
 
-    let icon = app.default_window_icon().cloned()
+    let icon = app
+        .default_window_icon()
+        .cloned()
         .expect("default window icon must be configured");
 
     TrayIconBuilder::new()
@@ -29,16 +31,14 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                 show_main_window(tray.app_handle());
             }
         })
-        .on_menu_event(|app, event| {
-            match event.id().as_ref() {
-                "open" => show_main_window(app),
-                "settings" => {
-                    show_main_window(app);
-                    let _ = app.emit("show-settings", ());
-                }
-                "quit" => std::process::exit(0),
-                _ => {}
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "open" => show_main_window(app),
+            "settings" => {
+                show_main_window(app);
+                let _ = app.emit("show-settings", ());
             }
+            "quit" => std::process::exit(0),
+            _ => {}
         })
         .build(app)?;
 

@@ -10,7 +10,9 @@ pub struct NicoboxResolver {
 
 impl NicoboxResolver {
     pub fn new() -> Self {
-        Self { client: Client::new() }
+        Self {
+            client: Client::new(),
+        }
     }
 }
 
@@ -39,7 +41,10 @@ impl ArtworkResolver for NicoboxResolver {
         let resp = self
             .client
             .get(&url)
-            .header("User-Agent", concat!("wsa_rpc_bridge/", env!("CARGO_PKG_VERSION")))
+            .header(
+                "User-Agent",
+                concat!("wsa_rpc_bridge/", env!("CARGO_PKG_VERSION")),
+            )
             .send()
             .await
             .ok()?;
@@ -59,9 +64,15 @@ impl ArtworkResolver for NicoboxResolver {
         let title = data["title"].as_str()?;
         if title != info.title {
             if cfg!(debug_assertions) {
-                log::info!("nicobox: title mismatch: got \"{title}\", expected \"{}\"", info.title);
+                log::info!(
+                    "nicobox: title mismatch: got \"{title}\", expected \"{}\"",
+                    info.title
+                );
             } else {
-                log::debug!("nicobox: title mismatch: got \"{title}\", expected \"{}\"", info.title);
+                log::debug!(
+                    "nicobox: title mismatch: got \"{title}\", expected \"{}\"",
+                    info.title
+                );
             }
             return None;
         }

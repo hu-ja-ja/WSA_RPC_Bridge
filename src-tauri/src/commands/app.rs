@@ -1,10 +1,10 @@
-use tauri::{AppHandle, State};
-#[cfg(target_os = "android")]
-use tauri::Manager;
-#[cfg(not(target_os = "android"))]
-use tauri_plugin_autostart::ManagerExt;
 #[cfg(target_os = "android")]
 use tauri::Emitter;
+#[cfg(target_os = "android")]
+use tauri::Manager;
+use tauri::{AppHandle, State};
+#[cfg(not(target_os = "android"))]
+use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
 
 #[cfg(not(target_os = "android"))]
@@ -52,8 +52,15 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
     let mut result = adb.get_media_info().await;
 
     if let Ok(ref mut info) = result {
-        let device = adb.device().expect("device must be connected after successful get_media_info");
-        let display_name = state.apk_label.lock().await.resolve(&info.package_name, device).await;
+        let device = adb
+            .device()
+            .expect("device must be connected after successful get_media_info");
+        let display_name = state
+            .apk_label
+            .lock()
+            .await
+            .resolve(&info.package_name, device)
+            .await;
         info.display_name = Some(display_name);
 
         let mut registry = state.artwork.lock().await;
@@ -87,7 +94,11 @@ pub async fn get_media_info(
         .expect("media mutex poisoned")
         .clone();
 
-    log::info!("get_media_info: android title={:?}, artist={:?}", info.title, info.artist);
+    log::info!(
+        "get_media_info: android title={:?}, artist={:?}",
+        info.title,
+        info.artist
+    );
 
     // ponytail: 情報は即時返し、サムネは別イベントで後送 — 秒数リセットを防ぐ
     if !info.title.is_empty() {
@@ -145,7 +156,9 @@ pub fn connect_discord(app: AppHandle, state: State<'_, AppState>) -> Result<(),
     }
     log::info!("connect_discord: connecting Discord RPC (android)");
     crate::android::discord_connect()?;
-    state.discord_connected.store(true, std::sync::atomic::Ordering::Relaxed);
+    state
+        .discord_connected
+        .store(true, std::sync::atomic::Ordering::Relaxed);
     let _ = app.emit("discord-status-changed", true);
     Ok(())
 }
@@ -163,7 +176,9 @@ pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
 pub fn disconnect_discord(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     log::info!("disconnect_discord: disconnecting Discord RPC (android)");
     crate::android::discord_disconnect()?;
-    state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
+    state
+        .discord_connected
+        .store(false, std::sync::atomic::Ordering::Relaxed);
     let _ = app.emit("discord-status-changed", false);
     Ok(())
 }
@@ -194,8 +209,13 @@ pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn get_discord_status(state: State<'_, AppState>) -> Result<bool, String> {
-    let connected = state.discord_connected.load(std::sync::atomic::Ordering::Relaxed);
-    log::debug!("get_discord_status: android discord_connected={}", connected);
+    let connected = state
+        .discord_connected
+        .load(std::sync::atomic::Ordering::Relaxed);
+    log::debug!(
+        "get_discord_status: android discord_connected={}",
+        connected
+    );
     Ok(connected)
 }
 
@@ -242,7 +262,11 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppConfig, String> {
 
 #[tauri::command]
 #[cfg(not(target_os = "android"))]
-pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
+pub fn update_settings(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    config: AppConfig,
+) -> Result<(), String> {
     let old = state.config.get();
     state.config.set(config.clone());
     if old.auto_start != config.auto_start {
@@ -260,7 +284,11 @@ pub fn update_settings(app: AppHandle, state: State<'_, AppState>, config: AppCo
 
 #[tauri::command]
 #[cfg(target_os = "android")]
-pub fn update_settings(_app: AppHandle, state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
+pub fn update_settings(
+    _app: AppHandle,
+    state: State<'_, AppState>,
+    config: AppConfig,
+) -> Result<(), String> {
     crate::android::save_whitelist(&config.media_whitelist)?;
     crate::android::set_media_notification_enabled(config.media_notification)?;
     state.config.set(config.clone());

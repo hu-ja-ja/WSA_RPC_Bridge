@@ -1,9 +1,9 @@
 #[cfg(not(target_os = "android"))]
 mod adb;
-#[cfg(not(target_os = "android"))]
-mod apk_label;
 #[cfg(target_os = "android")]
 mod android;
+#[cfg(not(target_os = "android"))]
+mod apk_label;
 mod artwork;
 mod commands;
 mod config;
@@ -22,10 +22,10 @@ mod tray;
 use std::path::PathBuf;
 
 use commands::AppState;
-#[cfg(not(target_os = "android"))]
-use tauri::{Manager, WindowEvent};
 #[cfg(target_os = "android")]
 use tauri::{Emitter, Manager};
+#[cfg(not(target_os = "android"))]
+use tauri::{Manager, WindowEvent};
 #[cfg(not(target_os = "android"))]
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex;
@@ -144,7 +144,8 @@ pub fn run() {
             )?;
         }
 
-        app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+        app.handle()
+            .plugin(tauri_plugin_updater::Builder::new().build())?;
 
         std::fs::create_dir_all(wsa_data_dir())?;
         std::fs::create_dir_all(default_apk_cache_dir())?;
@@ -209,7 +210,9 @@ pub fn run() {
                         if let Err(e) = crate::android::discord_idle_disconnect() {
                             log::warn!("android: idle disconnect failed: {e}");
                         }
-                        state.discord_connected.store(false, std::sync::atomic::Ordering::Relaxed);
+                        state
+                            .discord_connected
+                            .store(false, std::sync::atomic::Ordering::Relaxed);
                         let _ = app_handle.emit("discord-status-changed", false);
                     }
                 }

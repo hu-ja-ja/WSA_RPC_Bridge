@@ -18,7 +18,11 @@ impl ApkLabelResolver {
         }
     }
 
-    pub async fn resolve<D: ADBDeviceExt + Send>(&mut self, package_name: &str, device: &mut D) -> String {
+    pub async fn resolve<D: ADBDeviceExt + Send>(
+        &mut self,
+        package_name: &str,
+        device: &mut D,
+    ) -> String {
         if let Some(name) = self.cache.get(package_name) {
             return name.clone();
         }
@@ -36,7 +40,11 @@ impl ApkLabelResolver {
         }
     }
 
-    async fn resolve_inner<D: ADBDeviceExt + Send>(&self, package_name: &str, device: &mut D) -> Result<String> {
+    async fn resolve_inner<D: ADBDeviceExt + Send>(
+        &self,
+        package_name: &str,
+        device: &mut D,
+    ) -> Result<String> {
         let apk_path = self.get_apk_path(package_name, device).await?;
         let local_path = self.cache_dir.join(format!("{}.apk", package_name));
 
@@ -56,7 +64,11 @@ impl ApkLabelResolver {
         Ok(label)
     }
 
-    async fn get_apk_path<D: ADBDeviceExt + Send>(&self, package_name: &str, device: &mut D) -> Result<String> {
+    async fn get_apk_path<D: ADBDeviceExt + Send>(
+        &self,
+        package_name: &str,
+        device: &mut D,
+    ) -> Result<String> {
         let cmd = format!("pm path {}", package_name);
         let mut stdout = Vec::new();
         device
@@ -69,7 +81,11 @@ impl ApkLabelResolver {
             .lines()
             .filter_map(|line| {
                 let path = line.trim().strip_prefix("package:")?.trim().to_string();
-                if path.ends_with("/base.apk") { Some(path) } else { None }
+                if path.ends_with("/base.apk") {
+                    Some(path)
+                } else {
+                    None
+                }
             })
             .next()
             .ok_or_else(|| anyhow::anyhow!("no base.apk in pm path output"))?;

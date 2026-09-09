@@ -68,9 +68,17 @@ impl ArtworkRegistry {
         }
 
         if cfg!(debug_assertions) {
-            log::info!("artwork: no thumbnail for {} - {} (resolver={}) using placeholder", info.package_name, info.title, resolver.is_some());
+            log::info!(
+                "artwork: no thumbnail for {} - {} (resolver={}) using placeholder",
+                info.package_name,
+                info.title,
+                resolver.is_some()
+            );
         } else {
-            log::debug!("artwork: no resolver found for {}, using placeholder", info.package_name);
+            log::debug!(
+                "artwork: no resolver found for {}, using placeholder",
+                info.package_name
+            );
         }
         // ponytail: don't cache placeholder - transient failure should retry next time
         Some(PLACEHOLDER_URL.to_string())

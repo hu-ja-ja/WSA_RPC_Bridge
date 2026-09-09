@@ -22,7 +22,9 @@ pub extern "system" fn Java_com_wsarpcbridge_app_SignatureBridge_init(
 }
 
 fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
-    let vm = JVM.get().ok_or("JVM not initialized (SignatureBridge.init not called)")?;
+    let vm = JVM
+        .get()
+        .ok_or("JVM not initialized (SignatureBridge.init not called)")?;
     let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
     match f(&mut env) {
         Ok(v) => Ok(v),
@@ -34,9 +36,9 @@ fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Re
 }
 
 fn bridge_class() -> Result<&'static jni::objects::GlobalRef, String> {
-    BRIDGE_CLASS
-        .get()
-        .ok_or_else(|| "SignatureBridge class not cached (SignatureBridge.init not called)".to_string())
+    BRIDGE_CLASS.get().ok_or_else(|| {
+        "SignatureBridge class not cached (SignatureBridge.init not called)".to_string()
+    })
 }
 
 /// 自身の署名証明書の SHA-256 フィンガープリント（コロン区切り大文字hex）。無ければ空文字。

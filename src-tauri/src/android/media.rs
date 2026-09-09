@@ -31,7 +31,11 @@ fn pending_media() -> &'static Mutex<Option<MediaInfo>> {
 
 pub fn set_app_handle(app: AppHandle) {
     let _ = APP_HANDLE.set(app.clone());
-    if let Some(info) = pending_media().lock().expect("pending media mutex poisoned").take() {
+    if let Some(info) = pending_media()
+        .lock()
+        .expect("pending media mutex poisoned")
+        .take()
+    {
         push_media_update(app, info);
     }
 }
@@ -75,7 +79,9 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
 }
 
 fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
-    let vm = JVM.get().ok_or("JVM not initialized (MediaBridge.init not called)")?;
+    let vm = JVM
+        .get()
+        .ok_or("JVM not initialized (MediaBridge.init not called)")?;
     let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
     match f(&mut env) {
         Ok(v) => Ok(v),
@@ -111,15 +117,15 @@ fn call_string_array(name: &str) -> Result<Vec<String>, String> {
 }
 
 fn store_class() -> Result<&'static jni::objects::GlobalRef, String> {
-    STORE_CLASS
-        .get()
-        .ok_or_else(|| "MediaWhitelistStore class not cached (MediaBridge.init not called)".to_string())
+    STORE_CLASS.get().ok_or_else(|| {
+        "MediaWhitelistStore class not cached (MediaBridge.init not called)".to_string()
+    })
 }
 
 fn info_service_class() -> Result<&'static jni::objects::GlobalRef, String> {
-    INFO_SERVICE_CLASS
-        .get()
-        .ok_or_else(|| "MediaInfoService class not cached (MediaBridge.init not called)".to_string())
+    INFO_SERVICE_CLASS.get().ok_or_else(|| {
+        "MediaInfoService class not cached (MediaBridge.init not called)".to_string()
+    })
 }
 
 pub fn load_media_notification_enabled() -> Result<bool, String> {
@@ -133,7 +139,12 @@ pub fn load_media_notification_enabled() -> Result<bool, String> {
 pub fn set_media_notification_enabled(enabled: bool) -> Result<(), String> {
     let class = info_service_class()?;
     with_jni(|env| {
-        env.call_static_method(class, "setEnabled", "(Z)V", &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)])?;
+        env.call_static_method(
+            class,
+            "setEnabled",
+            "(Z)V",
+            &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)],
+        )?;
         Ok(())
     })
 }
@@ -149,7 +160,12 @@ pub fn load_rpc_enabled() -> Result<bool, String> {
 fn set_media_rpc_enabled(enabled: bool) -> Result<(), String> {
     let class = info_service_class()?;
     with_jni(|env| {
-        env.call_static_method(class, "setRpcEnabled", "(Z)V", &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)])?;
+        env.call_static_method(
+            class,
+            "setRpcEnabled",
+            "(Z)V",
+            &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)],
+        )?;
         Ok(())
     })
 }
@@ -177,7 +193,10 @@ pub fn set_rpc_enabled(app: &AppHandle, enabled: bool) -> Result<(), String> {
         discord_disconnect()?;
         state.discord_connected.store(false, Ordering::Relaxed);
     }
-    let _ = app.emit("discord-status-changed", state.discord_connected.load(Ordering::Relaxed));
+    let _ = app.emit(
+        "discord-status-changed",
+        state.discord_connected.load(Ordering::Relaxed),
+    );
     let _ = app.emit("rpc-enabled-changed", enabled);
     Ok(())
 }
@@ -193,12 +212,21 @@ pub fn load_whitelist() -> Result<Vec<String>, String> {
 pub fn save_whitelist(packages: &[String]) -> Result<(), String> {
     let class = store_class()?;
     with_jni(|env| {
-        let arr = env.new_object_array(packages.len() as i32, "java/lang/String", jni::objects::JObject::null())?;
+        let arr = env.new_object_array(
+            packages.len() as i32,
+            "java/lang/String",
+            jni::objects::JObject::null(),
+        )?;
         for (i, pkg) in packages.iter().enumerate() {
             let js = env.new_string(pkg.as_str())?;
             env.set_object_array_element(&arr, i as i32, js)?;
         }
-        let _ = env.call_static_method(class, "save", "([Ljava/lang/String;)V", &[jni::objects::JValue::from(&arr)])?;
+        let _ = env.call_static_method(
+            class,
+            "save",
+            "([Ljava/lang/String;)V",
+            &[jni::objects::JValue::from(&arr)],
+        )?;
         Ok(())
     })
 }
@@ -216,7 +244,8 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     duration_ms: jni::sys::jlong,
     is_playing: jni::sys::jboolean,
 ) {
-    let mut get = |s: &jni::objects::JString| env.get_string(s).map(|v| v.into()).unwrap_or_default();
+    let mut get =
+        |s: &jni::objects::JString| env.get_string(s).map(|v| v.into()).unwrap_or_default();
     let display_name: String = get(&display_name);
     let display_name = (!display_name.is_empty()).then_some(display_name);
 
@@ -235,10 +264,18 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     if cfg!(debug_assertions) {
         log::info!(
             "android: media update: title={:?} artist={:?} pkg={:?} playing={}",
-            info.title, info.artist, info.package_name, info.is_playing
+            info.title,
+            info.artist,
+            info.package_name,
+            info.is_playing
         );
     } else {
-        log::debug!("android: media update: {} - {} (playing={})", info.title, info.artist, info.is_playing);
+        log::debug!(
+            "android: media update: {} - {} (playing={})",
+            info.title,
+            info.artist,
+            info.is_playing
+        );
     }
     // ponytail: 情報とサムネは完全分離 — media_state はサムネを持たない
     *media_state().lock().expect("media mutex poisoned") = info.clone();
@@ -246,7 +283,9 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     let Some(app) = APP_HANDLE.get().cloned() else {
         // サービスが MainActivity より先に起動した場合(AppHandle 未設定)は最新の1件だけ保留し、
         // set_app_handle でリプレイする。UI側は起動時に get_media_info で現在値を取得する。
-        *pending_media().lock().expect("pending media mutex poisoned") = Some(info);
+        *pending_media()
+            .lock()
+            .expect("pending media mutex poisoned") = Some(info);
         return;
     };
     push_media_update(app, info);
@@ -256,7 +295,10 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
     if cfg!(debug_assertions) {
         log::info!(
             "android: push_media_update: title={:?} artist={:?} pkg={:?} playing={}",
-            info.title, info.artist, info.package_name, info.is_playing
+            info.title,
+            info.artist,
+            info.package_name,
+            info.is_playing
         );
     }
     tauri::async_runtime::spawn(async move {
@@ -286,7 +328,9 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
         if cfg!(debug_assertions) {
             log::info!(
                 "android: resolve: start title={:?} artist={:?} pkg={:?}",
-                info.title, info.artist, info.package_name
+                info.title,
+                info.artist,
+                info.package_name
             );
         }
         let url_opt = state.artwork.lock().await.resolve(&info).await;
@@ -307,7 +351,8 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
             {
                 log::debug!(
                     "android: resolve result discarded (stale) resolve_for={:?} cur={:?}",
-                    info.title, cur.title
+                    info.title,
+                    cur.title
                 );
                 return;
             }
