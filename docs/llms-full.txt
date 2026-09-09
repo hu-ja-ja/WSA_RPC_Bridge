@@ -292,6 +292,7 @@ GitHub Actions の `workflow_dispatch` からリリースを生成します。
 1. Discord Developer Portal で Social SDK のダウンロード URL を生成する (約 1 時間で失効する GCS 署名付き URL)
 2. 手元で `pwsh scripts/release.ps1` を実行し、対話で以下を入力する:
    - `version`: アプリのバージョン (例 `0.4.0`) → タグ `v{version}` としてリリース
+   - `channel`: `release` / `beta` (未入力は `release`。`beta` はプレリリース扱いで `update.json` を更新しない)
    - `SDK URL`: 上記の期限付き URL をクリップボードにコピーしてから Enter を押す (貼り付け操作は不要。画面に表示されるが、引数・履歴・ログには残らない。画面共有中は操作しないこと)
    - スクリプトが URL を使い捨ての秘密値として登録 → ワークフロー起動 → 終了待機 → 秘密値を削除する
    - 事前に `gh` へ権限のあるアカウントでログインしておくこと (`gh auth login` → `gh auth status` で確認)
@@ -300,8 +301,8 @@ GitHub Actions の `workflow_dispatch` からリリースを生成します。
    - 使い捨ての秘密値から Social SDK を取得し `src-tauri/gen/android/app/libs/discord_partner_sdk.aar` へ配置
    - Android APK (`aarch64`) + Windows MSI をビルド
    - CHANGELOG.md から該当バージョンのセクションを抽出し、リリース本文とする (セクションが無い場合はコミット一覧でフォールバック)
-   - リリースを自動作成し、成果物を添付
-   - `update.json` を GitHub Pages にデプロイ (デスクトップのアップデーター用)
+   - リリースを自動作成し、成果物を添付 (`beta` はプレリリース・latestにしない)
+   - `update.json` を GitHub Pages にデプロイ (デスクトップのアップデーター用。`beta` ではスキップ)
 
 ## Social SDK の取り扱い
 
