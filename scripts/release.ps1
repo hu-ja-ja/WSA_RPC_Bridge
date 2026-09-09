@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $version = (Read-Host 'version (e.g. 0.4.0)').Trim()
 if ($version -eq '') { throw 'version is required' }
 
-Write-Output 'Copy the SDK URL to the clipboard, then press Enter'
+Write-Output 'Copy the SDK bundle zip URL to the clipboard, then press Enter'
 [void](Read-Host 'Press Enter when ready')
 $url = (Get-Clipboard -Raw).Trim()
 if ([string]::IsNullOrWhiteSpace($url)) { throw 'URL is required' }

@@ -94,37 +94,49 @@ jobs:
           }
           $ProgressPreference = 'SilentlyContinue'
           $out = "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
+          $tmp = Join-Path $env:RUNNER_TEMP "social_sdk.zip"
           try {
             New-Item -ItemType Directory -Force -Path (Split-Path $out) | Out-Null
-            Invoke-WebRequest -Uri $SDK_URL -OutFile $out
+            Invoke-WebRequest -Uri $SDK_URL -OutFile $tmp
           } catch {
             Write-Error "SDK download failed"
             exit 1
           }
-          if (-not (Test-Path $out) -or (Get-Item $out).Length -eq 0) {
+          if (-not (Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) {
             Write-Error "SDK download failed"
             exit 1
           }
-          $len = (Get-Item $out).Length
-          Write-Output "downloaded $len bytes to $out"
-          if ($len -lt 10MB) {
-            Write-Error "downloaded file too small ($len bytes); aborting before build"
-            exit 1
-          }
+          Write-Output "downloaded $((Get-Item $tmp).Length) bytes"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $wanted = 'discord_social_sdk/lib/release/discord_partner_sdk.aar'
+          $zip = [IO.Compression.ZipFile]::OpenRead($tmp)
           try {
-            $zip = [IO.Compression.ZipFile]::OpenRead($out)
-          } catch {
-            Write-Error "archive validation failed: not a valid zip archive"
+            $entry = $zip.Entries | Where-Object { $_.FullName.Replace('\', '/').EndsWith($wanted) } | Select-Object -First 1
+            if (-not $entry) {
+              Write-Error "archive layout unexpected: '$wanted' not found"
+              $zip.Entries | Select-Object -First 20 FullName | ForEach-Object { Write-Output "entry: $($_.FullName)" }
+              exit 1
+            }
+            Write-Output "extracting '$($entry.FullName)' ($($entry.Length) bytes)"
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $out, $true)
+          } finally {
+            $zip.Dispose()
+          }
+          Remove-Item $tmp -Force
+          $len = (Get-Item $out).Length
+          Write-Output "extracted $len bytes to $out"
+          if ($len -lt 10MB) {
+            Write-Error "extracted file too small ($len bytes); aborting before build"
             exit 1
           }
+          $zip = [IO.Compression.ZipFile]::OpenRead($out)
           try {
-            $entry = $zip.Entries | Where-Object { $_.FullName -eq 'AndroidManifest.xml' } | Select-Object -First 1
-            if (-not $entry) {
+            $manifest = $zip.Entries | Where-Object { $_.FullName -eq 'AndroidManifest.xml' } | Select-Object -First 1
+            if (-not $manifest) {
               Write-Error "archive validation failed: manifest entry missing"
               exit 1
             }
-            Write-Output "archive ok: manifest entry present ($($entry.Length) bytes)"
+            Write-Output "archive ok: manifest entry present ($($manifest.Length) bytes)"
           } finally {
             $zip.Dispose()
           }
@@ -147,10 +159,11 @@ jobs:
           Write-Output "keystore restored to $keystore"
 
       - name: Build Android APK (aarch64)
+        id: build-apk
         run: pnpm tauri android build --apk --target aarch64
 
       - name: Diagnose Gradle failure
-        if: failure()
+        if: failure() && steps.build-apk.conclusion == 'failure'
         shell: pwsh
         working-directory: src-tauri/gen/android
         run: ./gradlew.bat :app:processUniversalReleaseResources --stacktrace
