@@ -292,7 +292,7 @@ GitHub Actions の `workflow_dispatch` からリリースを生成します。
 1. Discord Developer Portal で Social SDK のダウンロード URL を生成する (約 1 時間で失効する GCS 署名付き URL)
 2. 手元で `pwsh scripts/release.ps1` を実行し、対話で以下を入力する:
    - `version`: アプリのバージョン (例 `0.4.0`) → タグ `v{version}` としてリリース
-   - `SDK URL`: 上記の期限付き URL (画面に表示されるが、引数・履歴・ログには残らない。画面共有中は貼り付けないこと)
+   - `SDK URL`: 上記の期限付き URL をクリップボードにコピーしてから Enter を押す (貼り付け操作は不要。画面に表示されるが、引数・履歴・ログには残らない。画面共有中は操作しないこと)
    - スクリプトが URL を使い捨ての秘密値として登録 → ワークフロー起動 → 終了待機 → 秘密値を削除する
    - 事前に `gh` へ権限のあるアカウントでログインしておくこと (`gh auth login` → `gh auth status` で確認)
 3. ワークフローが以下を実行する:
