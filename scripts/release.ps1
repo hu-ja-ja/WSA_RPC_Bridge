@@ -13,11 +13,15 @@ $url = [Runtime.InteropServices.Marshal]::PtrToStringUni($ptr)
 [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
 Remove-Variable secureUrl
 if ([string]::IsNullOrWhiteSpace($url)) { throw 'URL is required' }
+if ($url -notmatch '^https://') { throw 'URL must start with https://' }
 
 $started = (Get-Date).ToUniversalTime()
 try {
-  $url | gh secret set SDK_URL --body -
+  gh secret set SDK_URL --body "$url"
+  if ($LASTEXITCODE -ne 0) { throw 'secret registration failed' }
+  Start-Sleep -Seconds 15
   gh workflow run release.yml -f version=$version
+  if ($LASTEXITCODE -ne 0) { throw 'workflow dispatch failed' }
 
   $runId = $null
   foreach ($i in 1..30) {
@@ -31,7 +35,9 @@ try {
   if (-not $runId) { throw 'dispatched run not found' }
 
   gh run watch $runId --exit-status
+  if ($LASTEXITCODE -ne 0) { throw "run $runId failed" }
 } finally {
   gh secret delete SDK_URL
+  if ($LASTEXITCODE -ne 0) { Write-Warning 'secret deletion failed; delete SDK_URL manually' }
   Remove-Variable url -ErrorAction SilentlyContinue
 }

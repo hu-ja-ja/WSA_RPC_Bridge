@@ -86,7 +86,9 @@ jobs:
         env:
           SDK_URL: ${{ secrets.SDK_URL }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:SDK_URL)) {
+          $ErrorActionPreference = 'Stop'
+          $SDK_URL = $env:SDK_URL.Trim()
+          if ([string]::IsNullOrWhiteSpace($SDK_URL)) {
             Write-Error "SDK_URL is not set; register it before dispatch"
             exit 1
           }
@@ -94,7 +96,7 @@ jobs:
           $out = "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
           try {
             New-Item -ItemType Directory -Force -Path (Split-Path $out) | Out-Null
-            Invoke-WebRequest -Uri $env:SDK_URL -OutFile $out
+            Invoke-WebRequest -Uri $SDK_URL -OutFile $out
           } catch {
             Write-Error "SDK download failed"
             exit 1
