@@ -7,13 +7,14 @@ $ErrorActionPreference = 'Stop'
 $version = (Read-Host 'version (e.g. 0.4.0)').Trim()
 if ($version -eq '') { throw 'version is required' }
 
-$secureUrl = Read-Host 'SDK URL (input hidden)' -AsSecureString
-$ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureUrl)
-$url = [Runtime.InteropServices.Marshal]::PtrToStringUni($ptr)
-[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
-Remove-Variable secureUrl
+Write-Output 'Copy the SDK URL to the clipboard, then press Enter'
+[void](Read-Host 'Press Enter when ready')
+$url = (Get-Clipboard -Raw).Trim()
 if ([string]::IsNullOrWhiteSpace($url)) { throw 'URL is required' }
-if ($url -notmatch '^https://') { throw 'URL must start with https://' }
+$hit = [regex]::Match($url, 'https://\S+')
+if (-not $hit.Success) { throw 'URL must start with https://' }
+$url = $hit.Value -replace '[\u200B-\u200D\uFEFF]+$', ''
+if ($url.Length -lt 50) { throw 'URL looks too short; check the pasted value' }
 
 $started = (Get-Date).ToUniversalTime()
 try {

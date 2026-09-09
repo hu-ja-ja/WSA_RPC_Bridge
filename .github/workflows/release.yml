@@ -105,6 +105,29 @@ jobs:
             Write-Error "SDK download failed"
             exit 1
           }
+          $len = (Get-Item $out).Length
+          Write-Output "downloaded $len bytes to $out"
+          if ($len -lt 10MB) {
+            Write-Error "downloaded file too small ($len bytes); aborting before build"
+            exit 1
+          }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          try {
+            $zip = [IO.Compression.ZipFile]::OpenRead($out)
+          } catch {
+            Write-Error "archive validation failed: not a valid zip archive"
+            exit 1
+          }
+          try {
+            $entry = $zip.Entries | Where-Object { $_.FullName -eq 'AndroidManifest.xml' } | Select-Object -First 1
+            if (-not $entry) {
+              Write-Error "archive validation failed: manifest entry missing"
+              exit 1
+            }
+            Write-Output "archive ok: manifest entry present ($($entry.Length) bytes)"
+          } finally {
+            $zip.Dispose()
+          }
 
       - name: Decode Android signing keystore
         shell: pwsh
@@ -125,6 +148,12 @@ jobs:
 
       - name: Build Android APK (aarch64)
         run: pnpm tauri android build --apk --target aarch64
+
+      - name: Diagnose Gradle failure
+        if: failure()
+        shell: pwsh
+        working-directory: src-tauri/gen/android
+        run: ./gradlew.bat :app:processUniversalReleaseResources --stacktrace
 
       - name: Build Windows MSI
         run: pnpm tauri build --bundles msi

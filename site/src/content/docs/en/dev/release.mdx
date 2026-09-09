@@ -10,7 +10,7 @@ Releases are generated from GitHub Actions' `workflow_dispatch`.
 1. Generate the Social SDK download URL in the Discord Developer Portal (a GCS signed URL that expires in about 1 hour)
 2. Run `pwsh scripts/release.ps1` locally and enter the following interactively:
    - `version`: the app version (e.g. `0.4.0`) → released as tag `v{version}`
-   - `SDK URL`: the expiring URL above (input is hidden; never stored in arguments, history, or logs)
+   - `SDK URL`: copy the expiring URL above to the clipboard, then press Enter (no pasting needed; shown on screen, but never stored in arguments, history, or logs; avoid operating while screen sharing)
    - The script registers the URL as a single-use secret → dispatches the workflow → waits → deletes the secret
    - Sign in to `gh` with an authorized account beforehand (`gh auth login`, then verify with `gh auth status`)
 3. The workflow then:
