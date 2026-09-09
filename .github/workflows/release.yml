@@ -152,11 +152,27 @@ jobs:
           }
           $keystore = "$env:RUNNER_TEMP\release.keystore"
           [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
-          "KEYSTORE_FILE=$keystore" >> $env:GITHUB_ENV
-          "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $env:GITHUB_ENV
-          "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $env:GITHUB_ENV
-          "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $env:GITHUB_ENV
+          'KEYSTORE_FILE={0}' -f $keystore >> $env:GITHUB_ENV
+          'KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}' >> $env:GITHUB_ENV
+          'KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}' >> $env:GITHUB_ENV
+          'KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}' >> $env:GITHUB_ENV
           Write-Output "keystore restored to $keystore"
+
+      - name: Verify keystore credentials
+        shell: pwsh
+        run: |
+          $keystore = "$env:RUNNER_TEMP\release.keystore"
+          if (-not (Test-Path $keystore)) {
+            Write-Error "keystore file not found at $keystore"
+            exit 1
+          }
+          $out = & keytool -list -keystore $keystore -storepass $env:KEYSTORE_PASSWORD 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            $out | Select-Object -First 5 | ForEach-Object { Write-Output $_ }
+            Write-Error "keystore credentials rejected; check registered secrets before build"
+            exit 1
+          }
+          Write-Output "keystore credentials ok"
 
       - name: Build Android APK (aarch64)
         id: build-apk
