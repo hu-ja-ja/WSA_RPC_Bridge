@@ -1,5 +1,8 @@
 # WSA RPC Bridge
 
+[![AI Contribution](https://raw.githubusercontent.com/Essk/ai-contribution-level/main/badges/level-3.svg)](https://github.com/Essk/ai-contribution-level)
+[![Contains AI-generated](https://raw.githubusercontent.com/hu-ja-ja/ai-usage-badge/main/badges/code-text.svg)](https://github.com/hu-ja-ja/ai-usage-badge)
+
 [English](README_en.md) | [日本語](README.md) | [Documentation](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/)
 
 An app (Windows desktop / Android) that retrieves media playback information playing on WSA (Windows Subsystem for Android) or Android devices and displays it on Discord Rich Presence. For user-facing setup, features, and legal information, see the [documentation site](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/).

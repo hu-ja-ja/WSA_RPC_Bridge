@@ -1,5 +1,8 @@
 # WSA RPC Bridge
 
+[![AI Contribution](https://raw.githubusercontent.com/Essk/ai-contribution-level/main/badges/level-3.svg)](https://github.com/Essk/ai-contribution-level)
+[![Contains AI-generated](https://raw.githubusercontent.com/hu-ja-ja/ai-usage-badge/main/badges/code-text.svg)](https://github.com/hu-ja-ja/ai-usage-badge)
+
 [English](README_en.md) | [日本語](README.md) | [ドキュメント](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/)
 
 WSA (Windows Subsystem for Android) や Android デバイスで再生されているメディア情報を取得し、Discord Rich Presence に表示するアプリ (Windows デスクトップ / Android 対応) 。ユーザー向けの導入・機能・法務情報は [ドキュメントサイト](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/) を参照してください。
