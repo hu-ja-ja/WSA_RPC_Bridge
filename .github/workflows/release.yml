@@ -202,7 +202,9 @@ jobs:
       - name: Generate APK signing fingerprint
         shell: pwsh
         run: |
-          $apk = Get-ChildItem src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk | Select-Object -First 1
+          $apkDir = "src-tauri/gen/android/app/build/outputs/apk/universal/release"
+          $apk = $null
+          if (Test-Path $apkDir) { $apk = Get-ChildItem "$apkDir/*.apk" | Select-Object -First 1 }
           if (-not $apk) { Write-Warning "no release APK found"; exit 0 }
           $keystore = "$env:RUNNER_TEMP\release.keystore"
           if (-not (Test-Path $keystore)) { Write-Warning "no keystore; skipping fingerprint"; exit 0 }
@@ -292,7 +294,7 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/msi/*.msi.sha256
-            src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
             apk-signing-fingerprint.txt
 
       - name: Create release (fallback)
@@ -305,5 +307,5 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/msi/*.msi.sha256
-            src-tauri/gen/android/app/build/outputs/apk/arm64/release/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
             apk-signing-fingerprint.txt
