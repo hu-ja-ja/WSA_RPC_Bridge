@@ -13,7 +13,7 @@ WSA (Windows Subsystem for Android) や Android デバイスで再生されて�
 
 |       Windows       |                            Android                            |
 | :-----------------: | :-----------------------------------------------------------: |
-| ![GUI](img\GUI.png) | <img src="img\Android_GUI.png" alt="Android GUI" width="30%"> |
+| ![GUI](img/GUI.png) | <img src="img/Android_GUI.png" alt="Android GUI" width="30%"> |
 
 ## 技術スタック
 
