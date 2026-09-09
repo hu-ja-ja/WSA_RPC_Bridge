@@ -235,17 +235,32 @@ mod tests {
 
     #[test]
     fn tcp_open_detects_listener() {
-        let addr = free_addr();
-        assert!(!tcp_open(addr));
-        let listener = std::net::TcpListener::bind(addr).unwrap();
+        let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let addr = match listener.local_addr().unwrap() {
+            SocketAddr::V4(v4) => v4,
+            _ => unreachable!(),
+        };
         assert!(tcp_open(addr));
         drop(listener);
+        // ponytail: close is async on Windows — poll instead of asserting once
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while tcp_open(addr) && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
         assert!(!tcp_open(addr));
     }
 
     #[test]
     fn adb_host_command_fails_when_server_down() {
-        let err = adb_host_command(free_addr(), "host:version").unwrap_err();
+        // ponytail: free port may still look open right after drop — retry for a closed one
+        let mut addr = free_addr();
+        for _ in 0..10 {
+            if !tcp_open(addr) {
+                break;
+            }
+            addr = free_addr();
+        }
+        let err = adb_host_command(addr, "host:version").unwrap_err();
         assert!(err.to_string().contains("unreachable"));
     }
 }

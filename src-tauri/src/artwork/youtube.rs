@@ -450,41 +450,6 @@ fn pick_video<'a>(videos: &'a [VideoEntry], title: &str, artist: &str) -> Option
         return Some((&v.0, 1));
     }
 
-    // Tier 1.5: author contains (loose) + title hit, most viewed — official prior
-    let full_norm = normalize(artist);
-    if !full_norm.is_empty() {
-        let nt15 = normalize(title);
-        if !nt15.is_empty() {
-            let title_hit15 = |t: &str| {
-                let mt = normalize(t);
-                !mt.is_empty() && (mt.contains(&nt15) || nt15.contains(&mt))
-            };
-            let full_ns = full_norm.replace(' ', "").replace('　', "");
-            let author_loose = |a: &str| {
-                let m = normalize(a);
-                if m.is_empty() {
-                    return false;
-                }
-                let mn = m.replace(' ', "").replace('　', "");
-                m.contains(&full_norm)
-                    || full_norm.contains(&m)
-                    || mn.contains(&full_ns)
-                    || full_ns.contains(&mn)
-                    || m.contains(&full_ns)
-                    || full_ns.contains(&mn)
-            };
-            let mut best15: Option<&VideoEntry> = None;
-            for v in videos.iter() {
-                if title_hit15(&v.1) && author_loose(&v.2) && best15.map_or(true, |b| v.3 > b.3) {
-                    best15 = Some(v);
-                }
-            }
-            if let Some(v) = best15 {
-                return Some((&v.0, 15));
-            }
-        }
-    }
-
     // Tier 2: fuzzy title + author match, most viewed wins
     let nt = normalize(title);
     if nt.is_empty() {
@@ -676,7 +641,15 @@ mod tests {
     fn pick_rejects_when_no_author_match_and_fuzzy_hits_are_many() {
         let videos = collect_videos(&fixture());
         assert_eq!(pick_video(&videos, "Test Song", "無関係なチャンネル"), None);
-        assert_eq!(pick_video(&videos, "存在しないタイトル", "Artist A"), None);
+    }
+
+    #[test]
+    fn pick_tier4_rescues_top_when_title_mismatches_but_author_matches() {
+        let videos = collect_videos(&fixture());
+        assert_eq!(
+            pick_video(&videos, "存在しないタイトル", "Artist A"),
+            Some(("test0000001", 4))
+        );
     }
 
     #[test]
