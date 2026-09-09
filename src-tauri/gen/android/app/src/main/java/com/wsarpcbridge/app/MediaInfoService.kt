@@ -86,7 +86,7 @@ class MediaInfoService : Service() {
             if (enabled) {
                 Log.i(TAG, "setEnabled(true)")
                 start(ctx)
-                // HyperOSでは権限ダイアログが表示されないため、システム設定画面で許可してもらう
+                // 一部端末では権限ダイアログが表示されないため、システム設定画面で許可してもらう
                 MainActivity.current?.openNotificationSettingsIfNeeded()
             } else {
                 Log.i(TAG, "setEnabled(false)")

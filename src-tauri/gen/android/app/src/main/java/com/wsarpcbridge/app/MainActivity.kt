@@ -45,7 +45,7 @@ class MainActivity : TauriActivity() {
     NotificationBridge.notifyAccessChanged(
       MediaCollectorService.isNotificationAccessGranted(this)
     )
-    // HyperOS等では権限ダイアログが表示されず、システム設定画面でのみ
+    // 一部端末では権限ダイアログが表示されず、システム設定画面でのみ
     // POST_NOTIFICATIONS を許可できる。許可が後から付与された場合は、
     // 非表示のままだったFGS通知を再投稿するためサービスを再起動する。
     val granted = hasNotificationPermission()
