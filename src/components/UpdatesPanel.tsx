@@ -43,6 +43,7 @@ export function UpdatesPanel() {
     if (!pendingUpdate) return
     setUpdateState('downloading')
     setDownloadProgress(0)
+    setUpdateError(null)
     try {
       let downloaded = 0
       let contentLength = 0
@@ -59,10 +60,17 @@ export function UpdatesPanel() {
             break
         }
       })
+    } catch (e) {
+      setUpdateError(String(e))
+      setUpdateState('error')
+      return
+    }
+    // ponytail: WindowsではMSI導入時にupdaterが自動終了させる。生き残っていたら再起動する
+    try {
       await relaunch()
     } catch (e) {
       setUpdateError(String(e))
-      setUpdateState('available')
+      setUpdateState('error')
     }
   }
 
@@ -91,6 +99,9 @@ export function UpdatesPanel() {
             </Show>
 
             <Show when={updateState() === 'available'}>
+              <Show when={updateError()}>
+                <p class="update-error">{updateError()}</p>
+              </Show>
               <p class="update-status update-available">
                 {t("updates.update_available", { version: updateVersion()! })}
               </p>
