@@ -66,7 +66,7 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          $version = $env:VERSION
+          $version = $env:VERSION -replace '^v',''
 
           $conf = Get-Content src-tauri/tauri.conf.json -Raw
           $conf = $conf -replace '(?m)"version":\s*"[^"]*"', "`"version`": `"$version`""
@@ -249,7 +249,7 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          $version = $env:VERSION
+          $version = $env:VERSION -replace '^v',''
           $content = Get-Content CHANGELOG.md -Raw
           $pattern = "(?ms)^## \[\s*$([regex]::Escape($version))\s*\][^\r\n]*\r?\n(.*?)(?=^## \[\s*|\z)"
           $m = [regex]::Match($content, $pattern)
@@ -266,7 +266,7 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          $version = $env:VERSION
+          $version = $env:VERSION -replace '^v',''
           $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
           $sigPath = "$($msi.FullName).sig"
           $sig = ""
@@ -277,7 +277,7 @@ jobs:
           if (Test-Path .release-notes.md) {
             $notes = Get-Content .release-notes.md -Raw
           }
-          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/$($msi.Name)"
+          $url = "https://github.com/${{ github.repository }}/releases/download/$version/$($msi.Name)"
           $pubDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 
           $json = @{
@@ -295,14 +295,12 @@ jobs:
           Write-Output "update.json generated for version $version"
 
       - name: Deploy update.json to GitHub Pages
-        if: inputs.channel != 'beta'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\pages" | Out-Null
           Copy-Item update.json "$env:RUNNER_TEMP\pages\update.json"
 
       - name: Publish update.json to GitHub Pages
-        if: inputs.channel != 'beta'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -314,7 +312,7 @@ jobs:
         if: steps.changelog.outputs.has_section == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
+          tag_name: ${{ inputs.version }}
           body_path: .release-notes.md
           prerelease: ${{ inputs.channel == 'beta' }}
           make_latest: ${{ inputs.channel != 'beta' }}
@@ -329,7 +327,7 @@ jobs:
         if: steps.changelog.outputs.has_section != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
+          tag_name: ${{ inputs.version }}
           generate_release_notes: true
           prerelease: ${{ inputs.channel == 'beta' }}
           make_latest: ${{ inputs.channel != 'beta' }}
