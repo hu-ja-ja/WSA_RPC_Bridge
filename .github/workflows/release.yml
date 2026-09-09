@@ -7,6 +7,14 @@ on:
         description: 'アプリのバージョン（例: 0.4.0）'
         required: true
         type: string
+      channel:
+        description: 'リリースチャネル（betaはプレリリース扱い・update.jsonを更新しない）'
+        required: false
+        default: release
+        type: choice
+        options:
+          - release
+          - beta
 
 permissions:
   contents: write
@@ -287,12 +295,14 @@ jobs:
           Write-Output "update.json generated for version $version"
 
       - name: Deploy update.json to GitHub Pages
+        if: inputs.channel != 'beta'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\pages" | Out-Null
           Copy-Item update.json "$env:RUNNER_TEMP\pages\update.json"
 
       - name: Publish update.json to GitHub Pages
+        if: inputs.channel != 'beta'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -306,6 +316,8 @@ jobs:
         with:
           tag_name: v${{ inputs.version }}
           body_path: .release-notes.md
+          prerelease: ${{ inputs.channel == 'beta' }}
+          make_latest: ${{ inputs.channel != 'beta' }}
           files: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig
@@ -319,6 +331,8 @@ jobs:
         with:
           tag_name: v${{ inputs.version }}
           generate_release_notes: true
+          prerelease: ${{ inputs.channel == 'beta' }}
+          make_latest: ${{ inputs.channel != 'beta' }}
           files: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/msi/*.msi.sig

@@ -7,6 +7,10 @@ $ErrorActionPreference = 'Stop'
 $version = (Read-Host 'version (e.g. 0.4.0)').Trim()
 if ($version -eq '') { throw 'version is required' }
 
+$channel = (Read-Host 'channel (release/beta, default release)').Trim().ToLower()
+if ($channel -eq '') { $channel = 'release' }
+if ($channel -ne 'release' -and $channel -ne 'beta') { throw 'channel must be release or beta' }
+
 Write-Output 'Copy the SDK bundle zip URL to the clipboard, then press Enter'
 [void](Read-Host 'Press Enter when ready')
 $url = (Get-Clipboard -Raw).Trim()
@@ -21,7 +25,7 @@ try {
   gh secret set SDK_URL --body "$url"
   if ($LASTEXITCODE -ne 0) { throw 'secret registration failed' }
   Start-Sleep -Seconds 15
-  gh workflow run release.yml -f version=$version
+  gh workflow run release.yml -f version=$version -f channel=$channel
   if ($LASTEXITCODE -ne 0) { throw 'workflow dispatch failed' }
 
   $runId = $null
