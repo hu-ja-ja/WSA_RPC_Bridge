@@ -178,6 +178,22 @@ jobs:
         id: build-apk
         run: pnpm tauri android build --apk --target aarch64
 
+      - name: Rename APK
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          $apkDir = "src-tauri/gen/android/app/build/outputs/apk/universal/release"
+          $apk = $null
+          if (Test-Path $apkDir) { $apk = Get-ChildItem "$apkDir/*.apk" | Select-Object -First 1 }
+          if (-not $apk) {
+            Write-Error "no release APK found in $apkDir"
+            exit 1
+          }
+          $name = "wsa-rpc-bridge_${env:VERSION}_android_arm64.apk"
+          Rename-Item -Path $apk.FullName -NewName $name
+          Write-Output "renamed to $name"
+
       - name: Diagnose Gradle failure
         if: failure() && steps.build-apk.conclusion == 'failure'
         shell: pwsh
