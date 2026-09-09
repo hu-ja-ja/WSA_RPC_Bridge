@@ -6,18 +6,20 @@ WSA (Windows Subsystem for Android) や Android デバイスで再生されて�
 
 ## スクリーンショット
 
-![GUI](img/GUI.png)
-
 ![RPC](img/RPC.png)
+
+|       Windows       |                            Android                            |
+| :-----------------: | :-----------------------------------------------------------: |
+| ![GUI](img\GUI.png) | <img src="img\Android_GUI.png" alt="Android GUI" width="30%"> |
 
 ## 技術スタック
 
-| レイヤー           | 技術                                  |
-|--------------------|---------------------------------------|
+| レイヤー           | 技術                                             |
+| ------------------ | ------------------------------------------------ |
 | フロントエンド     | SolidJS + [Kobalte](https://kobalte.dev/) + Vite |
-| バックエンド       | Rust / Tauri v2                       |
-| Android ネイティブ | Kotlin (通知アクセス / JNI ブリッジ)  |
-| ドキュメント       | Astro Starlight (site/)               |
+| バックエンド       | Rust / Tauri v2                                  |
+| Android ネイティブ | Kotlin (通知アクセス / JNI ブリッジ)             |
+| ドキュメント       | Astro Starlight (site/)                          |
 
 ## リポジトリ構成
 

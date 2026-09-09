@@ -6,9 +6,11 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 
 ## Screenshots
 
-![GUI](img/GUI.png)
-
 ![RPC](img/RPC.png)
+
+|       Windows       |                            Android                            |
+| :-----------------: | :-----------------------------------------------------------: |
+| ![GUI](img\GUI.png) | <img src="img\Android_GUI.png" alt="Android GUI" width="30%"> |
 
 ## Tech Stack
 
