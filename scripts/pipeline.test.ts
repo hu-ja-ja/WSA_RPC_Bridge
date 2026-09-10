@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
 import { Cause, Effect, Exit, Option } from 'effect';
-import { ArchiveError, extractNotes, extractZipEntry, parseZip, redactSecrets } from './pipeline.ts';
+import { ArchiveError, buildDownloadGuide, extractNotes, extractZipEntry, parseZip, redactSecrets } from './pipeline.ts';
 
 // ── minimal zip builder (local/central/EOCD, no deps) ──
 const enc = new TextEncoder();
@@ -127,5 +127,25 @@ describe('redactSecrets', () => {
       'Command failed: keytool -storepass [redacted] -alias [redacted]',
     );
     assert.equal(redactSecrets('nothing secret here', ['s3cr3t']), 'nothing secret here');
+  });
+});
+
+describe('buildDownloadGuide', () => {
+  it('embeds exact names with direct links (ja+en)', () => {
+    const guide = buildDownloadGuide({
+      version: '0.4.1',
+      repo: 'o/r',
+      msi: 'a_0.4.1_x64_en-US.msi',
+      apk: 'w_0.4.1_android_arm64.apk',
+    });
+    assert.match(guide, /\[a_0\.4\.1_x64_en-US\.msi\]\(https:\/\/github\.com\/o\/r\/releases\/download\/0\.4\.1\/a_0\.4\.1_x64_en-US\.msi\)/);
+    assert.match(guide, /\[w_0\.4\.1_android_arm64\.apk\]\(https:\/\/github\.com\/o\/r\/releases\/download\/0\.4\.1\/w_0\.4\.1_android_arm64\.apk\)/);
+    assert.match(guide, /ダウンロード \/ Download/);
+  });
+
+  it('omits the android row when no APK was built', () => {
+    const guide = buildDownloadGuide({ version: '0.4.1', repo: 'o/r', msi: 'a.msi' });
+    assert.doesNotMatch(guide, /Android:/);
+    assert.match(guide, /a\.msi/);
   });
 });

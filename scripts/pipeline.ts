@@ -381,6 +381,27 @@ export const extractNotes = (changelog: string, version: string): string | undef
   return lines.slice(start + 1, end).join('\n').trim();
 };
 
+// ── download-guide ─────────────────────────────────────────────────
+// GitHub Release 本文専用。update.json の notes には含めない。
+export const buildDownloadGuide = (args: {
+  readonly version: string;
+  readonly repo: string;
+  readonly msi: string;
+  readonly apk?: string;
+}): string => {
+  const base = `https://github.com/${args.repo}/releases/download/${args.version}`;
+  const rows = [
+    `- Windows: [${args.msi}](${base}/${args.msi}) をダウンロードしてインストールしてください / Download and install \`${args.msi}\`.`,
+  ];
+  if (args.apk) {
+    rows.push(`- Android: [${args.apk}](${base}/${args.apk}) をダウンロードしてインストールしてください / Download and install \`${args.apk}\`.`);
+  }
+  rows.push(
+    '- `.sig` / `.sha256` / `apk-signing-fingerprint.txt` は検証用です。通常は不要です / Verification files, usually not needed. 詳しくはドキュメントを参照してください / See the docs: https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/verification/ https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/en/verification/',
+  );
+  return `---\n### ダウンロード / Download\n\n${rows.join('\n')}\n`;
+};
+
 const cmdReleaseNotes = (raw: string | undefined): Effect.Effect<void, ArtifactsError> =>
   Effect.gen(function* () {
     const version = yield* stripV(raw, 'pipeline.ts release-notes <version>');
@@ -450,6 +471,9 @@ const cmdUpdateJson = (raw: string | undefined): Effect.Effect<void, ArtifactsEr
     });
     yield* writeText(join(pages, 'update.json'), text);
     yield* Effect.logInfo(`update.json generated for version ${version}`);
+    const guide = buildDownloadGuide({ version, repo, msi: basename(msi), apk: apkName });
+    const prev = existsSync(notesPath) ? yield* readText(notesPath) : '';
+    yield* writeText(join(ROOT, '.release-notes.md'), `${prev.trimEnd()}\n\n${guide}`);
   });
 
 // ── checksums ──────────────────────────────────────────────────────

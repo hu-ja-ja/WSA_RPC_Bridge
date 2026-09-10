@@ -45,6 +45,7 @@ export default defineConfig({
           translations: { en: "Guide" },
           items: [
             { label: "はじめに", link: "/", translations: { en: "Introduction" } },
+            { slug: "verification" },
             { slug: "guide/settings" },
             { slug: "guide/how-it-works" },
             { slug: "guide/troubleshooting" },

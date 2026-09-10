@@ -1,0 +1,30 @@
+---
+title: Verification
+description: How to confirm distributed files are genuine
+---
+
+How to confirm distributed files have not been tampered with. Not needed for a normal installation.
+
+### Windows (MSI checksum verification)
+
+1. Download the `*.msi.sha256` file attached to the same [release](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest) as the `*.msi`
+2. Compute the MSI hash in PowerShell and confirm it matches the `.sha256` content
+
+```pwsh
+(Get-FileHash <msi-file-name> -Algorithm SHA256).Hash
+```
+
+`*.msi.sig` is a signature verified automatically by the in-app updater, so no manual step is needed.
+
+### Android (signing certificate verification)
+
+1. Download the `apk-signing-fingerprint.txt` file attached to the [release](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest)
+2. Confirm it matches the "Signing Certificate Fingerprint (SHA-256)" shown on the app's "About" screen
+
+To extract it from the APK itself without going through the installed app, use the JDK `keytool`.
+
+```sh
+keytool -printcert -jarfile <apk-file-name>
+```
+
+If the `SHA256` value in the output matches `apk-signing-fingerprint.txt`, the APK was signed with the developer's signing certificate.

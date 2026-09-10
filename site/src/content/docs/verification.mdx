@@ -1,0 +1,30 @@
+---
+title: 検証
+description: 配布ファイルの正当性の確認手順
+---
+
+配布ファイルが改ざんされていないことを確認する手順です。通常のインストールでは不要です。
+
+### Windows（MSI のチェックサム照合）
+
+1. `*.msi` と同じ[リリース](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest)に添付されている `*.msi.sha256` をダウンロードする
+2. PowerShell で MSI のハッシュを求め、`.sha256` の内容と一致することを確認する
+
+```pwsh
+(Get-FileHash <msiファイル名> -Algorithm SHA256).Hash
+```
+
+`*.msi.sig` はアプリ内アップデーターが自動で検証する署名のため、手動での操作は不要です。
+
+### Android（署名証明書の照合）
+
+1. [リリース](https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/latest)に添付されている `apk-signing-fingerprint.txt` をダウンロードする
+2. アプリの「アプリ概要」画面に表示される「署名証明書フィンガープリント (SHA-256)」と一致することを確認する
+
+インストール済みアプリを介さず APK 自体から取り出す場合は、JDK の `keytool` で確認できます。
+
+```sh
+keytool -printcert -jarfile <apkファイル名>
+```
+
+出力の `SHA256` の値が `apk-signing-fingerprint.txt` と一致すれば、開発者の署名証明書で署名された APK であることを確認できます。
