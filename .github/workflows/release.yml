@@ -280,16 +280,32 @@ jobs:
           $url = "https://github.com/${{ github.repository }}/releases/download/$version/$($msi.Name)"
           $pubDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 
+          $platforms = @{
+            "windows-x86_64" = @{
+              signature = $sig
+              url       = $url
+            }
+          }
+          $apkDir = "src-tauri/gen/android/app/build/outputs/apk/universal/release"
+          if (Test-Path $apkDir) {
+            $apk = Get-ChildItem "$apkDir/*.apk" | Select-Object -First 1
+            if ($apk) {
+              $platforms["android-aarch64"] = @{
+                url = "https://github.com/${{ github.repository }}/releases/download/$version/$($apk.Name)"
+              }
+              Write-Output "android update entry: $($apk.Name)"
+            } else {
+              Write-Output "no APK found; skipping android update entry"
+            }
+          } else {
+            Write-Output "no APK dir; skipping android update entry"
+          }
+
           $json = @{
             version = $version
             notes   = $notes
             pub_date = $pubDate
-            platforms = @{
-              "windows-x86_64" = @{
-                signature = $sig
-                url       = $url
-              }
-            }
+            platforms = $platforms
           }
           $json | ConvertTo-Json -Depth 10 | Set-Content update.json -Encoding utf8
           Write-Output "update.json generated for version $version"

@@ -44,7 +44,7 @@ const footerItems: NavItem[] = [
 ]
 
 export function Sidebar(props: SidebarProps) {
-  const items = () => (props.android ? mainItems.filter((i) => i.key !== 'updates') : mainItems)
+  const items = () => mainItems
 
   const dragStyle = () => {
     const dx = props.dragOffset

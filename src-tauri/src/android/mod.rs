@@ -2,6 +2,7 @@ pub mod discord;
 pub mod media;
 pub mod notifications;
 pub mod signature;
+pub mod updater;
 
 pub use discord::{
     discord_connect, discord_disconnect, discord_idle_disconnect, discord_update_presence, rpc_idle,
@@ -12,3 +13,7 @@ pub use media::{
 };
 pub use notifications::{get_notification_access_status, open_notification_access_settings};
 pub use signature::get_signing_fingerprint;
+pub use updater::{
+    AndroidUpdateStatus, can_install_packages, download_update, fetch_update_status,
+    install_apk, open_install_settings,
+};

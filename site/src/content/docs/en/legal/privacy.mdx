@@ -8,7 +8,7 @@ description: Privacy Policy of WSA RPC Bridge
 > This page is a translation of the Japanese original for convenience. In case of any discrepancy, the Japanese version prevails.
 
 Established: August 5, 2026
-Revised: August 19, 2026
+Revised: September 10, 2026
 
 ## 1. Introduction
 
@@ -61,8 +61,13 @@ The App requests the following permissions:
 | Post notifications (Android 13+) | Runtime permission | Show the persistent notification |
 | Run foreground service | Normal permission | Keep the service alive to continue collecting media playback information |
 | Internet | Normal permission | Send data to Discord and perform thumbnail resolution requests |
+| Install unknown apps (Android version, only for in-app updates) | Special access (granted manually in Settings) | Used only to install a new APK downloaded inside the app |
 
 Notification access can read other apps' notifications, but this App uses it solely to detect media sessions and **has no feature that reads other apps' notification content**. Notification content is never viewed, saved, sent, or used for any other purpose. This can also be verified in the source code.
+
+### In-App Updates (Android version, optional)
+
+The App can check for and install new versions from its Updates screen. Only when "Update automatically" is chosen, the new APK is temporarily saved to the device's cache storage and the OS installer screen opens. Installation requires the "Install unknown apps" permission, which is requested only when the update feature is used. The permission is never requested unless the update feature is used.
 
 ### Discord Rich Presence (Common)
 

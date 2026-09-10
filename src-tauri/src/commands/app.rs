@@ -321,6 +321,43 @@ pub fn open_notification_access_settings() -> Result<(), String> {
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+pub async fn check_android_update(
+    app: AppHandle,
+) -> Result<crate::android::AndroidUpdateStatus, String> {
+    let current = app.package_info().version.to_string();
+    crate::android::fetch_update_status(&current).await
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub async fn download_android_update(
+    app: AppHandle,
+    url: String,
+    version: String,
+) -> Result<String, String> {
+    crate::android::download_update(&app, &url, &version).await
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn install_android_update(path: String) -> Result<(), String> {
+    crate::android::install_apk(&path)
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn get_install_permission_status() -> Result<bool, String> {
+    crate::android::can_install_packages()
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+pub fn open_install_permission_settings() -> Result<(), String> {
+    crate::android::open_install_settings()
+}
+
+#[tauri::command]
 #[cfg(not(target_os = "android"))]
 pub fn get_signing_fingerprint() -> Result<Option<String>, String> {
     Ok(None)

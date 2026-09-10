@@ -109,6 +109,16 @@ pub fn run() {
             commands::get_notification_access_status,
             commands::open_notification_access_settings,
             commands::get_signing_fingerprint,
+            #[cfg(target_os = "android")]
+            commands::check_android_update,
+            #[cfg(target_os = "android")]
+            commands::download_android_update,
+            #[cfg(target_os = "android")]
+            commands::install_android_update,
+            #[cfg(target_os = "android")]
+            commands::get_install_permission_status,
+            #[cfg(target_os = "android")]
+            commands::open_install_permission_settings,
         ]);
 
     #[cfg(not(target_os = "android"))]
