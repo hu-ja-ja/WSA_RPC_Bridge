@@ -28,6 +28,10 @@ jobs:
 
       - run: mise run generate-licenses
 
+      # type-aware lint resolves every tsconfig, including site/ (astro extends).
+      # Site deps are not part of the root install, so install them here.
+      - run: mise run docs-deps
+
       - run: mise run lint
 
       - run: pnpm tauri build
