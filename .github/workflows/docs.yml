@@ -15,24 +15,27 @@ concurrency:
   group: github-pages
   cancel-in-progress: false
 
+env:
+  MISE_TASK_OUTPUT: prefix
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: jdx/mise-action@v3
+      - uses: ./.github/actions/setup
+        with:
+          js: 'false'
 
-      - name: Install dependencies
-        run: pnpm --dir site install --frozen-lockfile
+      - run: mise run docs-deps
 
-      - name: Build docs
-        run: BASE_PATH='/WSA_RPC_Bridge/docs/' pnpm --dir site build
+      - run: mise run docs-build
 
       - name: Deploy to GitHub Pages /docs
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: site/dist
-          keep_files: false
+          keep_files: true
           destination_dir: docs

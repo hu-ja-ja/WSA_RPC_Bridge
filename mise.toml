@@ -43,6 +43,46 @@ run = "pnpm install"
 description = "Regenerate third-party licenses"
 run = "pnpm generate-licenses"
 
+[tasks."pipeline:codegen"]
+description = "Generate Android codegen files ignored by git (gradle settings + kotlin templates)"
+run = "node scripts/pipeline.ts android-codegen"
+
+[tasks."pipeline:sync-version"]
+description = "Sync release version into tauri.conf.json and Cargo.toml"
+usage = 'arg "<version>"'
+run = "node scripts/pipeline.ts sync-version \"{{usage.version}}\""
+
+[tasks."pipeline:download-sdk"]
+description = "Download and validate the Social SDK aar (needs SDK_URL)"
+run = "node scripts/pipeline.ts download-sdk"
+
+[tasks."pipeline:keystore"]
+description = "Restore the Android signing keystore from secrets"
+run = "node scripts/pipeline.ts keystore"
+
+[tasks."pipeline:notes"]
+description = "Extract release notes for a version from CHANGELOG.md"
+usage = 'arg "<version>"'
+run = "node scripts/pipeline.ts release-notes \"{{usage.version}}\""
+
+[tasks."pipeline:update-json"]
+description = "Generate update.json (and rename the APK) for a version"
+usage = 'arg "<version>"'
+run = "node scripts/pipeline.ts update-json \"{{usage.version}}\""
+
+[tasks."pipeline:checksums"]
+description = "Generate MSI sha256 files and the APK signing fingerprint"
+run = "node scripts/pipeline.ts checksums"
+
+[tasks."pipeline:test"]
+description = "Run pipeline.ts unit tests"
+run = "node --test scripts/pipeline.test.ts"
+
+[tasks.docs-deps]
+description = "Install docs site dependencies"
+dir = "site"
+run = "pnpm install --frozen-lockfile"
+
 [tasks.docs-dev]
 description = "Run the Astro Starlight docs dev server on port 4321"
 dir = "site"

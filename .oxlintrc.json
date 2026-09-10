@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
+  "extends": ["./node_modules/@effect/tsgo/oxlint-presets/correctness.json"],
+  "options": {
+    "typeAware": true
+  },
+  "plugins": ["typescript", "effecttsgo"],
+  "rules": {
+    "typescript/no-floating-promises": "off"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**/*.ts"],
+      "rules": {
+        "typescript/no-floating-promises": "error"
+      }
+    },
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "typescript/no-floating-promises": "off"
+      }
+    }
+  ]
+}

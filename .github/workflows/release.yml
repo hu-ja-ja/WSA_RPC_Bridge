@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       channel:
-        description: 'リリースチャネル（betaはプレリリース扱い・update.jsonを更新しない）'
+        description: 'リリースチャネル'
         required: false
         default: release
         type: choice
@@ -32,181 +32,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: jdx/mise-action@v3
-
-      - name: Get pnpm store path
-        id: pnpm-cache
-        shell: pwsh
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $env:GITHUB_OUTPUT
-      - uses: actions/cache@v4
+      - uses: ./.github/actions/setup
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> src-tauri/target
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~\.gradle\caches
-            ~\.gradle\wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('src-tauri/gen/android/**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - run: mise run deps
+          rust: 'true'
+          android: 'true'
 
       - name: Sync version from input
-        shell: pwsh
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          $version = $env:VERSION -replace '^v',''
+        run: mise run pipeline:sync-version "${{ inputs.version }}"
 
-          $conf = Get-Content src-tauri/tauri.conf.json -Raw
-          $conf = $conf -replace '(?m)"version":\s*"[^"]*"', "`"version`": `"$version`""
-          Set-Content src-tauri/tauri.conf.json $conf -NoNewline -Encoding utf8
-
-          $toml = Get-Content src-tauri/Cargo.toml -Raw
-          $toml = $toml -replace '(?m)^version = ".*"', "version = `"$version`""
-          Set-Content src-tauri/Cargo.toml $toml -NoNewline -Encoding utf8
-
-          Write-Output "synced version $version"
-
-      - name: Set JAVA_HOME
-        shell: pwsh
-        run: echo "JAVA_HOME=$(mise where java)" >> $env:GITHUB_ENV
-
-      - name: Install Android NDK
-        shell: pwsh
-        run: |
-          $sdk = "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat"
-          1..50 | ForEach-Object { 'y' } | & $sdk --licenses
-          & $sdk "ndk;$env:NDK_VERSION"
+      - name: Setup Android SDK + NDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
 
       - name: Download Social SDK
-        shell: pwsh
         env:
           SDK_URL: ${{ secrets.SDK_URL }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $SDK_URL = $env:SDK_URL.Trim()
-          if ([string]::IsNullOrWhiteSpace($SDK_URL)) {
-            Write-Error "SDK_URL is not set; register it before dispatch"
-            exit 1
-          }
-          $ProgressPreference = 'SilentlyContinue'
-          $out = "src-tauri/gen/android/app/libs/discord_partner_sdk.aar"
-          $tmp = Join-Path $env:RUNNER_TEMP "social_sdk.zip"
-          try {
-            New-Item -ItemType Directory -Force -Path (Split-Path $out) | Out-Null
-            Invoke-WebRequest -Uri $SDK_URL -OutFile $tmp
-          } catch {
-            Write-Error "SDK download failed"
-            exit 1
-          }
-          if (-not (Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) {
-            Write-Error "SDK download failed"
-            exit 1
-          }
-          Write-Output "downloaded $((Get-Item $tmp).Length) bytes"
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $wanted = 'discord_social_sdk/lib/release/discord_partner_sdk.aar'
-          $zip = [IO.Compression.ZipFile]::OpenRead($tmp)
-          try {
-            $entry = $zip.Entries | Where-Object { $_.FullName.Replace('\', '/').EndsWith($wanted) } | Select-Object -First 1
-            if (-not $entry) {
-              Write-Error "archive layout unexpected: '$wanted' not found"
-              $zip.Entries | Select-Object -First 20 FullName | ForEach-Object { Write-Output "entry: $($_.FullName)" }
-              exit 1
-            }
-            Write-Output "extracting '$($entry.FullName)' ($($entry.Length) bytes)"
-            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $out, $true)
-          } finally {
-            $zip.Dispose()
-          }
-          Remove-Item $tmp -Force
-          $len = (Get-Item $out).Length
-          Write-Output "extracted $len bytes to $out"
-          if ($len -lt 10MB) {
-            Write-Error "extracted file too small ($len bytes); aborting before build"
-            exit 1
-          }
-          $zip = [IO.Compression.ZipFile]::OpenRead($out)
-          try {
-            $manifest = $zip.Entries | Where-Object { $_.FullName -eq 'AndroidManifest.xml' } | Select-Object -First 1
-            if (-not $manifest) {
-              Write-Error "archive validation failed: manifest entry missing"
-              exit 1
-            }
-            Write-Output "archive ok: manifest entry present ($($manifest.Length) bytes)"
-          } finally {
-            $zip.Dispose()
-          }
+        run: mise run pipeline:download-sdk
 
       - name: Decode Android signing keystore
-        shell: pwsh
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          if ($env:ANDROID_KEYSTORE_BASE64 -eq "") {
-            Write-Error "ANDROID_KEYSTORE_BASE64 is not set; a signed release APK cannot be produced"
-            exit 1
-          }
-          $keystore = "$env:RUNNER_TEMP\release.keystore"
-          [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
-          'KEYSTORE_FILE={0}' -f $keystore >> $env:GITHUB_ENV
-          'KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}' >> $env:GITHUB_ENV
-          'KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}' >> $env:GITHUB_ENV
-          'KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}' >> $env:GITHUB_ENV
-          Write-Output "keystore restored to $keystore"
-
-      - name: Verify keystore credentials
-        shell: pwsh
-        run: |
-          $keystore = "$env:RUNNER_TEMP\release.keystore"
-          if (-not (Test-Path $keystore)) {
-            Write-Error "keystore file not found at $keystore"
-            exit 1
-          }
-          $out = & keytool -list -keystore $keystore -storepass $env:KEYSTORE_PASSWORD 2>&1
-          if ($LASTEXITCODE -ne 0) {
-            $out | Select-Object -First 5 | ForEach-Object { Write-Output $_ }
-            Write-Error "keystore credentials rejected; check registered secrets before build"
-            exit 1
-          }
-          Write-Output "keystore credentials ok"
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: mise run pipeline:keystore
 
       - name: Build Android APK (aarch64)
-        id: build-apk
         run: pnpm tauri android build --apk --target aarch64
-
-      - name: Rename APK
-        shell: pwsh
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          $apkDir = "src-tauri/gen/android/app/build/outputs/apk/universal/release"
-          $apk = $null
-          if (Test-Path $apkDir) { $apk = Get-ChildItem "$apkDir/*.apk" | Select-Object -First 1 }
-          if (-not $apk) {
-            Write-Error "no release APK found in $apkDir"
-            exit 1
-          }
-          $name = "wsa-rpc-bridge_${env:VERSION}_android_arm64.apk"
-          Rename-Item -Path $apk.FullName -NewName $name
-          Write-Output "renamed to $name"
-
-      - name: Diagnose Gradle failure
-        if: failure() && steps.build-apk.conclusion == 'failure'
-        shell: pwsh
-        working-directory: src-tauri/gen/android
-        run: ./gradlew.bat :app:processUniversalReleaseResources --stacktrace
 
       - name: Build Windows MSI
         run: pnpm tauri build --bundles msi
@@ -215,108 +68,16 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Generate SHA-256 checksums
-        shell: pwsh
-        run: |
-          $msiFiles = Get-ChildItem -Path src-tauri/target/release/bundle/msi/*.msi
-          foreach ($msi in $msiFiles) {
-            $hash = (Get-FileHash -Path $msi.FullName -Algorithm SHA256).Hash.ToLower()
-            "$hash  $($msi.Name)" | Out-File -FilePath "$($msi.FullName).sha256" -Encoding ascii
-          }
-
-      - name: Generate APK signing fingerprint
-        shell: pwsh
-        run: |
-          $apkDir = "src-tauri/gen/android/app/build/outputs/apk/universal/release"
-          $apk = $null
-          if (Test-Path $apkDir) { $apk = Get-ChildItem "$apkDir/*.apk" | Select-Object -First 1 }
-          if (-not $apk) { Write-Warning "no release APK found"; exit 0 }
-          $keystore = "$env:RUNNER_TEMP\release.keystore"
-          if (-not (Test-Path $keystore)) { Write-Warning "no keystore; skipping fingerprint"; exit 0 }
-          $fp = & keytool -list -v -keystore $keystore -alias $env:KEY_ALIAS -storepass $env:KEYSTORE_PASSWORD 2>$null |
-            Select-String -Pattern 'SHA256:' | Select-Object -First 1
-          if ($fp) {
-            $line = $fp.ToString().Trim()
-            $fpValue = ($line -replace '^.*SHA256:\s*', '').Trim()
-            "Signing certificate SHA-256 fingerprint`n$fpValue" | Out-File apk-signing-fingerprint.txt -Encoding ascii
-            Write-Output "fingerprint: $fpValue"
-          } else {
-            Write-Warning "keytool fingerprint extraction failed"
-          }
+        run: mise run pipeline:checksums
 
       - name: Extract release notes from CHANGELOG.md
-        id: changelog
-        shell: pwsh
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          $version = $env:VERSION -replace '^v',''
-          $content = Get-Content CHANGELOG.md -Raw
-          $pattern = "(?ms)^## \[\s*$([regex]::Escape($version))\s*\][^\r\n]*\r?\n(.*?)(?=^## \[\s*|\z)"
-          $m = [regex]::Match($content, $pattern)
-          if ($m.Success) {
-            $body = $m.Groups[1].Value.Trim()
-            Set-Content .release-notes.md $body -Encoding utf8
-            Write-Output "has_section=true" >> $env:GITHUB_OUTPUT
-          } else {
-            Write-Output "has_section=false" >> $env:GITHUB_OUTPUT
-          }
+        run: mise run pipeline:notes "${{ inputs.version }}"
 
       - name: Generate update.json
-        shell: pwsh
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          $version = $env:VERSION -replace '^v',''
-          $msi = Get-ChildItem src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
-          $sigPath = "$($msi.FullName).sig"
-          $sig = ""
-          if (Test-Path $sigPath) {
-            $sig = (Get-Content $sigPath -Raw).Trim()
-          }
-          $notes = ""
-          if (Test-Path .release-notes.md) {
-            $notes = Get-Content .release-notes.md -Raw
-          }
-          $url = "https://github.com/${{ github.repository }}/releases/download/$version/$($msi.Name)"
-          $pubDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-
-          $platforms = @{
-            "windows-x86_64" = @{
-              signature = $sig
-              url       = $url
-            }
-          }
-          $apkDir = "src-tauri/gen/android/app/build/outputs/apk/universal/release"
-          if (Test-Path $apkDir) {
-            $apk = Get-ChildItem "$apkDir/*.apk" | Select-Object -First 1
-            if ($apk) {
-              $platforms["android-aarch64"] = @{
-                url = "https://github.com/${{ github.repository }}/releases/download/$version/$($apk.Name)"
-              }
-              Write-Output "android update entry: $($apk.Name)"
-            } else {
-              Write-Output "no APK found; skipping android update entry"
-            }
-          } else {
-            Write-Output "no APK dir; skipping android update entry"
-          }
-
-          $json = @{
-            version = $version
-            notes   = $notes
-            pub_date = $pubDate
-            platforms = $platforms
-          }
-          $json | ConvertTo-Json -Depth 10 | Set-Content update.json -Encoding utf8
-          Write-Output "update.json generated for version $version"
-
-      - name: Deploy update.json to GitHub Pages
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\pages" | Out-Null
-          Copy-Item update.json "$env:RUNNER_TEMP\pages\update.json"
+        run: mise run pipeline:update-json "${{ inputs.version }}"
 
       - name: Publish update.json to GitHub Pages
+        if: inputs.channel != 'beta'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -325,7 +86,6 @@ jobs:
           destination_dir: .
 
       - name: Create release
-        if: steps.changelog.outputs.has_section == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.version }}
@@ -337,19 +97,4 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/msi/*.msi.sha256
             src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
-            apk-signing-fingerprint.txt
-
-      - name: Create release (fallback)
-        if: steps.changelog.outputs.has_section != 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.version }}
-          generate_release_notes: true
-          prerelease: ${{ inputs.channel == 'beta' }}
-          make_latest: ${{ inputs.channel != 'beta' }}
-          files: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.sig
-            src-tauri/target/release/bundle/msi/*.msi.sha256
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
-            apk-signing-fingerprint.txt
+            ${{ runner.temp }}/apk-signing-fingerprint.txt

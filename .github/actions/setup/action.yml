@@ -1,0 +1,51 @@
+name: setup
+description: mise toolchain + caches + JDK/Android toolchain
+
+inputs:
+  js:
+    description: 'Install JS dependencies (pnpm cache + mise run deps)'
+    default: 'true'
+  rust:
+    description: 'Enable Rust cache'
+    default: 'false'
+  android:
+    description: 'Enable Gradle cache (JDK/SDK/NDK come from mise env + runner image)'
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@v3
+
+    - if: inputs.js == 'true'
+      name: Get pnpm store path
+      id: pnpm-cache
+      shell: bash
+      run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    - if: inputs.js == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - if: inputs.js == 'true'
+      shell: bash
+      run: mise run deps
+
+    - if: inputs.rust == 'true'
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: src-tauri -> src-tauri/target
+
+    - if: inputs.android == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~\.gradle\caches
+          ~\.gradle\wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('src-tauri/gen/android/**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
