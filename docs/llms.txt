@@ -14,3 +14,4 @@
 - [設定](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/guide/settings/): WSA RPC Bridge の全設定項目リファレンス
 - [トラブルシューティング](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/guide/troubleshooting/): 症状別の原因と対処方法
 - [はじめに](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/): WSA RPC Bridge の概要、対象環境、インストール手順
+- [検証](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/verification/): 配布ファイルの正当性の確認手順
