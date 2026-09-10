@@ -170,7 +170,7 @@ mise tauri android build -- -o                # 完了後 Android Studio を開�
 mise run generate-licenses
 ```
 
-- `scripts/generate-licenses.mjs` が JS と Rust (cargo-about) の依存を収集し、アプリ内ライセンスタブのデータを再生成します。`tauri dev` / `tauri build` の `beforeDevCommand` / `beforeBuildCommand` でも自動実行されます。
+- `scripts/generate-licenses.ts` が JS と Rust (cargo-about) の依存を収集し、アプリ内ライセンスタブのデータを再生成します。`tauri dev` / `tauri build` の `beforeDevCommand` / `beforeBuildCommand` でも自動実行されます。
 
 ## `mise run docs-dev` / `docs-build` — ドキュメントサイト
 

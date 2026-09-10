@@ -1,83 +1,126 @@
-import { execSync } from 'child_process'
-import { createHash } from 'crypto'
-import { readFileSync, writeFileSync, rmSync, mkdirSync, existsSync } from 'fs'
-import { resolve, join } from 'path'
+// Third-party license collector for the in-app licenses tab.
+// Run via `pnpm generate-licenses`. Skips work when inputs are unchanged
+// unless `--force` is given; `--check` only verifies freshness (for CI).
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const ROOT = resolve(import.meta.dirname, '..')
-const SRC_TAURI = resolve(ROOT, 'src-tauri')
-const OUT_DIR = resolve(ROOT, 'src', 'generated')
-const OUT_FILE = resolve(OUT_DIR, 'licenses.ts')
-const HASH_FILE = resolve(OUT_DIR, '.licenses-hash')
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const SRC_TAURI = join(ROOT, 'src-tauri');
+const OUT_DIR = join(ROOT, 'src', 'generated');
+const OUT_FILE = join(OUT_DIR, 'licenses.ts');
+const HASH_FILE = join(OUT_DIR, '.licenses-hash');
+const WORKSPACE_CRATE = 'wsa-rpc-bridge';
 
 const INPUT_FILES = [
-  resolve(ROOT, 'package.json'),
-  resolve(ROOT, 'pnpm-lock.yaml'),
-  resolve(SRC_TAURI, 'Cargo.toml'),
-  resolve(SRC_TAURI, 'Cargo.lock'),
-  resolve(SRC_TAURI, 'about.toml'),
-  resolve(ROOT, 'scripts', 'generate-licenses.mjs'),
-]
+  join(ROOT, 'package.json'),
+  join(ROOT, 'pnpm-lock.yaml'),
+  join(SRC_TAURI, 'Cargo.toml'),
+  join(SRC_TAURI, 'Cargo.lock'),
+  join(SRC_TAURI, 'about.toml'),
+  join(ROOT, 'scripts', 'generate-licenses.ts'),
+];
 
-function currentHash() {
-  const h = createHash('sha256')
-  for (const f of INPUT_FILES) h.update(readFileSync(f))
-  return h.digest('hex')
+export interface LicenseEntry {
+  name: string;
+  version: string;
+  copyright: string;
+  license: string;
+  url: string;
+  text: string;
 }
 
-const hash = currentHash()
-if (
-  existsSync(OUT_FILE) &&
-  existsSync(HASH_FILE) &&
-  readFileSync(HASH_FILE, 'utf-8') === hash
-) {
-  console.log('licenses up to date, skipping (inputs unchanged)')
-  process.exit(0)
+export interface PnpmPick {
+  license: string;
+  name: string;
+  version: string;
+  copyright: string;
+  url: string;
+  pkgPath: string;
 }
 
-// ── helpers ──────────────────────────────────────────────────────────
+// ── small helpers ────────────────────────────────────────────────
 
-// dual-licensed packages ship one file per license (e.g. LICENSE_MIT + LICENSE_APACHE-2.0)
-const MULTI_LICENSE_FILES = [
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const firstString = (v: unknown): string => {
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v.find((x): x is string => typeof x === 'string') ?? '';
+  return '';
+};
+
+// Shell-free spawn with a readable error (no string-concatenated commands).
+// On Windows, console shims (e.g. pnpm.cmd) need a shell to resolve.
+const run = (cmd: string, args: string[], cwd: string, timeoutMs?: number): string => {
+  try {
+    return execFileSync(cmd, args, {
+      cwd,
+      encoding: 'utf-8',
+      timeout: timeoutMs,
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
+    });
+  } catch (e) {
+    throw new Error(`${cmd} ${args.join(' ')} failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+};
+
+export const hashInputs = (files: string[]): string => {
+  const h = createHash('sha256');
+  for (const f of files) h.update(readFileSync(f));
+  return h.digest('hex');
+};
+
+// ── license text resolution ──────────────────────────────────────
+
+const LICENSE_CANDIDATES = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'LICENCE.md', 'LICENCE.txt'];
+
+// Dual-licensed packages ship one file per license.
+const MULTI_LICENSE_FILES: [label: string, file: string][] = [
   ['MIT', 'LICENSE_MIT'],
   ['Apache-2.0', 'LICENSE_APACHE-2.0'],
   ['MIT', 'LICENSE-MIT'],
   ['Apache-2.0', 'LICENSE-APACHE'],
-]
+];
 
-function readLicenseFile(pkgPath, pkgName) {
-  for (const f of ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'LICENCE.md', 'LICENCE.txt']) {
+export const readLicenseFile = (pkgPath: string, pkgName: string): string | null => {
+  for (const f of LICENSE_CANDIDATES) {
     try {
-      return readFileSync(join(pkgPath, f), 'utf-8').trim()
+      return readFileSync(join(pkgPath, f), 'utf-8').trim();
     } catch { /* next */ }
   }
 
-  const multi = []
+  const multi: [label: string, text: string][] = [];
   for (const [label, f] of MULTI_LICENSE_FILES) {
     try {
-      multi.push([label, readFileSync(join(pkgPath, f), 'utf-8').trim()])
+      multi.push([label, readFileSync(join(pkgPath, f), 'utf-8').trim()]);
     } catch { /* next */ }
   }
-  if (multi.length) {
+  if (multi.length > 0) {
     return multi.length > 1
       ? multi.map(([label, t]) => `===== ${label} =====\n\n${t}`).join('\n\n')
-      : multi[0][1]
+      : (multi[0]?.[1] ?? null);
   }
 
-  // SPDX metadata document only (e.g. @tauri-apps/plugin-*)
-  // The package is licensed (MIT/Apache-2.0), so don't warn; the caller
-  // falls back to the SPDX_TEXTS template text.
+  // Metadata-only packages carry no text to embed (e.g. SPDX stub files);
+  // the caller falls back to the template text below without warning.
   for (const f of ['LICENSE.spdx', 'LICENCE.spdx']) {
     try {
-      readFileSync(join(pkgPath, f))
-      return null
+      readFileSync(join(pkgPath, f));
+      return null;
     } catch { /* next */ }
   }
 
-  console.warn(`  [warn] no LICENSE file for ${pkgName}, using template`)
-  return null
-}
+  console.warn(`  [warn] no LICENSE file for ${pkgName}, using template`);
+  return null;
+};
 
-const SPDX_TEXTS = {
+const SPDX_TEXTS: Record<string, string> = {
   'MIT': `MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -160,117 +203,182 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.`,
-}
+};
 
-// SPDX expressions like "MIT OR Apache-2.0" / "MIT AND Apache-2.0" map
-// every component to a template, not just the first.
-function templateText(licenseName) {
-  const parts = licenseName.split(/\s+(?:OR|AND)\s+/).filter(Boolean)
-  const texts = parts.map(p => SPDX_TEXTS[p] ?? `License: ${p}`)
+// SPDX expressions like "MIT OR Apache-2.0" map every component to a
+// template, not just the first one.
+export const templateText = (licenseName: string): string => {
+  const parts = licenseName
+    .split(/[()/,|]+|\s+(?:OR|AND)\s+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const texts = parts.map((p) => SPDX_TEXTS[p] ?? `License: ${p}`);
   return parts.length > 1
     ? texts.map((t, i) => `===== ${parts[i]} =====\n\n${t}`).join('\n\n')
-    : texts[0]
-}
+    : (texts[0] ?? `License: ${licenseName}`);
+};
 
-// ── 1. Rust ──────────────────────────────────────────────────────────
+// ── pure collectors (no fs/process; unit-tested) ───────────────────
 
-console.log('[1/3] Running cargo-about...')
-const tmpDir = resolve(SRC_TAURI, 'target')
-mkdirSync(tmpDir, { recursive: true })
-const tmpJson = resolve(tmpDir, '.cargo-about-tmp.json')
-execSync('cargo about generate --format json -o ' + tmpJson, {
-  cwd: SRC_TAURI,
-  encoding: 'utf-8',
-  timeout: 300_000,
-})
-const rustRaw = JSON.parse(readFileSync(tmpJson, 'utf-8'))
-const rustEntries = []
-for (const lic of rustRaw.licenses) {
-  for (const used of lic.used_by) {
-    const c = used.crate
-    // skip workspace project itself
-    if (c.name === 'wsa-rpc-bridge') continue
-    rustEntries.push({
-      name: c.name,
-      version: c.version,
-      copyright: Array.isArray(c.authors) ? c.authors.join(', ') : (c.authors || ''),
-      license: lic.name,
-      url: c.repository || `https://crates.io/crates/${c.name}`,
-      text: lic.text.trim(),
-    })
+// Production package identities from `pnpm ls --prod --parseable` output.
+// Lines without a node_modules segment (e.g. the project root) are skipped
+// instead of assuming the root is always the first line.
+export const parseProdSet = (stdout: string): Set<string> => {
+  const set = new Set<string>();
+  for (const line of stdout.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const segs = trimmed.split(/[\\/]node_modules[\\/]/);
+    if (segs.length < 2) continue;
+    const name = segs.pop()?.replace(/\\/g, '/');
+    if (name) set.add(name);
   }
-}
-console.log(`  -> ${rustEntries.length} Rust crates`)
+  return set;
+};
 
-// ── 2. npm (production only) ────────────────────────────────────────
-
-console.log('[2/3] Reading npm production licenses...')
-
-// get flat list of production package paths (including transitive deps)
-const prodPaths = execSync('pnpm ls --prod --parseable --depth=Infinity', {
-  cwd: ROOT,
-  encoding: 'utf-8',
-})
-  .trim()
-  .split(/\r?\n/)
-  .filter(Boolean)
-  // skip the root project entry (first line = project root)
-  .slice(1)
-
-// get full licenses list from pnpm
-const npmRaw = JSON.parse(
-  execSync('pnpm licenses list --json', { cwd: ROOT, encoding: 'utf-8' })
-)
-
-// build a set of production package identity keys
-const prodSet = new Set()
-for (const p of prodPaths) {
-  const name = p.split(/[\\\/]node_modules[\\\/]/).pop()
-  if (name) prodSet.add(name.replace(/\\/g, '/'))
-}
-
-const npmEntries = []
-for (const [licenseName, packages] of Object.entries(npmRaw)) {
-  for (const pkg of packages) {
-    const pkgName = pkg.name
-    if (!prodSet.has(pkgName)) continue
-    const pkgPath = pkg.paths[0]
-    const ver = Array.isArray(pkg.versions) ? pkg.versions[0] : pkg.versions
-    // try to read actual LICENSE file
-    let licText = readLicenseFile(pkgPath, pkgName)
-    if (!licText) licText = templateText(licenseName)
-    npmEntries.push({
-      name: pkgName,
-      version: ver,
-      copyright: pkg.author || '',
-      license: licenseName,
-      url: pkg.homepage || '',
-      text: licText,
-    })
+// One row per production package found in `pnpm licenses list --json`.
+// Same package listed under several license groups yields one row per group;
+// the caller dedupes after resolving the license text.
+export const selectProdPackages = (raw: unknown, prodSet: Set<string>): PnpmPick[] => {
+  if (!isRecord(raw)) return [];
+  const picks: PnpmPick[] = [];
+  for (const [license, packages] of Object.entries(raw)) {
+    if (!Array.isArray(packages)) continue;
+    for (const pkg of packages) {
+      if (!isRecord(pkg)) continue;
+      const name = typeof pkg['name'] === 'string' ? pkg['name'] : '';
+      if (!name || !prodSet.has(name)) continue;
+      const paths = Array.isArray(pkg['paths'])
+        ? pkg['paths'].filter((p): p is string => typeof p === 'string')
+        : [];
+      const pkgPath = paths[0];
+      if (!pkgPath) continue;
+      picks.push({
+        license,
+        name,
+        version: firstString(pkg['versions']),
+        copyright: firstString(pkg['author']),
+        url: firstString(pkg['homepage']),
+        pkgPath,
+      });
+    }
   }
-}
+  return picks;
+};
 
-// deduplicate npm entries (same package can appear in multiple license groups)
-const seen = new Set()
-const npmDeduped = npmEntries.filter(e => {
-  const key = `${e.name}@${e.version}`
-  if (seen.has(key)) return false
-  seen.add(key)
-  return true
-})
-console.log(`  -> ${npmDeduped.length} npm packages`)
+// Flattened `cargo about generate --format json` output. Skips the workspace
+// crate itself and entries without usable license text.
+export const buildCargoEntries = (raw: unknown): LicenseEntry[] => {
+  if (!isRecord(raw) || !Array.isArray(raw['licenses'])) return [];
+  const out: LicenseEntry[] = [];
+  for (const lic of raw['licenses']) {
+    if (!isRecord(lic)) continue;
+    const license = typeof lic['name'] === 'string' ? lic['name'] : '';
+    const text = typeof lic['text'] === 'string' ? lic['text'].trim() : '';
+    if (!license || !text || !Array.isArray(lic['used_by'])) continue;
+    for (const used of lic['used_by']) {
+      if (!isRecord(used) || !isRecord(used['crate'])) continue;
+      const crate = used['crate'];
+      const name = typeof crate['name'] === 'string' ? crate['name'] : '';
+      if (!name || name === WORKSPACE_CRATE) continue;
+      const version = typeof crate['version'] === 'string' ? crate['version'] : '';
+      const authors = crate['authors'];
+      const copyright = Array.isArray(authors)
+        ? authors.filter((a): a is string => typeof a === 'string').join(', ')
+        : typeof authors === 'string'
+          ? authors
+          : '';
+      const repository = typeof crate['repository'] === 'string' && crate['repository'] !== ''
+        ? crate['repository']
+        : `https://crates.io/crates/${name}`;
+      out.push({ name, version, copyright, license, url: repository, text });
+    }
+  }
+  return out;
+};
 
-// ── 3. Merge & write ──────────────────────────────────────────────
+export const dedupeByNameVersion = (entries: LicenseEntry[]): LicenseEntry[] => {
+  const seen = new Set<string>();
+  return entries.filter((e) => {
+    const key = `${e.name}@${e.version}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
-console.log('[3/3] Writing src/generated/licenses.ts...')
-mkdirSync(OUT_DIR, { recursive: true })
+export const sortEntries = (entries: LicenseEntry[]): LicenseEntry[] =>
+  [...entries].sort((a, b) => a.name.localeCompare(b.name));
 
-const allEntries = [...rustEntries, ...npmDeduped]
+// ── main ───────────────────────────────────────────────────────────
 
-// sort alphabetically for consistency
-allEntries.sort((a, b) => a.name.localeCompare(b.name))
+const USAGE = 'usage: generate-licenses.ts [--force] [--check]';
 
-const code = `// Auto-generated by scripts/generate-licenses.mjs
+const parseJson = (text: string, what: string): unknown => {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error(`${what} output is invalid JSON`);
+  }
+};
+
+const main = (): void => {
+  const args = process.argv.slice(2);
+  const flags = new Set(args);
+  if (flags.has('--help') || flags.has('-h')) {
+    console.log(USAGE);
+    return;
+  }
+  for (const a of args) {
+    if (a !== '--force' && a !== '--check') throw new Error(`unknown argument: ${a}\n${USAGE}`);
+  }
+  const force = flags.has('--force');
+  const check = flags.has('--check');
+
+  const hash = hashInputs(INPUT_FILES);
+  const upToDate =
+    !force &&
+    existsSync(OUT_FILE) &&
+    existsSync(HASH_FILE) &&
+    readFileSync(HASH_FILE, 'utf-8').trim() === hash.trim();
+  if (check) {
+    if (!upToDate) throw new Error('licenses out of date, run pnpm generate-licenses');
+    console.log('licenses up to date');
+    return;
+  }
+  if (upToDate) {
+    console.log('licenses up to date, skipping (inputs unchanged)');
+    return;
+  }
+
+  // ── 1. Rust ──
+  console.log('[1/3] Running cargo-about...');
+  const tmpJson = join(tmpdir(), `cargo-about-${process.pid}.json`);
+  try {
+    run('cargo', ['about', 'generate', '--format', 'json', '-o', tmpJson], SRC_TAURI, 300_000);
+    const rustEntries = buildCargoEntries(parseJson(readFileSync(tmpJson, 'utf-8'), 'cargo about'));
+    console.log(`  -> ${rustEntries.length} Rust crates`);
+
+    // ── 2. npm (production only) ──
+    console.log('[2/3] Reading npm production licenses...');
+    const prodSet = parseProdSet(run('pnpm', ['ls', '--prod', '--parseable', '--depth=Infinity'], ROOT));
+    const npmRaw = parseJson(run('pnpm', ['licenses', 'list', '--json'], ROOT), 'pnpm licenses');
+    const npmEntries = selectProdPackages(npmRaw, prodSet).map((p) => ({
+      name: p.name,
+      version: p.version,
+      copyright: p.copyright,
+      license: p.license,
+      url: p.url,
+      text: readLicenseFile(p.pkgPath, p.name) ?? templateText(p.license),
+    }));
+    const npmDeduped = dedupeByNameVersion(npmEntries);
+    console.log(`  -> ${npmDeduped.length} npm packages`);
+
+    // ── 3. Merge & write ──
+    console.log('[3/3] Writing src/generated/licenses.ts...');
+    mkdirSync(OUT_DIR, { recursive: true });
+    const allEntries = sortEntries([...rustEntries, ...npmDeduped]);
+    const code = `// Auto-generated by scripts/generate-licenses.ts
 // Do not edit manually.
 
 export interface LicenseEntry {
@@ -283,10 +391,22 @@ export interface LicenseEntry {
 }
 
 export const licenses: LicenseEntry[] = ${JSON.stringify(allEntries, null, 2)}
-`
+`;
+    writeFileSync(OUT_FILE, code, 'utf-8');
+    writeFileSync(HASH_FILE, hash, 'utf-8');
+    console.log(`  -> ${allEntries.length} total entries written to ${OUT_FILE}`);
+  } finally {
+    try {
+      rmSync(tmpJson);
+    } catch { /* best effort */ }
+  }
+};
 
-writeFileSync(OUT_FILE, code, 'utf-8')
-writeFileSync(HASH_FILE, hash, 'utf-8')
-console.log(`  -> ${allEntries.length} total entries written to ${OUT_FILE}`)
-
-try { rmSync(tmpJson) } catch { /* best effort */ }
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  try {
+    main();
+  } catch (e) {
+    console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
+    process.exitCode = 1;
+  }
+}
