@@ -14,6 +14,6 @@ pub use media::{
 pub use notifications::{get_notification_access_status, open_notification_access_settings};
 pub use signature::get_signing_fingerprint;
 pub use updater::{
-    AndroidUpdateStatus, can_install_packages, download_update, fetch_update_status,
-    install_apk, open_install_settings,
+    can_install_packages, download_update, fetch_update_status, install_apk, open_install_settings,
+    AndroidUpdateStatus,
 };

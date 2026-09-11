@@ -8,7 +8,8 @@ use crate::android::media::app_handle;
 
 static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
-static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
+static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> =
+    OnceLock::new();
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_NotificationBridge_init(
@@ -66,12 +67,8 @@ fn bridge_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'
 pub fn get_notification_access_status() -> Result<bool, String> {
     let class = bridge_class()?;
     with_jni(|env| {
-        let result = env.call_static_method(
-            class,
-            jni_str!("isAccessGranted"),
-            jni_sig!("()Z"),
-            &[],
-        )?;
+        let result =
+            env.call_static_method(class, jni_str!("isAccessGranted"), jni_sig!("()Z"), &[])?;
         result.z()
     })
 }
@@ -79,12 +76,7 @@ pub fn get_notification_access_status() -> Result<bool, String> {
 pub fn open_notification_access_settings() -> Result<(), String> {
     let class = bridge_class()?;
     with_jni(|env| {
-        env.call_static_method(
-            class,
-            jni_str!("openAccessSettings"),
-            jni_sig!("()V"),
-            &[],
-        )?;
+        env.call_static_method(class, jni_str!("openAccessSettings"), jni_sig!("()V"), &[])?;
         Ok(())
     })
 }

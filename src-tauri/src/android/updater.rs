@@ -7,7 +7,8 @@ use tauri::{AppHandle, Emitter};
 
 static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
-static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
+static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> =
+    OnceLock::new();
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_UpdateBridge_init(
@@ -46,9 +47,9 @@ fn with_jni<T>(f: impl FnOnce(&mut jni::Env) -> jni::errors::Result<T>) -> Resul
 }
 
 fn bridge_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'static>>, String> {
-    BRIDGE_CLASS.get().ok_or_else(|| {
-        "UpdateBridge class not cached (UpdateBridge.init not called)".to_string()
-    })
+    BRIDGE_CLASS
+        .get()
+        .ok_or_else(|| "UpdateBridge class not cached (UpdateBridge.init not called)".to_string())
 }
 
 /// update.json の取得先。Win版 updater の endpoints と同じものを見る。
@@ -239,12 +240,8 @@ pub async fn download_update(app: &AppHandle, url: &str, version: &str) -> Resul
 pub fn can_install_packages() -> Result<bool, String> {
     let class = bridge_class()?;
     with_jni(|env| {
-        let result = env.call_static_method(
-            class,
-            jni_str!("canRequestInstalls"),
-            jni_sig!("()Z"),
-            &[],
-        )?;
+        let result =
+            env.call_static_method(class, jni_str!("canRequestInstalls"), jni_sig!("()Z"), &[])?;
         result.z()
     })
 }
@@ -252,12 +249,7 @@ pub fn can_install_packages() -> Result<bool, String> {
 pub fn open_install_settings() -> Result<(), String> {
     let class = bridge_class()?;
     with_jni(|env| {
-        env.call_static_method(
-            class,
-            jni_str!("openInstallSettings"),
-            jni_sig!("()V"),
-            &[],
-        )?;
+        env.call_static_method(class, jni_str!("openInstallSettings"), jni_sig!("()V"), &[])?;
         Ok(())
     })
 }

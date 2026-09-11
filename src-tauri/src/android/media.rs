@@ -56,7 +56,8 @@ static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
 static STORE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
 
-static INFO_SERVICE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
+static INFO_SERVICE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> =
+    OnceLock::new();
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
@@ -70,8 +71,7 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
             }
             // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
             // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
-            if let Ok(class) =
-                env.find_class(jni_str!("com/wsarpcbridge/app/MediaWhitelistStore"))
+            if let Ok(class) = env.find_class(jni_str!("com/wsarpcbridge/app/MediaWhitelistStore"))
             {
                 if let Ok(gref) = env.new_global_ref(class) {
                     let _ = STORE_CLASS.set(gref);
@@ -121,12 +121,8 @@ fn call_string_array(name: &str) -> Result<Vec<String>, String> {
     let class = store_class()?;
     let name = jni::strings::JNIString::from(name);
     with_jni(|env| {
-        let result = env.call_static_method(
-            class,
-            &name,
-            jni_sig!("()[Ljava/lang/String;"),
-            &[],
-        )?;
+        let result =
+            env.call_static_method(class, &name, jni_sig!("()[Ljava/lang/String;"), &[])?;
         jstring_array_to_vec(env, result.l()?)
     })
 }
@@ -137,7 +133,8 @@ fn store_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'s
     })
 }
 
-fn info_service_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'static>>, String> {
+fn info_service_class(
+) -> Result<&'static jni::objects::Global<jni::objects::JClass<'static>>, String> {
     INFO_SERVICE_CLASS.get().ok_or_else(|| {
         "MediaInfoService class not cached (MediaBridge.init not called)".to_string()
     })
@@ -260,8 +257,7 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
 ) {
     let info = unowned_env
         .with_env(|env| -> jni::errors::Result<MediaInfo> {
-            let get =
-                |s: &jni::objects::JString| s.try_to_string(env).unwrap_or_default();
+            let get = |s: &jni::objects::JString| s.try_to_string(env).unwrap_or_default();
             let display_name: String = get(&display_name);
             let display_name = (!display_name.is_empty()).then_some(display_name);
 

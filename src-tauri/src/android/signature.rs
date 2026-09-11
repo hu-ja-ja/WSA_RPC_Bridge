@@ -5,7 +5,8 @@ use jni::jni_str;
 
 static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
-static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
+static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> =
+    OnceLock::new();
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_SignatureBridge_init(
