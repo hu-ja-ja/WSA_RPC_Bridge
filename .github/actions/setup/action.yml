@@ -38,7 +38,7 @@ runs:
     - if: inputs.rust == 'true'
       uses: Swatinem/rust-cache@v2
       with:
-        workspaces: src-tauri -> src-tauri/target
+        workspaces: src-tauri -> target
 
     - if: inputs.android == 'true'
       uses: actions/cache@v4

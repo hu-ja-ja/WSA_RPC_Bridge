@@ -51,11 +51,11 @@ const runCommand = (cmd: string, args: string[], extraEnv: Record<string, string
     try: () => spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf-8', env: { ...process.env, ...extraEnv } }),
     catch: () => new CargoError({ message: `failed to spawn ${cmd}` }),
   }).pipe(
-    Effect.flatMap((r) =>
-      r.status !== 0
-        ? Effect.fail(new CargoError({ message: `command failed: ${cmd} ${args.join(' ')}\n${r.stderr ?? ''}` }))
-        : Effect.succeed(r.stdout ?? '')
-    ),
+    Effect.flatMap((r) => {
+      if (r.status === 0) return Effect.succeed(r.stdout ?? '');
+      const how = r.signal ? `killed by signal ${r.signal}` : `exited with code ${r.status}`;
+      return Effect.fail(new CargoError({ message: `command failed (${how}): ${cmd} ${args.join(' ')}\n${r.stderr ?? ''}` }));
+    }),
   );
 
 const requiredEnv = (name: string): Effect.Effect<string, ArtifactsError> =>
@@ -106,13 +106,19 @@ const runnerTemp = (): string => process.env['RUNNER_TEMP'] || tmpdir();
 // NOTE: Tauri/wry の build.rs と処理が重複している。Tauri更新時はここも要確認。
 const cmdAndroidCodegen = (): Effect.Effect<void, CargoError | ArtifactsError> =>
   Effect.gen(function* () {
-    const output = yield* runCommand('cargo', [
-      'metadata',
-      '--format-version',
-      '1',
-      '--manifest-path',
-      join(SRC_TAURI, 'Cargo.toml'),
-    ]);
+    // Offline first: dependency versions are locked and the registry is
+    // cached, so metadata needs no network in the normal case. This also
+    // sidesteps flaky index updates (which once died silently after ~35s).
+    // Fall back to online for cold caches.
+    const tailArgs = ['--format-version', '1', '--manifest-path', join(SRC_TAURI, 'Cargo.toml')];
+    const output = yield* runCommand('cargo', ['metadata', '--offline', ...tailArgs]).pipe(
+      Effect.catchAll((e) =>
+        Effect.zipRight(
+          Effect.logWarning(`offline metadata failed; retrying online (${e.message})`),
+          runCommand('cargo', ['metadata', ...tailArgs]),
+        )
+      ),
+    );
     const meta = yield* Effect.try({
       try: () => JSON.parse(output) as { packages: { name: string; manifest_path: string }[] },
       catch: () => new CargoError({ message: 'cargo metadata output is invalid JSON' }),
