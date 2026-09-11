@@ -1,4 +1,4 @@
-import { createSignal, createResource, Show } from 'solid-js'
+import { createSignal, createResource, Show, onMount, onCleanup } from 'solid-js'
 import { check } from '@tauri-apps/plugin-updater'
 import { getVersion } from '@tauri-apps/api/app'
 import { relaunch } from '@tauri-apps/plugin-process'
@@ -119,8 +119,12 @@ export function UpdatesPanel() {
   }
 
   async function handleAutoInstall() {
+    if (updateState() === 'downloading') return
     const version = updateVersion()
-    if (!version || !pendingApkUrl) return
+    if (!version || !pendingApkUrl) {
+      setUpdateError('update URL is unavailable (Android entry missing)')
+      return
+    }
     setUpdateState('downloading')
     setDownloadProgress(0)
     setUpdateError(null)
@@ -150,10 +154,36 @@ export function UpdatesPanel() {
       await invoke('install_android_update', { path: pendingApkPath })
       // 導入画面を開いた後はOS側の操作になる。成功時はプロセスが置換されるため、このまま待機表示でよい。
     } catch (e) {
+      // ponytail: staleキャッシュで固まらないよう次回は再取得
+      pendingApkPath = null
+      pendingApkVersion = null
       setUpdateError(String(e))
       setUpdateState('error')
     }
   }
+
+  // ponytail: 設定から戻ったら許可状態だけ再確認。自動で先には進めない
+  onMount(() => {
+    if (!IS_ANDROID) return
+    const recheck = async () => {
+      if (!permissionNeeded() || !pendingApkPath) return
+      try {
+        const allowed = await invoke<boolean>('get_install_permission_status')
+        if (allowed) setPermissionNeeded(false)
+      } catch {
+        /* 次回タップで再確認 */
+      }
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void recheck()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    onCleanup(() => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    })
+  })
 
   async function handleOpenInstallSettings() {
     try {
@@ -186,9 +216,19 @@ export function UpdatesPanel() {
           <div class="update-action">
             <Show when={updateState() === 'downloading'}>
               <div class="update-progress">
-                <p class="update-status">{t("updates.download_progress", { progress: downloadProgress() })}</p>
+                <p class="update-status">
+                  {downloadProgress() > 0
+                    ? t("updates.download_progress", { progress: downloadProgress() })
+                    : t("updates.checking")}
+                </p>
                 <div class="progress-bar">
-                  <div class="progress-bar-fill" style={{ width: `${downloadProgress()}%` }} />
+                  <div
+                    class="progress-bar-fill"
+                    style={{
+                      width: downloadProgress() > 0 ? `${downloadProgress()}%` : '25%',
+                      opacity: downloadProgress() > 0 ? 1 : 0.6,
+                    }}
+                  />
                 </div>
               </div>
             </Show>

@@ -154,12 +154,16 @@ fn cache_dir() -> Result<String, String> {
     Ok(dir)
 }
 
-fn apk_path_for(version: &str) -> Result<String, String> {
+fn sanitize_version(version: &str) -> String {
     // ponytail: ファイル名に使えない文字を落とす
-    let safe: String = version
+    version
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '-' || *c == '_')
-        .collect();
+        .collect()
+}
+
+fn apk_path_for(version: &str) -> Result<String, String> {
+    let safe = sanitize_version(version);
     if safe.is_empty() {
         return Err("invalid version for apk path".to_string());
     }
@@ -167,9 +171,17 @@ fn apk_path_for(version: &str) -> Result<String, String> {
 }
 
 /// APKをキャッシュに保存する。同版が済みなら再取得しない。進捗はイベントで通知する。
+/// 破損・中断時は .part を残さず、content-length と突き合わせてから rename する。
 pub async fn download_update(app: &AppHandle, url: &str, version: &str) -> Result<String, String> {
+    if !url.starts_with("https://") {
+        return Err("update url must be https".to_string());
+    }
     let path = apk_path_for(version)?;
-    if std::path::Path::new(&path).is_file() {
+    if std::path::Path::new(&path).is_file()
+        && std::fs::metadata(&path)
+            .map(|m| m.len() > 0)
+            .unwrap_or(false)
+    {
         return Ok(path);
     }
     let tmp = format!("{}.part", &path);
@@ -177,38 +189,51 @@ pub async fn download_update(app: &AppHandle, url: &str, version: &str) -> Resul
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| e.to_string())?;
-    let mut resp = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .error_for_status()
-        .map_err(|e| e.to_string())?;
-    let total = resp.content_length().filter(|t| *t > 0);
-    let mut file = tokio::fs::File::create(&tmp)
-        .await
-        .map_err(|e| e.to_string())?;
-    let mut done: u64 = 0;
-    {
-        use tokio::io::AsyncWriteExt;
-        while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
-            file.write_all(&chunk).await.map_err(|e| e.to_string())?;
-            done += chunk.len() as u64;
-            if let Some(t) = total {
-                let _ = app.emit(
-                    "android-update-progress",
-                    DownloadProgress {
-                        progress: (done.saturating_mul(100) / t).min(100) as u32,
-                    },
-                );
+    let result: Result<String, String> = async {
+        let mut resp = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?
+            .error_for_status()
+            .map_err(|e| e.to_string())?;
+        let total = resp.content_length().filter(|t| *t > 0);
+        let mut file = tokio::fs::File::create(&tmp)
+            .await
+            .map_err(|e| e.to_string())?;
+        let mut done: u64 = 0;
+        {
+            use tokio::io::AsyncWriteExt;
+            while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
+                file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+                done += chunk.len() as u64;
+                if let Some(t) = total {
+                    let _ = app.emit(
+                        "android-update-progress",
+                        DownloadProgress {
+                            progress: (done.saturating_mul(100) / t).min(100) as u32,
+                        },
+                    );
+                }
+            }
+            file.flush().await.map_err(|e| e.to_string())?;
+        }
+        drop(file);
+        if let Some(t) = total {
+            if done != t {
+                return Err("incomplete download, please retry".to_string());
             }
         }
-        file.flush().await.map_err(|e| e.to_string())?;
+        tokio::fs::rename(&tmp, &path)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(path.clone())
     }
-    tokio::fs::rename(&tmp, &path)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(path)
+    .await;
+    if result.is_err() {
+        let _ = tokio::fs::remove_file(&tmp).await;
+    }
+    result
 }
 
 pub fn can_install_packages() -> Result<bool, String> {
@@ -238,6 +263,13 @@ pub fn open_install_settings() -> Result<(), String> {
 }
 
 pub fn install_apk(path: &str) -> Result<(), String> {
+    let cache = cache_dir()?;
+    if !path.ends_with(".apk") || !path.starts_with(&cache) {
+        return Err("invalid apk path".to_string());
+    }
+    if !std::path::Path::new(path).is_file() {
+        return Err("apk cache missing, please re-download".to_string());
+    }
     let class = bridge_class()?;
     let launched = with_jni(|env| {
         let jpath = env.new_string(path)?;
@@ -252,13 +284,14 @@ pub fn install_apk(path: &str) -> Result<(), String> {
     if launched {
         Ok(())
     } else {
+        log::warn!("install failed: path exists but installer not launched");
         Err("installer could not be launched".to_string())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::is_newer;
+    use super::{is_newer, sanitize_version};
 
     #[test]
     fn version_compare() {
@@ -274,5 +307,15 @@ mod tests {
         assert!(is_newer("0.4.0", "v0.4.1"));
         assert!(is_newer("1.0.0-beta", "1.0.0"));
         assert!(!is_newer("1.0.0", "1.0.0-beta"));
+        // ponytail: beta同士は比較しない仕様
+        assert!(!is_newer("1.0.0-beta.1", "1.0.0-beta.2"));
+    }
+
+    #[test]
+    fn version_sanitize() {
+        assert_eq!(sanitize_version("0.4.1"), "0.4.1");
+        assert_eq!(sanitize_version("../0.4"), "0.4");
+        assert_eq!(sanitize_version(""), "");
+        assert_eq!(sanitize_version("../../etc"), "etc");
     }
 }

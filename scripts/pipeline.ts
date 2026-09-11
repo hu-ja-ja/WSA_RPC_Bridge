@@ -459,6 +459,7 @@ const cmdUpdateJson = (raw: string | undefined): Effect.Effect<void, ArtifactsEr
       },
     };
     if (apkName) {
+      // updater.rs PLATFORM_KEY と一致させること
       platforms['android-aarch64'] = {
         url: `https://github.com/${repo}/releases/download/${version}/${apkName}`,
       };
