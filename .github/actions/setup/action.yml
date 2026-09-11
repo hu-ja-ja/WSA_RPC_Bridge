@@ -38,6 +38,11 @@ runs:
     - if: inputs.rust == 'true'
       uses: Swatinem/rust-cache@v2
       with:
+        # Share one cache lineage across jobs. Per-job keys left android
+        # restoring a stale partial registry, which forced cold mass
+        # downloads that kept dying mid-fetch. env+lock hashes still differ
+        # the key when toolchains or dependencies actually change.
+        shared-key: wsa-rpc-bridge
         workspaces: src-tauri -> target
 
     - if: inputs.android == 'true'
