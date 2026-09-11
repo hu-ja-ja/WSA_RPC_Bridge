@@ -51,6 +51,13 @@ jobs:
           rust: 'true'
           android: 'true'
 
+      - name: Diagnose cargo env (temporary)
+        shell: pwsh
+        run: |
+          cargo --version
+          Get-PSDrive C | Select-Object Used, Free
+          cargo metadata --format-version 1 --manifest-path src-tauri/Cargo.toml > $null
+
       - run: mise run pipeline:codegen
 
       - run: mise run android-test
