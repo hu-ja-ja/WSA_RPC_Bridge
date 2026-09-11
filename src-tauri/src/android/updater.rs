@@ -1,44 +1,51 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+use jni::jni_sig;
+use jni::jni_str;
 use tauri::{AppHandle, Emitter};
 
 static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
-static BRIDGE_CLASS: OnceLock<jni::objects::GlobalRef> = OnceLock::new();
+static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_UpdateBridge_init(
-    mut env: jni::JNIEnv,
+    mut unowned_env: jni::EnvUnowned,
     _this: jni::objects::JObject,
 ) {
-    if let Ok(vm) = env.get_java_vm() {
-        let _ = JVM.set(vm);
-    }
-    // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
-    // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
-    if let Ok(class) = env.find_class("com/wsarpcbridge/app/UpdateBridge") {
-        if let Ok(gref) = env.new_global_ref(class) {
-            let _ = BRIDGE_CLASS.set(gref);
-        }
-    }
+    unowned_env
+        .with_env(|env| -> jni::errors::Result<()> {
+            if let Ok(vm) = env.get_java_vm() {
+                let _ = JVM.set(vm);
+            }
+            // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
+            // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
+            if let Ok(class) = env.find_class(jni_str!("com/wsarpcbridge/app/UpdateBridge")) {
+                if let Ok(gref) = env.new_global_ref(class) {
+                    let _ = BRIDGE_CLASS.set(gref);
+                }
+            }
+            Ok(())
+        })
+        .resolve::<jni::errors::ThrowRuntimeExAndDefault>();
 }
 
-fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
+fn with_jni<T>(f: impl FnOnce(&mut jni::Env) -> jni::errors::Result<T>) -> Result<T, String> {
     let vm = JVM
         .get()
         .ok_or("JVM not initialized (UpdateBridge.init not called)")?;
-    let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
-    match f(&mut env) {
-        Ok(v) => Ok(v),
-        Err(e) => {
+    vm.attach_current_thread(|env| {
+        let result = f(env);
+        if result.is_err() {
             let _ = env.exception_clear();
-            Err(e.to_string())
         }
-    }
+        result
+    })
+    .map_err(|e| e.to_string())
 }
 
-fn bridge_class() -> Result<&'static jni::objects::GlobalRef, String> {
+fn bridge_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'static>>, String> {
     BRIDGE_CLASS.get().ok_or_else(|| {
         "UpdateBridge class not cached (UpdateBridge.init not called)".to_string()
     })
@@ -132,9 +139,14 @@ pub async fn fetch_update_status(current: &str) -> Result<AndroidUpdateStatus, S
 fn cache_dir() -> Result<String, String> {
     let class = bridge_class()?;
     let dir: String = with_jni(|env| {
-        let result = env.call_static_method(class, "cacheDirPath", "()Ljava/lang/String;", &[])?;
-        let jstr = jni::objects::JString::from(result.l()?);
-        env.get_string(&jstr).map(|s| s.into())
+        let result = env.call_static_method(
+            class,
+            jni_str!("cacheDirPath"),
+            jni_sig!("()Ljava/lang/String;"),
+            &[],
+        )?;
+        let jstr: jni::objects::JString = env.cast_local::<jni::objects::JString>(result.l()?)?;
+        jstr.try_to_string(env)
     })?;
     if dir.is_empty() {
         return Err("cache directory unavailable".to_string());
@@ -202,7 +214,12 @@ pub async fn download_update(app: &AppHandle, url: &str, version: &str) -> Resul
 pub fn can_install_packages() -> Result<bool, String> {
     let class = bridge_class()?;
     with_jni(|env| {
-        let result = env.call_static_method(class, "canRequestInstalls", "()Z", &[])?;
+        let result = env.call_static_method(
+            class,
+            jni_str!("canRequestInstalls"),
+            jni_sig!("()Z"),
+            &[],
+        )?;
         result.z()
     })
 }
@@ -210,7 +227,12 @@ pub fn can_install_packages() -> Result<bool, String> {
 pub fn open_install_settings() -> Result<(), String> {
     let class = bridge_class()?;
     with_jni(|env| {
-        env.call_static_method(class, "openInstallSettings", "()V", &[])?;
+        env.call_static_method(
+            class,
+            jni_str!("openInstallSettings"),
+            jni_sig!("()V"),
+            &[],
+        )?;
         Ok(())
     })
 }
@@ -221,8 +243,8 @@ pub fn install_apk(path: &str) -> Result<(), String> {
         let jpath = env.new_string(path)?;
         let result = env.call_static_method(
             class,
-            "installApk",
-            "(Ljava/lang/String;)Z",
+            jni_str!("installApk"),
+            jni_sig!("(Ljava/lang/String;)Z"),
             &[(&jpath).into()],
         )?;
         result.z()

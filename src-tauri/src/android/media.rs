@@ -1,6 +1,8 @@
 use std::sync::atomic::Ordering;
 use std::sync::{Mutex, OnceLock};
 
+use jni::jni_sig;
+use jni::jni_str;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -52,77 +54,90 @@ pub fn media_state() -> &'static Mutex<MediaInfo> {
 
 static JVM: OnceLock<jni::JavaVM> = OnceLock::new();
 
-static STORE_CLASS: OnceLock<jni::objects::GlobalRef> = OnceLock::new();
+static STORE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
 
-static INFO_SERVICE_CLASS: OnceLock<jni::objects::GlobalRef> = OnceLock::new();
+static INFO_SERVICE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>>> = OnceLock::new();
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_init(
-    mut env: jni::JNIEnv,
+    mut unowned_env: jni::EnvUnowned,
     _this: jni::objects::JObject,
 ) {
-    if let Ok(vm) = env.get_java_vm() {
-        let _ = JVM.set(vm);
-    }
-    // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
-    // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
-    if let Ok(class) = env.find_class("com/wsarpcbridge/app/MediaWhitelistStore") {
-        if let Ok(gref) = env.new_global_ref(class) {
-            let _ = STORE_CLASS.set(gref);
-        }
-    }
-    if let Ok(class) = env.find_class("com/wsarpcbridge/app/MediaInfoService") {
-        if let Ok(gref) = env.new_global_ref(class) {
-            let _ = INFO_SERVICE_CLASS.set(gref);
-        }
-    }
+    unowned_env
+        .with_env(|env| -> jni::errors::Result<()> {
+            if let Ok(vm) = env.get_java_vm() {
+                let _ = JVM.set(vm);
+            }
+            // JNI の FindClass はメインスレッド以外ではアプリのクラスローダーを参照しないため、
+            // メインスレッドでグローバル参照としてクラスを取得し、以降はそれを使う。
+            if let Ok(class) =
+                env.find_class(jni_str!("com/wsarpcbridge/app/MediaWhitelistStore"))
+            {
+                if let Ok(gref) = env.new_global_ref(class) {
+                    let _ = STORE_CLASS.set(gref);
+                }
+            }
+            if let Ok(class) = env.find_class(jni_str!("com/wsarpcbridge/app/MediaInfoService")) {
+                if let Ok(gref) = env.new_global_ref(class) {
+                    let _ = INFO_SERVICE_CLASS.set(gref);
+                }
+            }
+            Ok(())
+        })
+        .resolve::<jni::errors::ThrowRuntimeExAndDefault>();
 }
 
-fn with_jni<T>(f: impl FnOnce(&mut jni::JNIEnv) -> jni::errors::Result<T>) -> Result<T, String> {
+fn with_jni<T>(f: impl FnOnce(&mut jni::Env) -> jni::errors::Result<T>) -> Result<T, String> {
     let vm = JVM
         .get()
         .ok_or("JVM not initialized (MediaBridge.init not called)")?;
-    let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
-    match f(&mut env) {
-        Ok(v) => Ok(v),
-        Err(e) => {
+    vm.attach_current_thread(|env| {
+        let result = f(env);
+        if result.is_err() {
             // 失敗時は pending exception を残さない。残すと次の JNI 呼び出しで
             // "unexpected pending exception" により ART がプロセスごと abort する。
             let _ = env.exception_clear();
-            Err(e.to_string())
         }
-    }
+        result
+    })
+    .map_err(|e| e.to_string())
 }
 
 fn jstring_array_to_vec(
-    env: &mut jni::JNIEnv,
+    env: &mut jni::Env,
     arr: jni::objects::JObject,
 ) -> jni::errors::Result<Vec<String>> {
-    let arr = jni::objects::JObjectArray::from(arr);
-    let len = env.get_array_length(&arr)?;
-    let mut out = Vec::with_capacity(len as usize);
+    let arr = env.cast_local::<jni::objects::JObjectArray<jni::objects::JString>>(arr)?;
+    let len = arr.len(env)?;
+    let mut out = Vec::with_capacity(len);
     for i in 0..len {
-        let el = env.get_object_array_element(&arr, i)?;
-        out.push(env.get_string(&jni::objects::JString::from(el))?.into());
+        let el: jni::objects::JString = arr.get_element(env, i)?;
+        out.push(el.try_to_string(env)?);
     }
     Ok(out)
 }
 
 fn call_string_array(name: &str) -> Result<Vec<String>, String> {
     let class = store_class()?;
+    let name = jni::strings::JNIString::from(name);
     with_jni(|env| {
-        let result = env.call_static_method(class, name, "()[Ljava/lang/String;", &[])?;
+        let result = env.call_static_method(
+            class,
+            &name,
+            jni_sig!("()[Ljava/lang/String;"),
+            &[],
+        )?;
         jstring_array_to_vec(env, result.l()?)
     })
 }
 
-fn store_class() -> Result<&'static jni::objects::GlobalRef, String> {
+fn store_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'static>>, String> {
     STORE_CLASS.get().ok_or_else(|| {
         "MediaWhitelistStore class not cached (MediaBridge.init not called)".to_string()
     })
 }
 
-fn info_service_class() -> Result<&'static jni::objects::GlobalRef, String> {
+fn info_service_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'static>>, String> {
     INFO_SERVICE_CLASS.get().ok_or_else(|| {
         "MediaInfoService class not cached (MediaBridge.init not called)".to_string()
     })
@@ -131,7 +146,7 @@ fn info_service_class() -> Result<&'static jni::objects::GlobalRef, String> {
 pub fn load_media_notification_enabled() -> Result<bool, String> {
     let class = info_service_class()?;
     with_jni(|env| {
-        let result = env.call_static_method(class, "isEnabled", "()Z", &[])?;
+        let result = env.call_static_method(class, jni_str!("isEnabled"), jni_sig!("()Z"), &[])?;
         result.z()
     })
 }
@@ -141,9 +156,9 @@ pub fn set_media_notification_enabled(enabled: bool) -> Result<(), String> {
     with_jni(|env| {
         env.call_static_method(
             class,
-            "setEnabled",
-            "(Z)V",
-            &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)],
+            jni_str!("setEnabled"),
+            jni_sig!("(Z)V"),
+            &[jni::objects::JValue::Bool(enabled)],
         )?;
         Ok(())
     })
@@ -152,7 +167,8 @@ pub fn set_media_notification_enabled(enabled: bool) -> Result<(), String> {
 pub fn load_rpc_enabled() -> Result<bool, String> {
     let class = info_service_class()?;
     with_jni(|env| {
-        let result = env.call_static_method(class, "isRpcEnabled", "()Z", &[])?;
+        let result =
+            env.call_static_method(class, jni_str!("isRpcEnabled"), jni_sig!("()Z"), &[])?;
         result.z()
     })
 }
@@ -162,9 +178,9 @@ fn set_media_rpc_enabled(enabled: bool) -> Result<(), String> {
     with_jni(|env| {
         env.call_static_method(
             class,
-            "setRpcEnabled",
-            "(Z)V",
-            &[jni::objects::JValue::Bool(enabled as jni::sys::jboolean)],
+            jni_str!("setRpcEnabled"),
+            jni_sig!("(Z)V"),
+            &[jni::objects::JValue::Bool(enabled)],
         )?;
         Ok(())
     })
@@ -212,19 +228,17 @@ pub fn load_whitelist() -> Result<Vec<String>, String> {
 pub fn save_whitelist(packages: &[String]) -> Result<(), String> {
     let class = store_class()?;
     with_jni(|env| {
-        let arr = env.new_object_array(
-            packages.len() as i32,
-            "java/lang/String",
-            jni::objects::JObject::null(),
-        )?;
+        let empty = env.new_string("")?;
+        let arr =
+            jni::objects::JObjectArray::<jni::objects::JString>::new(env, packages.len(), &empty)?;
         for (i, pkg) in packages.iter().enumerate() {
             let js = env.new_string(pkg.as_str())?;
-            env.set_object_array_element(&arr, i as i32, js)?;
+            arr.set_element(env, i, &js)?;
         }
         let _ = env.call_static_method(
             class,
-            "save",
-            "([Ljava/lang/String;)V",
+            jni_str!("save"),
+            jni_sig!("([Ljava/lang/String;)V"),
             &[jni::objects::JValue::from(&arr)],
         )?;
         Ok(())
@@ -233,7 +247,7 @@ pub fn save_whitelist(packages: &[String]) -> Result<(), String> {
 
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
-    mut env: jni::JNIEnv,
+    mut unowned_env: jni::EnvUnowned,
     _this: jni::objects::JObject,
     title: jni::objects::JString,
     artist: jni::objects::JString,
@@ -244,22 +258,26 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
     duration_ms: jni::sys::jlong,
     is_playing: jni::sys::jboolean,
 ) {
-    let mut get =
-        |s: &jni::objects::JString| env.get_string(s).map(|v| v.into()).unwrap_or_default();
-    let display_name: String = get(&display_name);
-    let display_name = (!display_name.is_empty()).then_some(display_name);
+    let info = unowned_env
+        .with_env(|env| -> jni::errors::Result<MediaInfo> {
+            let get =
+                |s: &jni::objects::JString| s.try_to_string(env).unwrap_or_default();
+            let display_name: String = get(&display_name);
+            let display_name = (!display_name.is_empty()).then_some(display_name);
 
-    let info = MediaInfo {
-        title: get(&title),
-        artist: get(&artist),
-        album: get(&album),
-        package_name: get(&package_name),
-        thumbnail_url: None,
-        position: (position_ms > 0).then_some(position_ms as u64),
-        duration: (duration_ms > 0).then_some(duration_ms as u64),
-        display_name,
-        is_playing: is_playing != 0,
-    };
+            Ok(MediaInfo {
+                title: get(&title),
+                artist: get(&artist),
+                album: get(&album),
+                package_name: get(&package_name),
+                thumbnail_url: None,
+                position: (position_ms > 0).then_some(position_ms as u64),
+                duration: (duration_ms > 0).then_some(duration_ms as u64),
+                display_name,
+                is_playing,
+            })
+        })
+        .resolve::<jni::errors::ThrowRuntimeExAndDefault>();
 
     if cfg!(debug_assertions) {
         log::info!(
@@ -387,14 +405,14 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
 /// 接続制御とイベント発行のみ行う。
 #[no_mangle]
 pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_setRpcEnabled(
-    _env: jni::JNIEnv,
+    _env: jni::EnvUnowned,
     _this: jni::objects::JObject,
     enabled: jni::sys::jboolean,
 ) {
     let Some(app) = APP_HANDLE.get().cloned() else {
         return;
     };
-    if let Err(e) = set_rpc_enabled(&app, enabled != 0) {
+    if let Err(e) = set_rpc_enabled(&app, enabled) {
         log::error!("android: setRpcEnabled JNI failed: {e}");
     }
 }
