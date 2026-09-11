@@ -8,7 +8,7 @@ description: Privacy Policy of WSA RPC Bridge
 > This page is a translation of the Japanese original for convenience. In case of any discrepancy, the Japanese version prevails.
 
 Established: August 5, 2026
-Revised: September 10, 2026
+Revised: September 12, 2026
 
 ## 1. Introduction
 
@@ -58,10 +58,10 @@ The App requests the following permissions:
 | Permission | Type | Purpose |
 |---|---|---|
 | Notification access | Special access (granted manually in Settings) | Detect Android's MediaSession to retrieve media playback information |
+| Install unknown apps (Android version, only for in-app updates) | Special access (granted manually in Settings) | Used only to install a new APK downloaded inside the app |
 | Post notifications (Android 13+) | Runtime permission | Show the persistent notification |
 | Run foreground service | Normal permission | Keep the service alive to continue collecting media playback information |
 | Internet | Normal permission | Send data to Discord and perform thumbnail resolution requests |
-| Install unknown apps (Android version, only for in-app updates) | Special access (granted manually in Settings) | Used only to install a new APK downloaded inside the app |
 
 Notification access can read other apps' notifications, but this App uses it solely to detect media sessions and **has no feature that reads other apps' notification content**. Notification content is never viewed, saved, sent, or used for any other purpose. This can also be verified in the source code.
 
