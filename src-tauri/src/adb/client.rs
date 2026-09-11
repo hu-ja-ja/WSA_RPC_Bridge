@@ -52,22 +52,34 @@ impl AdbClient {
         log::info!("ADB connect: server={server_addr}, target={ws_addr}");
         let start = Instant::now();
 
-        // ponytail/known-bug: adb_client's `ADBServer` spawns `adb.exe start-server`
-        // on every connection attempt, even when the server is already running
-        // (adb_server.rs `connect()` -> `start()` is unconditional). Spawning a
-        // process during Windows shutdown races with the loader teardown and
-        // produces adb.exe 0xc0000142. If the upstream crate ever fixes this
-        // (e.g. by probing the port before spawning), the helpers below can be
-        // replaced with plain `ADBServer::new(...)`.
-        ensure_adb_server_running(server_addr);
-
-        // Raw host commands instead of ADBServer::disconnect/connect_device, which
-        // would respawn adb.exe each time.
-        for cmd in [
+        // ponytail: TCP・起動待ちはblocking化。async threadを塞がない
+        let cmds = [
             format!("host:disconnect:{ws_addr}"),
             format!("host:connect:{ws_addr}"),
-        ] {
-            match adb_host_command(server_addr, &cmd) {
+        ];
+        let outcomes = tokio::task::spawn_blocking(move || {
+            // ponytail/known-bug: adb_client's `ADBServer` spawns `adb.exe start-server`
+            // on every connection attempt, even when the server is already running
+            // (adb_server.rs `connect()` -> `start()` is unconditional). Spawning a
+            // process during Windows shutdown races with the loader teardown and
+            // produces adb.exe 0xc0000142. If the upstream crate ever fixes this
+            // (e.g. by probing the port before spawning), the helpers below can be
+            // replaced with plain `ADBServer::new(...)`.
+            ensure_adb_server_running(server_addr);
+            // Raw host commands instead of ADBServer::disconnect/connect_device, which
+            // would respawn adb.exe each time.
+            cmds.into_iter()
+                .map(|cmd| {
+                    let r = adb_host_command(server_addr, &cmd);
+                    (cmd, r)
+                })
+                .collect::<Vec<_>>()
+        })
+        .await
+        .context("adb setup task failed")?;
+
+        for (cmd, res) in outcomes {
+            match res {
                 Ok(body) => log::info!("adb {} -> {}", cmd, String::from_utf8_lossy(&body).trim()),
                 Err(e) => log::debug!("adb {} (ignored): {e:#}", cmd),
             }

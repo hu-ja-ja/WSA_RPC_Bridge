@@ -40,9 +40,11 @@ fn extract_state_data(trimmed: &str) -> Option<(u8, u64)> {
         let mut kv = part.trim().splitn(2, '=');
         let key = kv.next()?.trim();
         let val = kv.next()?.trim();
+        // ponytail: 末尾ゴミ(例: "100}")に耐性化。先頭数字列のみ見る
+        let num: String = val.chars().take_while(|c| c.is_ascii_digit()).collect();
         match key {
-            "state" => state_val = val.parse::<u8>().ok(),
-            "position" => pos_val = val.parse::<u64>().ok(),
+            "state" => state_val = num.parse::<u8>().ok(),
+            "position" => pos_val = num.parse::<u64>().ok(),
             _ => {}
         }
         if state_val.is_some() && pos_val.is_some() {
@@ -63,6 +65,8 @@ fn extract_description_raw(trimmed: &str) -> Option<String> {
 pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
     let lines: Vec<&str> = output.lines().collect();
     let mut i = 0;
+    // ponytail: 再生中>有効>タイトル有りで選択。先勝ちだと停止済みが上位残存時に誤る
+    let mut best: Option<(u8, MediaInfo)> = None;
 
     while i < lines.len() {
         let line = lines[i];
@@ -139,6 +143,13 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                 is_playing,
             };
             if !result.title.is_empty() {
+                let score = if result.is_playing {
+                    2
+                } else if is_active {
+                    1
+                } else {
+                    0
+                };
                 log::info!(
                     "ADB parser: active={}, title={:?}, artist={:?}, playing={}",
                     is_active,
@@ -146,13 +157,21 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                     result.artist,
                     result.is_playing,
                 );
-                return Some(result);
+                if best.as_ref().is_none_or(|(s, _)| score > *s) {
+                    best = Some((score, result));
+                    if score == 2 {
+                        // ponytail: 再生中が最優先のため確定で抜ける
+                        break;
+                    }
+                }
             }
         }
     }
 
-    log::debug!("ADB parser: no active session found");
-    None
+    if best.is_none() {
+        log::debug!("ADB parser: no active session found");
+    }
+    best.map(|(_, info)| info)
 }
 
 fn parse_description(desc: &str) -> Option<(String, String, String)> {
@@ -268,5 +287,23 @@ Media session config:
         assert_eq!(title, "Just a Title");
         assert_eq!(artist, "");
         assert_eq!(album, "");
+    }
+
+    #[test]
+    fn test_playing_beats_first_paused() {
+        let output = r#"  Sessions Stack - have 2 sessions:
+    id1 com.paused.app/id1 (userId=0)
+      active=true
+      state=PlaybackState {state=2, position=100}
+      metadata: size=1, description=Paused Song, Paused Artist, null
+    id2 com.playing.app/id2 (userId=0)
+      active=true
+      state=PlaybackState {state=3, position=200}
+      metadata: size=1, description=Playing Song, Playing Artist, null
+"#;
+        let info = parse_media_session(output).expect("should pick playing session");
+        assert_eq!(info.package_name, "com.playing.app");
+        assert_eq!(info.title, "Playing Song");
+        assert!(info.is_playing);
     }
 }

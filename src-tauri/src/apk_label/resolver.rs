@@ -18,6 +18,10 @@ impl ApkLabelResolver {
         }
     }
 
+    pub fn cached(&self, package_name: &str) -> Option<String> {
+        self.cache.get(package_name).cloned()
+    }
+
     pub async fn resolve<D: ADBDeviceExt + Send>(
         &mut self,
         package_name: &str,
@@ -45,6 +49,14 @@ impl ApkLabelResolver {
         package_name: &str,
         device: &mut D,
     ) -> Result<String> {
+        // ponytail: package名は英数・ドット・アンダースコアのみ。正規表現クレート不要の1行ガード
+        if package_name.is_empty()
+            || !package_name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_')
+        {
+            anyhow::bail!("invalid package name");
+        }
         let apk_path = self.get_apk_path(package_name, device).await?;
         let local_path = self.cache_dir.join(format!("{}.apk", package_name));
 

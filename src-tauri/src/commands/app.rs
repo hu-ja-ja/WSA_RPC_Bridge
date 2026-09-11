@@ -48,23 +48,38 @@ pub async fn get_adb_status(_state: State<'_, AppState>) -> Result<bool, String>
 #[cfg(not(target_os = "android"))]
 pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
     log::info!("get_media_info: invoked by frontend");
-    let mut adb = state.adb.lock().await;
-    let mut result = adb.get_media_info().await;
+    // ponytail: dumpsysのみADB確保。ラベル解決後は解放しYouTube検索を並行可に
+    let mut result = {
+        let mut adb = state.adb.lock().await;
+        adb.get_media_info().await
+    };
 
     if let Ok(ref mut info) = result {
-        let device = adb
-            .device()
-            .expect("device must be connected after successful get_media_info");
-        let display_name = state
-            .apk_label
-            .lock()
-            .await
-            .resolve(&info.package_name, device)
-            .await;
+        // ponytail: キャッシュ命中はADB不要。5秒ポーリング詰まり防止
+        let cached = state.apk_label.lock().await.cached(&info.package_name);
+        let display_name = match cached {
+            Some(name) => name,
+            None => {
+                let mut adb = state.adb.lock().await;
+                match adb.device() {
+                    Some(device) => {
+                        state
+                            .apk_label
+                            .lock()
+                            .await
+                            .resolve(&info.package_name, device)
+                            .await
+                    }
+                    None => info.package_name.clone(),
+                }
+            }
+        };
         info.display_name = Some(display_name);
 
-        let mut registry = state.artwork.lock().await;
-        let thumb = registry.resolve(info).await;
+        let thumb = {
+            let mut registry = state.artwork.lock().await;
+            registry.resolve(info).await
+        };
         if let Some(ref url) = thumb {
             info.thumbnail_url = Some(url.clone());
         }
@@ -87,7 +102,7 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
 #[cfg(target_os = "android")]
 pub async fn get_media_info(
     app: AppHandle,
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
 ) -> Result<MediaInfo, String> {
     let info = crate::android::media_state()
         .lock()
@@ -268,7 +283,7 @@ pub fn update_settings(
     config: AppConfig,
 ) -> Result<(), String> {
     let old = state.config.get();
-    state.config.set(config.clone());
+    state.config.set(config.clone())?;
     if old.auto_start != config.auto_start {
         if config.auto_start {
             let _ = app.autolaunch().enable();
@@ -291,7 +306,7 @@ pub fn update_settings(
 ) -> Result<(), String> {
     crate::android::save_whitelist(&config.media_whitelist)?;
     crate::android::set_media_notification_enabled(config.media_notification)?;
-    state.config.set(config.clone());
+    state.config.set(config.clone())?;
     log::info!("update_settings: settings updated");
     Ok(())
 }

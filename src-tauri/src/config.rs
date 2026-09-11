@@ -68,11 +68,16 @@ impl ConfigManager {
                 Err(_) => {
                     let default = AppConfig::default();
                     if let Some(parent) = self.path.parent() {
-                        let _ = fs::create_dir_all(parent);
+                        if let Err(e) = fs::create_dir_all(parent) {
+                            log::warn!("config dir create failed: {e}");
+                        }
                     }
                     if let Ok(json) = serde_json::to_string_pretty(&default) {
-                        let _ = fs::write(&self.path, &json);
-                        log::info!("config file created with defaults");
+                        if let Err(e) = fs::write(&self.path, &json) {
+                            log::warn!("config file create failed: {e}");
+                        } else {
+                            log::info!("config file created with defaults");
+                        }
                     }
                     default
                 }
@@ -82,13 +87,13 @@ impl ConfigManager {
         guard.as_ref().expect("config not initialized").clone()
     }
 
-    pub fn set(&self, config: AppConfig) {
+    pub fn set(&self, config: AppConfig) -> Result<(), String> {
         if let Some(parent) = self.path.parent() {
-            let _ = fs::create_dir_all(parent);
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        if let Ok(json) = serde_json::to_string_pretty(&config) {
-            let _ = fs::write(&self.path, &json);
-        }
+        let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+        fs::write(&self.path, &json).map_err(|e| e.to_string())?;
         *self.inner.lock().expect("config mutex poisoned") = Some(config);
+        Ok(())
     }
 }
