@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
-import { Config, Data, Effect, Exit, Schedule, Secret } from 'effect';
+import { Data, Effect, Exit, Schedule } from 'effect';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC_TAURI = join(ROOT, 'src-tauri');
@@ -62,23 +62,24 @@ const runCommand = (cmd: string, args: string[], extraEnv: Record<string, string
     }),
   );
 
-const requiredEnv = (name: string): Effect.Effect<string, ArtifactsError> =>
-  Config.string(name).pipe(
-    Effect.map((v) => v.trim()),
-    Effect.flatMap((v) => (v ? Effect.succeed(v) : Effect.fail(new ArtifactsError({ message: `${name} is not set` })))),
-    Effect.mapError((e) =>
-      e instanceof ArtifactsError ? e : new ArtifactsError({ message: `${name} is not set` })
-    ),
-  );
+const readEnv = (name: string): string | undefined => {
+  const v = process.env[name]?.trim();
+  return v || undefined;
+};
 
-const secretEnv = (name: string): Effect.Effect<string, KeystoreError> =>
-  Config.secret(name).pipe(
-    Effect.map((s) => Secret.value(s).trim()),
-    Effect.flatMap((v) => (v ? Effect.succeed(v) : Effect.fail(new KeystoreError({ message: `${name} is not set` })))),
-    Effect.mapError((e) =>
-      e instanceof KeystoreError ? e : new KeystoreError({ message: `${name} is not set` })
-    ),
-  );
+const requiredEnv = (name: string): Effect.Effect<string, ArtifactsError> => {
+  const v = readEnv(name);
+  return v === undefined
+    ? Effect.fail(new ArtifactsError({ message: `${name} is not set` }))
+    : Effect.succeed(v);
+};
+
+const secretEnv = (name: string): Effect.Effect<string, KeystoreError> => {
+  const v = readEnv(name);
+  return v === undefined
+    ? Effect.fail(new KeystoreError({ message: `${name} is not set` }))
+    : Effect.succeed(v);
+};
 
 const readText = (path: string): Effect.Effect<string, ArtifactsError> =>
   Effect.try({
@@ -262,21 +263,16 @@ export const extractZipEntry = (buf: Buffer, entry: ZipEntry): Effect.Effect<Buf
   });
 
 // ── download-sdk ───────────────────────────────────────────────────
-const fetchRetry = Schedule.exponential('1 second', 2).pipe(Schedule.compose(Schedule.recurs(4)));
-
 // Transient HTTP failures worth retrying in CI (timeouts, rate limits, 5xx).
 const retryableStatus = (status: number): boolean =>
   status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
 
 const cmdDownloadSdk = (): Effect.Effect<void, DownloadError | ArchiveError | ArtifactsError> =>
   Effect.gen(function* () {
-    const url = yield* Config.string('SDK_URL').pipe(
-      Effect.map((v) => v.trim()),
-      Effect.mapError(() => new DownloadError({ message: 'SDK_URL is not set', retryable: false })),
-      Effect.flatMap((v) =>
-        v ? Effect.succeed(v) : Effect.fail(new DownloadError({ message: 'SDK_URL is not set', retryable: false }))
-      ),
-    );
+    const url = readEnv('SDK_URL');
+    if (url === undefined) {
+      return yield* Effect.fail(new DownloadError({ message: 'SDK_URL is not set', retryable: false }));
+    }
     const out = join(ANDROID_PROJECT, 'app', 'libs', 'discord_partner_sdk.aar');
     yield* Effect.try({
       try: () => mkdirSync(dirname(out), { recursive: true }),
@@ -297,7 +293,13 @@ const cmdDownloadSdk = (): Effect.Effect<void, DownloadError | ArchiveError | Ar
         e instanceof DownloadError
           ? e
           : new DownloadError({ message: `SDK download failed: ${String(e)}`, retryable: true }),
-    }).pipe(Effect.retry({ schedule: fetchRetry, while: (e) => e.retryable }));
+    }).pipe(
+      Effect.retry({
+        schedule: Schedule.exponential('1 second', 2),
+        times: 4,
+        while: (e) => e.retryable,
+      }),
+    );
     if (!zip.length) return yield* Effect.fail(new ArchiveError({ message: 'SDK download failed (empty body)' }));
     yield* Effect.logInfo(`downloaded ${zip.length} bytes`);
     const wanted = 'discord_social_sdk/lib/release/discord_partner_sdk.aar';
@@ -353,13 +355,10 @@ const cmdKeystore = (): Effect.Effect<void, KeystoreError> =>
         });
       },
     });
-    const githubEnv = yield* Config.string('GITHUB_ENV').pipe(
-      Effect.map((v) => v.trim()),
-      Effect.flatMap((v) => (v ? Effect.succeed(v) : Effect.fail(new KeystoreError({ message: 'GITHUB_ENV is not set' })))),
-      Effect.mapError((e) =>
-        e instanceof KeystoreError ? e : new KeystoreError({ message: 'GITHUB_ENV is not set' })
-      ),
-    );
+    const githubEnv = readEnv('GITHUB_ENV');
+    if (githubEnv === undefined) {
+      return yield* Effect.fail(new KeystoreError({ message: 'GITHUB_ENV is not set' }));
+    }
     const alias = yield* secretEnv('KEY_ALIAS');
     const keypass = yield* secretEnv('KEY_PASSWORD');
     yield* Effect.try({
@@ -514,12 +513,12 @@ const cmdChecksums = (): Effect.Effect<void, ArtifactsError> =>
           maxBuffer: MAX_OUTPUT,
         }),
       catch: (e) => new ArtifactsError({ message: `keytool failed: ${redactSecrets(String(e), [storepass, alias])}` }),
-    }).pipe(Effect.either);
-    if (result._tag === 'Left') {
-      yield* Effect.logWarning(`${result.left.message}; skipping fingerprint`);
+    }).pipe(Effect.result);
+    if (result._tag === 'Failure') {
+      yield* Effect.logWarning(`${result.failure.message}; skipping fingerprint`);
       return;
     }
-    const m = result.right.match(/SHA256:\s*([0-9A-Fa-f:]+)/);
+    const m = result.success.match(/SHA256:\s*([0-9A-Fa-f:]+)/);
     if (!m) {
       yield* Effect.logWarning('keytool fingerprint extraction failed');
       return;

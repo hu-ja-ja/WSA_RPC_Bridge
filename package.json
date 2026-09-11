@@ -28,7 +28,7 @@
     "@effect/tsgo": "^0.44.0",
     "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^24.13.2",
-    "effect": "^3.22.2",
+    "effect": "4.0.0-rc.113",
     "oxlint": "^1.82.0",
     "oxlint-tsgolint": "^7.0.2001",
     "typescript": "~6.0.2",

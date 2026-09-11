@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
-import { Cause, Effect, Exit, Option } from 'effect';
+import { Cause, Effect, Exit, Option, Schedule } from 'effect';
 import { ArchiveError, buildDownloadGuide, extractNotes, extractZipEntry, parseZip, redactSecrets } from './pipeline.ts';
 
 // ── minimal zip builder (local/central/EOCD, no deps) ──
@@ -51,7 +51,7 @@ const run = <A>(effect: Effect.Effect<A, ArchiveError>): Promise<A> => Effect.ru
 const runErrorTag = async (effect: Effect.Effect<unknown, ArchiveError>): Promise<string> => {
   const exit = await Effect.runPromiseExit(effect);
   if (!Exit.isFailure(exit)) throw new Error('expected failure');
-  const failure = Cause.failureOption(exit.cause);
+  const failure = Cause.findErrorOption(exit.cause);
   if (!Option.isSome(failure)) throw new Error('expected failure');
   return failure.value._tag;
 };
@@ -147,5 +147,26 @@ describe('buildDownloadGuide', () => {
     const guide = buildDownloadGuide({ version: '0.4.1', repo: 'o/r', msi: 'a.msi' });
     assert.doesNotMatch(guide, /Android:/);
     assert.match(guide, /a\.msi/);
+  });
+});
+
+describe('retry times', () => {
+  it('retries up to `times` after the initial attempt', async () => {
+    let attempts = 0;
+    const alwaysFails = Effect.gen(function* () {
+      attempts++;
+      return yield* Effect.fail(new ArchiveError({ message: 'boom' }));
+    });
+    const exit = await Effect.runPromiseExit(
+      alwaysFails.pipe(
+        Effect.retry({
+          schedule: Schedule.spaced(1),
+          times: 4,
+          while: () => true,
+        }),
+      ),
+    );
+    assert.ok(Exit.isFailure(exit));
+    assert.equal(attempts, 5);
   });
 });
