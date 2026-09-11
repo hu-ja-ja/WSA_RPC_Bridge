@@ -46,9 +46,13 @@ type CiError = DownloadError | ArchiveError | KeystoreError | ArtifactsError | C
 
 // ── helpers ────────────────────────────────────────────────────────
 // Direct process spawn (not via shell despite the history of this helper).
+// maxBuffer must fit the largest expected output: `cargo metadata` prints
+// megabytes of JSON, and node kills the child with SIGTERM past the limit
+// (default is ~1MB). That silent death masqueraded as flaky CI for a while.
+const MAX_OUTPUT = 64 * 1024 * 1024;
 const runCommand = (cmd: string, args: string[], extraEnv: Record<string, string> = {}): Effect.Effect<string, CargoError> =>
   Effect.try({
-    try: () => spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf-8', env: { ...process.env, ...extraEnv } }),
+    try: () => spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf-8', env: { ...process.env, ...extraEnv }, maxBuffer: MAX_OUTPUT }),
     catch: () => new CargoError({ message: `failed to spawn ${cmd}` }),
   }).pipe(
     Effect.flatMap((r) => {
@@ -106,21 +110,15 @@ const runnerTemp = (): string => process.env['RUNNER_TEMP'] || tmpdir();
 // NOTE: Tauri/wry の build.rs と処理が重複している。Tauri更新時はここも要確認。
 const cmdAndroidCodegen = (): Effect.Effect<void, CargoError | ArtifactsError> =>
   Effect.gen(function* () {
-    // Offline first: dependency versions are locked and the registry is
-    // cached, so metadata needs no network in the normal case. This also
-    // sidesteps flaky index updates (which once died silently after ~35s).
-    // Fall back to online for cold caches.
-    const tailArgs = ['--format-version', '1', '--manifest-path', join(SRC_TAURI, 'Cargo.toml')];
-    const output = yield* runCommand('cargo', ['metadata', '--offline', ...tailArgs]).pipe(
-      Effect.catchAll((e) =>
-        Effect.zipRight(
-          Effect.logWarning(`offline metadata failed; retrying online (${e.message})`),
-          runCommand('cargo', ['metadata', ...tailArgs]),
-        )
-      ),
-    );
+    const output = yield* runCommand('cargo', [
+      'metadata',
+      '--format-version',
+      '1',
+      '--manifest-path',
+      join(SRC_TAURI, 'Cargo.toml'),
+    ]);
     const meta = yield* Effect.try({
-      try: () => JSON.parse(output) as { packages: { name: string; manifest_path: string }[] },
+      try: () => JSON.parse(output.replace(/^\uFEFF/, '')) as { packages: { name: string; manifest_path: string }[] },
       catch: () => new CargoError({ message: 'cargo metadata output is invalid JSON' }),
     });
     const rootManifest = resolve(SRC_TAURI, 'Cargo.toml');
@@ -513,6 +511,7 @@ const cmdChecksums = (): Effect.Effect<void, ArtifactsError> =>
         execFileSync('keytool', ['-list', '-v', '-keystore', keystore, '-alias', alias, '-storepass', storepass], {
           encoding: 'utf-8',
           stdio: ['ignore', 'pipe', 'pipe'],
+          maxBuffer: MAX_OUTPUT,
         }),
       catch: (e) => new ArtifactsError({ message: `keytool failed: ${redactSecrets(String(e), [storepass, alias])}` }),
     }).pipe(Effect.either);
