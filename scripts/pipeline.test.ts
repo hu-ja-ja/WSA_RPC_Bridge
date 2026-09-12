@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
 import { Cause, Effect, Exit, Option, Schedule } from 'effect';
-import { ArchiveError, buildDownloadGuide, extractNotes, extractZipEntry, parseZip, redactSecrets } from './pipeline.ts';
+import { ArchiveError, buildAndroidUpdateJson, buildDesktopUpdateJson, buildDownloadGuide, extractNotes, extractZipEntry, parseZip, redactSecrets } from './pipeline.ts';
 
 // ── minimal zip builder (local/central/EOCD, no deps) ──
 const enc = new TextEncoder();
@@ -147,6 +147,36 @@ describe('buildDownloadGuide', () => {
     const guide = buildDownloadGuide({ version: '0.4.1', repo: 'o/r', msi: 'a.msi' });
     assert.doesNotMatch(guide, /Android:/);
     assert.match(guide, /a\.msi/);
+  });
+});
+
+describe('update-json split', () => {
+  it('desktop manifest keeps windows-only with signature+url (Tauri strict parse)', () => {
+    const json = buildDesktopUpdateJson({
+      version: '0.4.1',
+      notes: 'n',
+      pubDate: '2026-09-12T00:00:00.000Z',
+      signature: 'sig',
+      url: 'https://github.com/o/r/releases/download/0.4.1/a.msi',
+    }) as { platforms: Record<string, { signature?: unknown; url?: unknown }> };
+    assert.deepEqual(Object.keys(json.platforms), ['windows-x86_64']);
+    for (const entry of Object.values(json.platforms)) {
+      assert.equal(typeof entry.signature, 'string');
+      assert.ok((entry.signature as string).length > 0);
+      assert.ok((entry.url as string).startsWith('https://'));
+    }
+    assert.doesNotMatch(JSON.stringify(json), /android-aarch64/);
+  });
+
+  it('android manifest carries a top-level url and no platforms key', () => {
+    const json = buildAndroidUpdateJson({
+      version: '0.4.1',
+      notes: 'n',
+      pubDate: '2026-09-12T00:00:00.000Z',
+      url: 'https://github.com/o/r/releases/download/0.4.1/w.apk',
+    }) as Record<string, unknown>;
+    assert.equal(json['url'], 'https://github.com/o/r/releases/download/0.4.1/w.apk');
+    assert.ok(!('platforms' in json));
   });
 });
 

@@ -66,7 +66,7 @@ usage = 'arg "<version>"'
 run = "node scripts/pipeline.ts release-notes \"{{usage.version}}\""
 
 [tasks."pipeline:update-json"]
-description = "Generate update.json (and rename the APK) for a version"
+description = "Generate update.json + update-android.json (and rename the APK) for a version"
 usage = 'arg "<version>"'
 run = "node scripts/pipeline.ts update-json \"{{usage.version}}\""
 

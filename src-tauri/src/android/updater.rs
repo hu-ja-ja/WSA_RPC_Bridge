@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use jni::jni_sig;
@@ -52,10 +51,10 @@ fn bridge_class() -> Result<&'static jni::objects::Global<jni::objects::JClass<'
         .ok_or_else(|| "UpdateBridge class not cached (UpdateBridge.init not called)".to_string())
 }
 
-/// update.json の取得先。Win版 updater の endpoints と同じものを見る。
-const UPDATE_URL: &str = "https://hu-ja-ja.github.io/WSA_RPC_Bridge/update.json";
-/// update.json の platforms 内の Android 用キー。release.yml で付与する。
-const PLATFORM_KEY: &str = "android-aarch64";
+/// update-android.json の取得先。Win版 updater 用の update.json とは別ファイルにする。
+/// update.json の platforms に signature なしのエントリを同居させると
+/// Windows 側が `missing field 'signature'` で検証前に落ちるため。
+const UPDATE_URL: &str = "https://hu-ja-ja.github.io/WSA_RPC_Bridge/update-android.json";
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,11 +68,6 @@ pub struct AndroidUpdateStatus {
 #[derive(serde::Deserialize)]
 struct UpdateManifest {
     version: Option<String>,
-    platforms: Option<HashMap<String, PlatformEntry>>,
-}
-
-#[derive(serde::Deserialize)]
-struct PlatformEntry {
     url: Option<String>,
 }
 
@@ -126,9 +120,7 @@ pub async fn fetch_update_status(current: &str) -> Result<AndroidUpdateStatus, S
         .await
         .map_err(|e| e.to_string())?;
     let latest = manifest.version.unwrap_or_default();
-    let url = manifest
-        .platforms
-        .and_then(|p| p.get(PLATFORM_KEY).and_then(|e| e.url.clone()));
+    let url = manifest.url;
     Ok(AndroidUpdateStatus {
         current_version: current.to_string(),
         latest_version: latest.clone(),
@@ -283,7 +275,7 @@ pub fn install_apk(path: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_newer, sanitize_version};
+    use super::{UpdateManifest, is_newer, sanitize_version};
 
     #[test]
     fn version_compare() {
@@ -301,6 +293,16 @@ mod tests {
         assert!(!is_newer("1.0.0", "1.0.0-beta"));
         // ponytail: beta同士は比較しない仕様
         assert!(!is_newer("1.0.0-beta.1", "1.0.0-beta.2"));
+    }
+
+    #[test]
+    fn android_manifest_parses() {
+        let m: UpdateManifest = serde_json::from_str(
+            r#"{"version":"0.4.1","notes":"n","pub_date":"2026-09-12T00:00:00Z","url":"https://example.com/w.apk"}"#,
+        )
+        .unwrap();
+        assert_eq!(m.version.as_deref(), Some("0.4.1"));
+        assert_eq!(m.url.as_deref(), Some("https://example.com/w.apk"));
     }
 
     #[test]

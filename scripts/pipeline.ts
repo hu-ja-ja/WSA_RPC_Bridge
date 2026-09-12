@@ -415,6 +415,38 @@ const cmdReleaseNotes = (raw: string | undefined): Effect.Effect<void, Artifacts
   });
 
 // ── update-json (APK rename 込み) ──────────────────────────────────
+// Tauri updater は platforms の全エントリに signature+url を要求する。
+// signature なしの android エントリを同居させると Windows で
+// `missing field 'signature'` になるため、Android 用は別ファイルに分離する。
+export const buildDesktopUpdateJson = (args: {
+  readonly version: string;
+  readonly notes: string;
+  readonly pubDate: string;
+  readonly signature: string;
+  readonly url: string;
+}): Record<string, unknown> => ({
+  version: args.version,
+  notes: args.notes,
+  pub_date: args.pubDate,
+  platforms: {
+    'windows-x86_64': {
+      signature: args.signature,
+      url: args.url,
+    },
+  },
+});
+
+export const buildAndroidUpdateJson = (args: {
+  readonly version: string;
+  readonly notes: string;
+  readonly pubDate: string;
+  readonly url: string;
+}): Record<string, unknown> => ({
+  version: args.version,
+  notes: args.notes,
+  pub_date: args.pubDate,
+  url: args.url,
+});
 const firstFile = (dir: string, ext: string): Effect.Effect<string | undefined, ArtifactsError> =>
   Effect.try({
     try: () => {
@@ -445,27 +477,20 @@ const cmdUpdateJson = (raw: string | undefined): Effect.Effect<void, ArtifactsEr
         });
         yield* Effect.logInfo(`renamed to ${apkName}`);
       }
-    } else {
-      yield* Effect.logWarning('no release APK found; skipping android update entry');
     }
     const sigPath = `${msi}.sig`;
     const sig = existsSync(sigPath) ? (yield* readText(sigPath)).trim() : '';
+    if (!sig) return yield* Effect.fail(new ArtifactsError({ message: `updater signature missing: ${sigPath}` }));
     const notesPath = join(ROOT, '.release-notes.md');
     const notes = existsSync(notesPath) ? yield* readText(notesPath) : '';
-    const platforms: Record<string, Record<string, string>> = {
-      'windows-x86_64': {
-        signature: sig,
-        url: `https://github.com/${repo}/releases/download/${version}/${basename(msi)}`,
-      },
-    };
-    if (apkName) {
-      // updater.rs PLATFORM_KEY と一致させること
-      platforms['android-aarch64'] = {
-        url: `https://github.com/${repo}/releases/download/${version}/${apkName}`,
-      };
-      yield* Effect.logInfo(`android update entry: ${apkName}`);
-    }
-    const json = { version, notes, pub_date: new Date().toISOString(), platforms };
+    const pubDate = new Date().toISOString();
+    const json = buildDesktopUpdateJson({
+      version,
+      notes,
+      pubDate,
+      signature: sig,
+      url: `https://github.com/${repo}/releases/download/${version}/${basename(msi)}`,
+    });
     const text = `${JSON.stringify(json, null, 2)}\n`;
     yield* writeText(join(ROOT, 'update.json'), text);
     const pages = join(runnerTemp(), 'pages');
@@ -475,6 +500,20 @@ const cmdUpdateJson = (raw: string | undefined): Effect.Effect<void, ArtifactsEr
     });
     yield* writeText(join(pages, 'update.json'), text);
     yield* Effect.logInfo(`update.json generated for version ${version}`);
+    if (apkName) {
+      const androidJson = buildAndroidUpdateJson({
+        version,
+        notes,
+        pubDate,
+        url: `https://github.com/${repo}/releases/download/${version}/${apkName}`,
+      });
+      const androidText = `${JSON.stringify(androidJson, null, 2)}\n`;
+      yield* writeText(join(ROOT, 'update-android.json'), androidText);
+      yield* writeText(join(pages, 'update-android.json'), androidText);
+      yield* Effect.logInfo(`update-android.json generated: ${apkName}`);
+    } else {
+      yield* Effect.logWarning('no release APK found; skipping update-android.json');
+    }
     const guide = buildDownloadGuide({ version, repo, msi: basename(msi), apk: apkName });
     const prev = existsSync(notesPath) ? yield* readText(notesPath) : '';
     yield* writeText(join(ROOT, '.release-notes.md'), `${prev.trimEnd()}\n\n${guide}`);
