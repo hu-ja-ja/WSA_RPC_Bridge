@@ -1,11 +1,11 @@
 {
-  "version": "0.4.3",
-  "notes": "### 追加\n\n- ログ出力機能を追加\n\n### 変更\n\n- リリース処理を改善\n- Windows版のアップデーターでフリーズする問題を修正\n- その他細かい変更\n",
-  "pub_date": "2026-09-12T17:37:32.292Z",
+  "version": "0.4.4",
+  "notes": "Release 0.4.4\n\nCHANGELOG.md に ## [0.4.4] の節がありません。\n",
+  "pub_date": "2026-09-12T18:06:26.535Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0THdSWFFnbk1LU2ZrQ2hlSXpXWEtxYTZhaEJFaVJGWkY1cW5kSDlaV05IOTFhQm5ub0xZaGNPRmRBWFNXeWtXS01sZUNOWXZsYm1zNWJlRU84bjZ0dndnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5MjM0MjUwCWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjNfeDY0X2VuLVVTLm1zaQpGR1hBeFhWTS8xRE90SjFiNzd6RlNvSk8vZ0dYVmpXMU9tQUU0bGFoa2RPTWdOTlREVVcxTWhmZHhrc1MwaFBtenkrQzJ0SndhVE5wcnlEWGc3YndDZz09Cg==",
-      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.3/wsa-rpc-bridge_0.4.3_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDBSWnVpcEE4MnNUd0tqeWhYcjMrV2NnbytPZlRZUUN0VVhXZjB1QUlUK2RHcFpFWmE1Q3hlWUNvRTRRSGxhTGFyL0x0STdwdHJQVGwvRHMwY0gxSndjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5MjM2MTY0CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjRfeDY0X2VuLVVTLm1zaQp6ZlVKUmxJSE1FNDNueFlMREJhWUVtdWdvUHBENWJzeFEyYStBYTltWFJUQWNXRWk2SzdIS3hLbnU3TnNKQlpVYWxOUk03a1g1bFFCNTliUUFHQnpEdz09Cg==",
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.4/wsa-rpc-bridge_0.4.4_x64_en-US.msi"
     }
   }
 }
