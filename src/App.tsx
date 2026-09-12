@@ -79,6 +79,7 @@ function App() {
   })
 
   let pollingTimer: ReturnType<typeof setInterval> | undefined
+  let pollingBusy = false
   let lastPresenceKey: string | null = null
   let settingsLoaded = false
   let dragStart: { x: number; y: number } | null = null
@@ -124,11 +125,22 @@ function App() {
         setLastFetch(null)
       }
       if (rpcEnabled()) {
-        await invoke('connect_discord')
+        try {
+          await invoke('connect_discord')
+        } catch (e) {
+          // ponytail: キュー満杯は捨てて次pollで再送。キーも進めない
+          console.debug('connect_discord busy, retry next poll', e)
+          return
+        }
         const key = `${result.title}|${result.artist}|${result.album}|${result.is_playing}|${result.position ?? 0}`
         // ponytail: 切断中に取りこぼした presence を救うため、未接続観測時はキー一致でも送り直す
         if (key !== lastPresenceKey || !discordConnected()) {
-          await invoke('update_discord_presence', { info: result })
+          try {
+            await invoke('update_discord_presence', { info: result })
+          } catch (e) {
+            console.debug('update_discord_presence busy, retry next poll', e)
+            return
+          }
           lastPresenceKey = key
         }
       }
@@ -278,7 +290,7 @@ function App() {
     }
 
     if (!IS_ANDROID) {
-      check().then(update => {
+      check({ timeout: 15000 }).then(update => {
         if (update && Notification.permission === 'granted') {
           new Notification('WSA RPC Bridge', {
             body: t('updates.update_available_notification', { version: update.version })
@@ -350,16 +362,23 @@ function App() {
       onCleanup(unlistenRpc)
     } else {
       pollingTimer = setInterval(async () => {
-        const dc = await checkStatus()
-        // ponytail: メディア有無と独立に再接続。無音中に Discord が起動しても追いつく
-        if (rpcEnabled() && !dc) {
-          try {
-            await invoke('connect_discord')
-          } catch (e) {
-            console.error('periodic connect_discord failed', e)
+        // ponytail: 前回がADB詰まりで未完なら被せない。キュー膨張防止
+        if (pollingBusy) return
+        pollingBusy = true
+        try {
+          const dc = await checkStatus()
+          // ponytail: メディア有無と独立に再接続。無音中に Discord が起動しても追いつく
+          if (rpcEnabled() && !dc) {
+            try {
+              await invoke('connect_discord')
+            } catch (e) {
+              console.error('periodic connect_discord failed', e)
+            }
           }
+          await fetchMediaInfo()
+        } finally {
+          pollingBusy = false
         }
-        await fetchMediaInfo()
       }, POLL_INTERVAL)
       onCleanup(() => {
         if (pollingTimer) clearInterval(pollingTimer)

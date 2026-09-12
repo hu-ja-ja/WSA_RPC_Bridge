@@ -40,6 +40,7 @@ export function UpdatesPanel() {
   let pendingApkVersion: string | null = null
 
   async function handleCheckUpdate() {
+    if (updateState() === 'checking' || updateState() === 'downloading') return
     setUpdateState('checking')
     setUpdateError(null)
     setPermissionNeeded(false)
@@ -66,7 +67,7 @@ export function UpdatesPanel() {
       return
     }
     try {
-      pendingUpdate = await check()
+      pendingUpdate = await check({ timeout: 15000 })
       if (!pendingUpdate) {
         setUpdateState('uptodate')
         return

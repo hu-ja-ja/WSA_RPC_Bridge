@@ -47,7 +47,7 @@ pub async fn get_adb_status(_state: State<'_, AppState>) -> Result<bool, String>
 #[tauri::command]
 #[cfg(not(target_os = "android"))]
 pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, String> {
-    log::info!("get_media_info: invoked by frontend");
+    log::debug!("get_media_info: invoked by frontend");
     // ponytail: dumpsysのみADB確保。ラベル解決後は解放しYouTube検索を並行可に
     let mut result = {
         let mut adb = state.adb.lock().await;
@@ -157,10 +157,9 @@ pub async fn get_media_info(
 
 #[tauri::command]
 #[cfg(not(target_os = "android"))]
-pub fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
-    log::info!("connect_discord: connecting to Discord IPC");
-    state.discord.connect();
-    Ok(())
+pub async fn connect_discord(state: State<'_, AppState>) -> Result<(), String> {
+    log::debug!("connect_discord: connecting to Discord IPC");
+    state.discord.connect()
 }
 
 #[tauri::command]
@@ -180,10 +179,9 @@ pub fn connect_discord(app: AppHandle, state: State<'_, AppState>) -> Result<(),
 
 #[tauri::command]
 #[cfg(not(target_os = "android"))]
-pub fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
-    log::info!("disconnect_discord: disconnecting from Discord IPC");
-    state.discord.disconnect();
-    Ok(())
+pub async fn disconnect_discord(state: State<'_, AppState>) -> Result<(), String> {
+    log::debug!("disconnect_discord: disconnecting from Discord IPC");
+    state.discord.disconnect()
 }
 
 #[tauri::command]
@@ -200,10 +198,12 @@ pub fn disconnect_discord(app: AppHandle, state: State<'_, AppState>) -> Result<
 
 #[tauri::command]
 #[cfg(not(target_os = "android"))]
-pub fn update_discord_presence(state: State<'_, AppState>, info: MediaInfo) -> Result<(), String> {
+pub async fn update_discord_presence(
+    state: State<'_, AppState>,
+    info: MediaInfo,
+) -> Result<(), String> {
     log::debug!("update_discord_presence: title={:?}", info.title);
-    state.discord.update_presence(&info);
-    Ok(())
+    state.discord.update_presence(&info)
 }
 
 #[tauri::command]

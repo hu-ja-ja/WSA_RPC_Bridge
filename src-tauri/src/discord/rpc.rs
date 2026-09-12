@@ -160,17 +160,23 @@ impl DiscordRpc {
         Self { tx, connected }
     }
 
-    pub fn connect(&self) {
-        let _ = self.tx.send(DiscordCmd::Connect);
+    // ponytail: 同期コマンドはメインスレッド実行のため blocking send 禁止。満杯は Err で返し frontend が次pollで再送する
+    pub fn connect(&self) -> Result<(), String> {
+        self.tx
+            .try_send(DiscordCmd::Connect)
+            .map_err(|e| format!("discord queue busy: {e}"))
     }
 
-    pub fn update_presence(&self, info: &MediaInfo) {
-        // ponytail: try_send だと満杯時に黙って捨てられ frontend は成功扱いでキーを消費してしまうため blocking 送達にする
-        let _ = self.tx.send(DiscordCmd::UpdatePresence(info.clone()));
+    pub fn update_presence(&self, info: &MediaInfo) -> Result<(), String> {
+        self.tx
+            .try_send(DiscordCmd::UpdatePresence(info.clone()))
+            .map_err(|e| format!("discord queue busy: {e}"))
     }
 
-    pub fn disconnect(&self) {
-        let _ = self.tx.send(DiscordCmd::Disconnect);
+    pub fn disconnect(&self) -> Result<(), String> {
+        self.tx
+            .try_send(DiscordCmd::Disconnect)
+            .map_err(|e| format!("discord queue busy: {e}"))
     }
 
     pub fn is_connected(&self) -> bool {
