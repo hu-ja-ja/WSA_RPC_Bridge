@@ -194,7 +194,7 @@ const cmdAndroidCodegen = (): Effect.Effect<void, CargoError | ArtifactsError> =
   });
 
 // ── sync-version ───────────────────────────────────────────────────
-const cmdSyncVersion = (raw: string | undefined): Effect.Effect<void, ArtifactsError> =>
+const cmdSyncVersion = (raw: string | undefined): Effect.Effect<void, ArtifactsError | CargoError> =>
   Effect.gen(function* () {
     const version = yield* stripV(raw, 'pipeline.ts sync-version <version>');
     const confPath = join(SRC_TAURI, 'tauri.conf.json');
@@ -203,6 +203,7 @@ const cmdSyncVersion = (raw: string | undefined): Effect.Effect<void, ArtifactsE
     const tomlPath = join(SRC_TAURI, 'Cargo.toml');
     const toml = (yield* readText(tomlPath)).replace(/^version = ".*"/m, `version = "${version}"`);
     yield* writeText(tomlPath, toml);
+    yield* runCommand('cargo', ['metadata', '--format-version', '1', '--manifest-path', join(SRC_TAURI, 'Cargo.toml')]);
     yield* Effect.logInfo(`synced version ${version}`);
   });
 
