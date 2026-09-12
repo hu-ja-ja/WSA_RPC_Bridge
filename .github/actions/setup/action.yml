@@ -20,7 +20,7 @@ runs:
     - if: runner.os == 'Linux'
       name: Install cargo-about
       shell: bash
-      run: cargo install cargo-about --version 0.9.1 --locked
+      run: cargo install --locked --features cli cargo-about --version 0.9.1
 
     - if: inputs.js == 'true'
       name: Get pnpm store path
