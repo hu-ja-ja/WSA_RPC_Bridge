@@ -19,16 +19,12 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: github-pages
-  cancel-in-progress: false
-
 env:
   MISE_TASK_OUTPUT: prefix
 
 jobs:
-  build:
-    runs-on: windows-latest
+  build-android:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -58,14 +54,84 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: mise run pipeline:keystore
 
+      - name: Generate licenses
+        run: mise run generate-licenses
+
       - name: Build Android APK (aarch64)
         run: pnpm tauri android build --apk --target aarch64
+
+      - name: Stop Gradle daemon
+        if: always()
+        working-directory: src-tauri/gen/android
+        run: ./gradlew --stop
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          rust: 'true'
+
+      - name: Sync version from input
+        run: mise run pipeline:sync-version "${{ inputs.version }}"
+
+      - name: Generate licenses
+        run: mise run generate-licenses
 
       - name: Build Windows MSI
         run: pnpm tauri build --bundles msi
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
+          if-no-files-found: error
+
+  release:
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/
+
+      - name: Download MSI
+        uses: actions/download-artifact@v4
+        with:
+          name: msi
+          path: src-tauri/target/release/bundle/msi/
+
+      - name: Decode Android signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: mise run pipeline:keystore
 
       - name: Generate SHA-256 checksums
         run: mise run pipeline:checksums
