@@ -1,10 +1,10 @@
 {
   "version": "0.4.4",
-  "notes": "Release 0.4.4\n\nCHANGELOG.md に ## [0.4.4] の節がありません。\n",
-  "pub_date": "2026-09-12T18:06:26.535Z",
+  "notes": "### 変更\n\n- Android版のアップデーターで、更新時に更新中のままになる問題を修正\n",
+  "pub_date": "2026-09-12T18:27:31.547Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDBSWnVpcEE4MnNUd0tqeWhYcjMrV2NnbytPZlRZUUN0VVhXZjB1QUlUK2RHcFpFWmE1Q3hlWUNvRTRRSGxhTGFyL0x0STdwdHJQVGwvRHMwY0gxSndjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5MjM2MTY0CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjRfeDY0X2VuLVVTLm1zaQp6ZlVKUmxJSE1FNDNueFlMREJhWUVtdWdvUHBENWJzeFEyYStBYTltWFJUQWNXRWk2SzdIS3hLbnU3TnNKQlpVYWxOUk03a1g1bFFCNTliUUFHQnpEdz09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0THd1YlI3bnRPTnpuUWF0MjJpa3paWGRvMnlEY1gwc0d6ejZyWUg4WXFQYkJmWCtPQjNhU1d4WlVhME01ajdZUGVvU2Yyb3NqMkFjRkdaYlordVRwY2dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5MjM3Mjk2CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjRfeDY0X2VuLVVTLm1zaQo4RFlPL3o2eHZhYVRPWElGNnlGZzBqS2E3SU44QjBGc2lMMFFwQ3RvdjdVYS83L3puRUVUL1lINTRHQ1U2U1FBTDdBRlEvckFkaW1IaE1abmtqSTRBQT09Cg==",
       "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.4/wsa-rpc-bridge_0.4.4_x64_en-US.msi"
     }
   }
