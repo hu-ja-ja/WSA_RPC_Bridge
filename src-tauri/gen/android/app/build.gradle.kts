@@ -93,6 +93,9 @@ rust {
 }
 
 dependencies {
+    if (file("libs/rustls-platform-verifier.aar").exists()) {
+        implementation(files("libs/rustls-platform-verifier.aar"))
+    }
     // Discord SDK はライセンス上リポジトリに置けず、ビルド時に取得される。
     // 無い環境(CI のユニットテスト)では DiscordBridge はリフレクションで呼ぶので依存を落とす。
     if (file("libs/discord_partner_sdk.aar").exists()) {

@@ -57,6 +57,9 @@ jobs:
       - name: Generate licenses
         run: mise run generate-licenses
 
+      - name: Generate Android codegen and verifier dependency
+        run: mise run pipeline:codegen
+
       - name: Build Android APK (aarch64)
         run: pnpm tauri android build --apk --target aarch64
 

@@ -172,6 +172,19 @@ const cmdAndroidCodegen = (): Effect.Effect<void, CargoError | ArtifactsError> =
             'utf-8',
           );
         }
+        const verifier = meta.packages.find((p) => p.name === 'rustls-platform-verifier-android');
+        if (!verifier) throw new Error('rustls-platform-verifier-android package not found');
+        const verifierVersions = join(dirname(verifier.manifest_path), 'maven', 'rustls', 'rustls-platform-verifier');
+        const verifierVersion = readdirSync(verifierVersions).find((name) =>
+          existsSync(join(verifierVersions, name, `rustls-platform-verifier-${name}.aar`)),
+        );
+        if (!verifierVersion) throw new Error('rustls platform verifier AAR not found');
+        const appLibs = join(ANDROID_PROJECT, 'app', 'libs');
+        mkdirSync(appLibs, { recursive: true });
+        cpSync(
+          join(verifierVersions, verifierVersion, `rustls-platform-verifier-${verifierVersion}.aar`),
+          join(appLibs, 'rustls-platform-verifier.aar'),
+        );
       },
       catch: () => new ArtifactsError({ message: 'kotlin template expansion failed' }),
     });
