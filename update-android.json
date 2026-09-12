@@ -1,0 +1,6 @@
+{
+  "version": "0.4.3",
+  "notes": "### 追加\n\n- ログ出力機能を追加\n\n### 変更\n\n- リリース処理を改善\n- Windows版のアップデーターでフリーズする問題を修正\n- その他細かい変更\n",
+  "pub_date": "2026-09-12T17:37:32.292Z",
+  "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.3/wsa-rpc-bridge_0.4.3_android_arm64.apk"
+}
