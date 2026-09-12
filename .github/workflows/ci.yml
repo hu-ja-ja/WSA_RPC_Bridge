@@ -42,7 +42,7 @@ jobs:
       - run: mise run test
 
   android-test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +56,5 @@ jobs:
       - run: mise run android-test
 
       - name: Stop Gradle daemon
-        shell: pwsh
         working-directory: src-tauri/gen/android
-        run: ./gradlew.bat --stop
+        run: ./gradlew --stop
