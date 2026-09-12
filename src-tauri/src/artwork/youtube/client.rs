@@ -31,16 +31,7 @@ impl YoutubeResolver {
             "query": query,
         });
 
-        if cfg!(debug_assertions) {
-            log::info!(
-                "youtube: searching innertube hl={} gl={} for {:?}",
-                hl,
-                gl,
-                query
-            );
-        } else {
-            log::debug!("youtube: searching innertube for {:?}", query);
-        }
+        crate::vlog!("youtube: searching hl={} gl={} for {}", hl, gl, m(query));
 
         let resp = self
             .client
@@ -68,8 +59,14 @@ impl YoutubeResolver {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            let snippet = body.chars().take(400).collect::<String>();
-            log::warn!("youtube: search API returned {} body={:?}", status, snippet);
+            // ponytail: 本文は候補titleを含むためlenのみ
+            log::warn!(
+                target: crate::models::MASKED_TARGET,
+                "youtube: search API returned {} len={}",
+                status,
+                body.len()
+            );
+            crate::raw_warn!("youtube: search API returned {status} body={body:?}");
             return Vec::new();
         }
 
@@ -83,11 +80,13 @@ impl YoutubeResolver {
         let json: Value = match serde_json::from_str(&text) {
             Ok(j) => j,
             Err(e) => {
-                let snippet = text.chars().take(400).collect::<String>();
+                // ponytail: 本文は候補titleを含むためlenのみ
                 log::warn!(
-                    "youtube: failed to decode search response: {e} body={:?}",
-                    snippet
+                    target: crate::models::MASKED_TARGET,
+                    "youtube: failed to decode search response: {e} len={}",
+                    text.len()
                 );
+                crate::raw_warn!("youtube: failed to decode search response: {e} body={text:?}");
                 return Vec::new();
             }
         };

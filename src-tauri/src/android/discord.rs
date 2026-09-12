@@ -280,10 +280,11 @@ pub fn discord_update_presence(info: &MediaInfo) -> Result<(), String> {
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
             );
-            log::debug!(
+            crate::mlog!(
+                debug,
                 "discord: presence update sent: {} - {} (playing={})",
-                info.title,
-                info.artist,
+                m(&info.title),
+                m(&info.artist),
                 info.is_playing
             );
         }

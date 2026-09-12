@@ -58,28 +58,22 @@ impl ArtworkRegistry {
         };
 
         if let Some(ref u) = url {
-            log::info!(
+            crate::mlog!(
+                info,
                 "artwork: resolved for {} - {}",
                 info.package_name,
-                info.title
+                m(&info.title)
             );
             self.in_memory.insert(key, Some(u.clone()));
             return Some(u.clone());
         }
 
-        if cfg!(debug_assertions) {
-            log::info!(
-                "artwork: no thumbnail for {} - {} (resolver={}) using placeholder",
-                info.package_name,
-                info.title,
-                resolver.is_some()
-            );
-        } else {
-            log::debug!(
-                "artwork: no resolver found for {}, using placeholder",
-                info.package_name
-            );
-        }
+        crate::vlog!(
+            "artwork: no thumbnail for {} - {} (resolver={})",
+            info.package_name,
+            m(&info.title),
+            resolver.is_some()
+        );
         // ponytail: don't cache placeholder - transient failure should retry next time
         Some(PLACEHOLDER_URL.to_string())
     }

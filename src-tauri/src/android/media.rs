@@ -275,22 +275,13 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
         })
         .resolve::<jni::errors::ThrowRuntimeExAndDefault>();
 
-    if cfg!(debug_assertions) {
-        log::info!(
-            "android: media update: title={:?} artist={:?} pkg={:?} playing={}",
-            info.title,
-            info.artist,
-            info.package_name,
-            info.is_playing
-        );
-    } else {
-        log::debug!(
-            "android: media update: {} - {} (playing={})",
-            info.title,
-            info.artist,
-            info.is_playing
-        );
-    }
+    crate::vlog!(
+        "android: media update: title={} artist={} pkg={:?} playing={}",
+        m(&info.title),
+        m(&info.artist),
+        info.package_name,
+        info.is_playing
+    );
     // ponytail: 情報とサムネは完全分離 — media_state はサムネを持たない
     *media_state().lock().expect("media mutex poisoned") = info.clone();
 
@@ -307,10 +298,11 @@ pub extern "system" fn Java_com_wsarpcbridge_app_MediaBridge_updateMediaInfo(
 
 fn push_media_update(app: AppHandle, info: MediaInfo) {
     if cfg!(debug_assertions) {
-        log::info!(
-            "android: push_media_update: title={:?} artist={:?} pkg={:?} playing={}",
-            info.title,
-            info.artist,
+        crate::mlog!(
+            info,
+            "android: push_media_update: title={} artist={} pkg={:?} playing={}",
+            m(&info.title),
+            m(&info.artist),
             info.package_name,
             info.is_playing
         );
@@ -340,19 +332,30 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
         }
 
         if cfg!(debug_assertions) {
-            log::info!(
-                "android: resolve: start title={:?} artist={:?} pkg={:?}",
-                info.title,
-                info.artist,
+            crate::mlog!(
+                info,
+                "android: resolve: start title={} artist={} pkg={:?}",
+                m(&info.title),
+                m(&info.artist),
                 info.package_name
             );
         }
         let url_opt = state.artwork.lock().await.resolve(&info).await;
         if cfg!(debug_assertions) {
             if let Some(ref url) = url_opt {
-                log::info!("android: resolve: got thumbnail url={}", url);
+                // ponytail: URLはtitleに復元可能なためlenのみ
+                log::info!(
+                    target: crate::models::MASKED_TARGET,
+                    "android: resolve: got thumbnail len={}",
+                    url.len()
+                );
+                crate::raw_info!("android: resolve: got thumbnail url={url}");
             } else {
-                log::info!("android: resolve: no thumbnail for title={:?}", info.title);
+                crate::mlog!(
+                    info,
+                    "android: resolve: no thumbnail for title={}",
+                    m(&info.title)
+                );
             }
         }
 
@@ -363,10 +366,11 @@ fn push_media_update(app: AppHandle, info: MediaInfo) {
                 || cur.title != info.title
                 || cur.artist != info.artist
             {
-                log::debug!(
-                    "android: resolve result discarded (stale) resolve_for={:?} cur={:?}",
-                    info.title,
-                    cur.title
+                crate::mlog!(
+                    debug,
+                    "android: resolve result discarded (stale) resolve_for={} cur={}",
+                    m(&info.title),
+                    m(&cur.title)
                 );
                 return;
             }

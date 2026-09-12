@@ -84,10 +84,11 @@ pub async fn get_media_info(state: State<'_, AppState>) -> Result<MediaInfo, Str
             info.thumbnail_url = Some(url.clone());
         }
 
-        log::info!(
-            "get_media_info: success title={:?}, artist={:?}, package={}, thumbnail={}",
-            info.title,
-            info.artist,
+        crate::mlog!(
+            info,
+            "get_media_info: success title={}, artist={}, package={}, thumbnail={}",
+            m(&info.title),
+            m(&info.artist),
             info.package_name,
             if thumb.is_some() { "有" } else { "無" },
         );
@@ -109,10 +110,11 @@ pub async fn get_media_info(
         .expect("media mutex poisoned")
         .clone();
 
-    log::info!(
-        "get_media_info: android title={:?}, artist={:?}",
-        info.title,
-        info.artist
+    crate::mlog!(
+        info,
+        "get_media_info: android title={}, artist={}",
+        m(&info.title),
+        m(&info.artist)
     );
 
     // ponytail: 情報は即時返し、サムネは別イベントで後送 — 秒数リセットを防ぐ
@@ -202,14 +204,22 @@ pub async fn update_discord_presence(
     state: State<'_, AppState>,
     info: MediaInfo,
 ) -> Result<(), String> {
-    log::debug!("update_discord_presence: title={:?}", info.title);
+    crate::mlog!(
+        debug,
+        "update_discord_presence: title={}",
+        m(&info.title)
+    );
     state.discord.update_presence(&info)
 }
 
 #[tauri::command]
 #[cfg(target_os = "android")]
 pub fn update_discord_presence(_state: State<'_, AppState>, info: MediaInfo) -> Result<(), String> {
-    log::debug!("update_discord_presence: title={:?}", info.title);
+    crate::mlog!(
+        debug,
+        "update_discord_presence: title={}",
+        m(&info.title)
+    );
     crate::android::discord_update_presence(&info)
 }
 

@@ -80,78 +80,55 @@ impl ArtworkResolver for YoutubeResolver {
             }
             if let Some((id, tier)) = pick_video(&videos, &title_q, &artist_q) {
                 let url = format!("https://i.ytimg.com/vi/{id}/mqdefault.jpg");
-                // TMPLOG: 誤検出切り分け用一時ログ（原因特定後に削除）
                 if cfg!(debug_assertions) {
-                    if let Some(m) = videos.iter().find(|v| v.0 == id) {
-                        log::info!(
-                            "youtube: TMPLOG matched title={:?} author={:?} views={} is_topic={}",
-                            m.1,
-                            m.2,
-                            m.3,
-                            m.2.to_lowercase().contains("topic")
-                        );
-                    }
-                    for (i, v) in videos.iter().take(3).enumerate() {
-                        log::info!(
-                            "youtube: TMPLOG candidate {} id={} title={:?} author={:?} views={}",
-                            i,
-                            v.0,
-                            v.1,
-                            v.2,
-                            v.3
-                        );
-                    }
-                }
-                if cfg!(debug_assertions) {
-                    log::info!(
-                        "youtube: resolved videoId={} tier={} query={:?} title={:?} artist={:?}",
-                        id,
+                    crate::mlog!(
+                        info,
+                        "youtube: resolved videoId={} tier={} query={} title={} artist={}",
+                        m(id),
                         tier,
-                        query,
-                        info.title,
-                        info.artist
+                        m(query),
+                        m(&info.title),
+                        m(&info.artist)
                     );
                 } else {
-                    log::info!("youtube: resolved thumbnail: {}", url);
+                    // ponytail: URLはtitleに復元可能なためlenのみ
+                    log::info!(
+                        target: crate::models::MASKED_TARGET,
+                        "youtube: resolved thumbnail len={}",
+                        url.len()
+                    );
+                    crate::raw_info!("youtube: resolved thumbnail: {url}");
                 }
                 return Some(url);
             }
+            crate::vlog!(
+                "youtube: no match for query {} ({} results)",
+                m(query),
+                videos.len()
+            );
             if cfg!(debug_assertions) {
-                log::info!(
-                    "youtube: no match for query {:?} ({} results)",
-                    query,
-                    videos.len()
-                );
                 if videos.is_empty() {
-                    log::info!(
-                        "youtube: no results - likely API key/version rejected for query {:?}",
-                        query
+                    crate::mlog!(
+                        info,
+                        "youtube: no results - likely key/version rejected for query {}",
+                        m(query)
                     );
                 } else {
                     for (i, v) in videos.iter().take(3).enumerate() {
-                        log::info!(
-                            "youtube: candidate {} id={} title={:?} author={:?} views={}",
+                        crate::mlog!(
+                            info,
+                            "youtube: candidate {} id={} title={} author={} views={}",
                             i,
-                            v.0,
-                            v.1,
-                            v.2,
+                            m(&v.0),
+                            m(&v.1),
+                            m(&v.2),
                             v.3
                         );
                     }
                 }
-            } else {
-                log::debug!(
-                    "youtube: no match for query {:?} ({} results)",
-                    query,
-                    videos.len()
-                );
             }
         }
-        if cfg!(debug_assertions) {
-            log::info!("youtube: no matching video for {:?}", info.title);
-        } else {
-            log::debug!("youtube: no matching video for {:?}", info.title);
-        }
+        crate::vlog!("youtube: no matching video for {}", m(&info.title));
         if had_results {
             return Some(PLACEHOLDER_URL.to_string());
         }

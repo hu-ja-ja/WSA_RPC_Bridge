@@ -80,6 +80,7 @@ impl AdbClient {
 
         for (cmd, res) in outcomes {
             match res {
+                // ponytail: host:disconnect/connect応答(OK系)のみ、PIIなし
                 Ok(body) => log::info!("adb {} -> {}", cmd, String::from_utf8_lossy(&body).trim()),
                 Err(e) => log::debug!("adb {} (ignored): {e:#}", cmd),
             }
@@ -144,11 +145,12 @@ impl AdbClient {
 
         match parse_media_session(&output_str) {
             Some(info) => {
-                log::info!(
-                    "ADB parsed media: title={:?}, artist={:?}, playing={}",
-                    info.title,
-                    info.artist,
-                    info.is_playing,
+                crate::mlog!(
+                    info,
+                    "ADB parsed media: title={}, artist={}, playing={}",
+                    m(&info.title),
+                    m(&info.artist),
+                    info.is_playing
                 );
                 Ok(info)
             }
@@ -157,9 +159,10 @@ impl AdbClient {
                     "ADB no active media session (dumpsys: {} chars)",
                     output_str.len()
                 );
+                // ponytail: raw dump holds titles, length only in file log
                 log::debug!(
-                    "ADB dumpsys output:\n{}",
-                    &output_str[..output_str.len().min(DEBUG_TRUNCATE_LEN)]
+                    "ADB dumpsys empty ({} chars)",
+                    output_str.len().min(DEBUG_TRUNCATE_LEN)
                 );
                 // ponytail: 無音は正常。frontend が切断と区別できるよう固定接頭辞を付ける
                 Err(anyhow::anyhow!("NO_SESSION: {}", tr("adb.no_session")))

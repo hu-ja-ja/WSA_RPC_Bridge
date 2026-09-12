@@ -104,7 +104,13 @@ impl DiscordRpc {
                                 .state(&info.title)
                                 .activity_type(ActivityType::Listening);
                             if let Some(ref thumb) = info.thumbnail_url {
-                                log::info!("Discord presence: large_image={}", thumb);
+                                // ponytail: URLはtitleに復元可能なためlenのみ
+                                log::info!(
+                                    target: crate::models::MASKED_TARGET,
+                                    "Discord presence: thumbnail len={}",
+                                    thumb.len()
+                                );
+                                crate::raw_info!("Discord presence: large_image={thumb}");
                                 let assets = Assets::new()
                                     .large_image(thumb.clone())
                                     .large_text(&info.artist);
@@ -128,7 +134,14 @@ impl DiscordRpc {
                             }
                             if log::log_enabled!(log::Level::Debug) {
                                 if let Ok(json) = serde_json::to_string(&activity) {
-                                    log::debug!("Discord presence payload: {}", json);
+                                    log::debug!(
+                                        target: crate::models::MASKED_TARGET,
+                                        "Discord presence payload len={} title={} artist={}",
+                                        json.len(),
+                                        crate::models::mask_text(&info.title),
+                                        crate::models::mask_text(&info.artist)
+                                    );
+                                    crate::raw_debug!("Discord presence payload: {json}");
                                 }
                             }
                             if let Err(e) = c.set_activity(activity) {
@@ -136,7 +149,12 @@ impl DiscordRpc {
                                 let _ = client.take();
                                 connected_clone.store(false, Ordering::Relaxed);
                             } else {
-                                log::info!("Discord presence updated: {} - {}", info.title, info.artist);
+                                crate::mlog!(
+                                    info,
+                                    "Discord presence updated: {} - {}",
+                                    m(&info.title),
+                                    m(&info.artist)
+                                );
                             }
                         }
                         DiscordCmd::Disconnect => {

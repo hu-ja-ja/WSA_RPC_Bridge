@@ -32,11 +32,7 @@ impl ArtworkResolver for NicoboxResolver {
              _sort=-viewCounter&_offset=0&_limit=1&_context=wsa_rpc_bridge"
         );
 
-        if cfg!(debug_assertions) {
-            log::info!("nicobox: searching niconico API: {}", url);
-        } else {
-            log::debug!("nicobox: searching niconico API: {}", url);
-        }
+        crate::vlog!("nicobox: searching api query={}", m(&info.title));
 
         let resp = self
             .client
@@ -52,8 +48,14 @@ impl ArtworkResolver for NicoboxResolver {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            let snippet = body.chars().take(400).collect::<String>();
-            log::warn!("nicobox: API returned {} body={:?}", status, snippet);
+            // ponytail: 本文は候補titleを含むためlenのみ
+            log::warn!(
+                target: crate::models::MASKED_TARGET,
+                "nicobox: API returned {} len={}",
+                status,
+                body.len()
+            );
+            crate::raw_warn!("nicobox: API returned {status} body={body:?}");
             return None;
         }
 
@@ -63,23 +65,23 @@ impl ArtworkResolver for NicoboxResolver {
         let data = &json["data"][0];
         let title = data["title"].as_str()?;
         if title != info.title {
-            if cfg!(debug_assertions) {
-                log::info!(
-                    "nicobox: title mismatch: got \"{title}\", expected \"{}\"",
-                    info.title
-                );
-            } else {
-                log::debug!(
-                    "nicobox: title mismatch: got \"{title}\", expected \"{}\"",
-                    info.title
-                );
-            }
+            crate::vlog!(
+                "nicobox: title mismatch: got {}, expected {}",
+                m(title),
+                m(&info.title)
+            );
             return None;
         }
 
         let thumbnail_url = data["thumbnailUrl"].as_str()?.to_string();
 
-        log::info!("nicobox: resolved thumbnail: {}", thumbnail_url);
+        // ponytail: URLはtitleに復元可能なためlenのみ
+        log::info!(
+            target: crate::models::MASKED_TARGET,
+            "nicobox: resolved thumbnail len={}",
+            thumbnail_url.len()
+        );
+        crate::raw_info!("nicobox: resolved thumbnail: {thumbnail_url}");
         Some(thumbnail_url)
     }
 }

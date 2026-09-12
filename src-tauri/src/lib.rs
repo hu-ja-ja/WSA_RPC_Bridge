@@ -41,6 +41,39 @@ const DISCORD_CLIENT_ID: &str = "1530562506513449120";
 #[cfg(not(target_os = "android"))]
 const APP_DIR: &str = "wsa-rpc-bridge";
 
+// ponytail: file=masked / stdout=raw(dev only)
+fn log_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    use tauri_plugin_log::{
+        RotationStrategy, Target, TargetKind, TimezoneStrategy, WEBVIEW_TARGET,
+    };
+    let mut targets = vec![
+        Target::new(TargetKind::LogDir {
+            file_name: Some("rust".into()),
+        })
+        .filter(|m| {
+            !m.target().starts_with(WEBVIEW_TARGET) && m.target() != crate::models::RAW_TARGET
+        }),
+        Target::new(TargetKind::LogDir {
+            file_name: Some("webview".into()),
+        })
+        .filter(|m| m.target().starts_with(WEBVIEW_TARGET)),
+    ];
+    if cfg!(debug_assertions) {
+        // ponytail: maskedはfileのみ、素通し+通常+webviewを端末へ
+        targets.push(
+            Target::new(TargetKind::Stdout)
+                .filter(|m| m.target() != crate::models::MASKED_TARGET),
+        );
+    }
+    tauri_plugin_log::Builder::default()
+        .level(log::LevelFilter::Debug)
+        .rotation_strategy(RotationStrategy::KeepSome(5))
+        .max_file_size(5_000_000)
+        .timezone_strategy(TimezoneStrategy::UseLocal)
+        .targets(targets)
+        .build()
+}
+
 #[cfg(not(target_os = "android"))]
 fn wsa_data_dir() -> PathBuf {
     config::app_data_base("LOCALAPPDATA", "Local").join(APP_DIR)
@@ -53,6 +86,13 @@ fn default_apk_cache_dir() -> PathBuf {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // ponytail: crash line survives in file log
+    let prev_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        log::error!("panic: {info}");
+        prev_hook(info);
+    }));
+
     #[cfg(not(target_os = "android"))]
     let apk_cache_dir = default_apk_cache_dir();
 
@@ -146,13 +186,7 @@ pub fn run() {
 
     #[cfg(not(target_os = "android"))]
     let builder = builder.setup(|app| {
-        if cfg!(debug_assertions) {
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .level(log::LevelFilter::Info)
-                    .build(),
-            )?;
-        }
+        app.handle().plugin(log_plugin())?;
 
         app.handle()
             .plugin(tauri_plugin_updater::Builder::new().build())?;
@@ -182,13 +216,7 @@ pub fn run() {
 
     #[cfg(target_os = "android")]
     let builder = builder.setup(|app| {
-        if cfg!(debug_assertions) {
-            app.handle().plugin(
-                tauri_plugin_log::Builder::default()
-                    .level(log::LevelFilter::Debug)
-                    .build(),
-            )?;
-        }
+        app.handle().plugin(log_plugin())?;
         log::info!("android: app started");
 
         // プレゼンス更新は JNI の updateMediaInfo で即時に行われるため、

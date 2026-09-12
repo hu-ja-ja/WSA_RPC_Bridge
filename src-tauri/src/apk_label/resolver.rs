@@ -102,6 +102,7 @@ impl ApkLabelResolver {
             .next()
             .ok_or_else(|| anyhow::anyhow!("no base.apk in pm path output"))?;
 
+        // ponytail: 端末内pathのためPIIなし
         log::debug!("APK path: {}", apk_path);
         Ok(apk_path)
     }
@@ -119,7 +120,13 @@ impl ApkLabelResolver {
             .pull(&remote_path, &mut file)
             .context("adb pull failed")?;
 
-        log::debug!("APK pulled to {:?}", local_path);
+        // ponytail: localは利用者名を含むためfile名のみ
+        let name = local_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("?");
+        log::debug!(target: crate::models::MASKED_TARGET, "APK pulled: {name}");
+        crate::raw_debug!("APK pulled to {local_path:?}");
         Ok(())
     }
 

@@ -119,10 +119,11 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                     title = parsed.0;
                     artist = parsed.1;
                     album = parsed.2;
-                    log::debug!(
-                        "ADB parser: metadata title={:?}, artist={:?}",
-                        title,
-                        artist
+                    crate::mlog!(
+                        debug,
+                        "ADB parser: metadata title={}, artist={}",
+                        m(&title),
+                        m(&artist)
                     );
                 }
             }
@@ -150,11 +151,12 @@ pub fn parse_media_session(output: &str) -> Option<MediaInfo> {
                 } else {
                     0
                 };
-                log::info!(
-                    "ADB parser: active={}, title={:?}, artist={:?}, playing={}",
+                crate::mlog!(
+                    info,
+                    "ADB parser: active={}, title={}, artist={}, playing={}",
                     is_active,
-                    result.title,
-                    result.artist,
+                    m(&result.title),
+                    m(&result.artist),
                     result.is_playing,
                 );
                 if best.as_ref().is_none_or(|(s, _)| score > *s) {

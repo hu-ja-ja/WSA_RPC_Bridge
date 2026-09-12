@@ -2,6 +2,7 @@ import { createSignal, onCleanup, onMount, createMemo, Show, lazy, Suspense } fr
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { check } from '@tauri-apps/plugin-updater'
+import { debug, info, warn, error as logError } from '@tauri-apps/plugin-log'
 import { Sidebar } from './components/Sidebar'
 import type { NavKey } from './components/Sidebar'
 import { Menu } from 'lucide-solid'
@@ -13,6 +14,32 @@ import { t } from './i18n'
 import './App.css'
 
 const LicensesPanel = lazy(() => import('./components/LicensesPanel'))
+
+// ponytail: console -> file log, devtools output kept
+function forwardConsole(
+  fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
+  logger: (message: string) => Promise<void>,
+) {
+  // ponytail: HMR re-import guard, avoid N重送信
+  if ((console[fnName] as unknown as { __fwd?: boolean }).__fwd) return
+  const original = console[fnName].bind(console)
+  const patched = (...args: unknown[]) => {
+    ;(original as (...a: unknown[]) => void)(...args)
+    try {
+      void logger(args.map((a) => String(a)).join(' ')).catch(() => {})
+    } catch {
+      /* logging must not break app */
+    }
+  }
+  ;(patched as unknown as { __fwd: boolean }).__fwd = true
+  console[fnName] = patched as typeof console.log
+}
+// ponytail: level(Debug)でtraceは破棄されるためlogはdebugへ
+forwardConsole('log', debug)
+forwardConsole('debug', debug)
+forwardConsole('info', info)
+forwardConsole('warn', warn)
+forwardConsole('error', logError)
 
 interface MediaInfo {
   title: string
