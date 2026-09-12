@@ -1,11 +1,14 @@
 {
-  "notes": "### 変更\n\n- リリース処理を修正\n- アップデーターが失敗したときに、エラーメッセージを表示するように\r\n",
-  "pub_date": "2026-09-09T16:33:20Z",
-  "version": "0.4.1",
+  "version": "0.4.2",
+  "notes": "### 変更\n\n- Androidのアップデーターを追加\n- 依存関係の更新\n- その他細かい変更\n",
+  "pub_date": "2026-09-12T05:51:25.546Z",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.1/wsa-rpc-bridge_0.4.1_x64_en-US.msi",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDlPc0ZSeFlyb1Y1OWwzTFZGT1djajhXTkQ0UGRHbjNYQzBVVmJKcDB4bkF0ZzQ3NVZEOTUwVWdhUTRJemZ4QUtNdVpjdURqc1hlbjdobGFPZ0Yzd1FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTcxNTk3CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjFfeDY0X2VuLVVTLm1zaQpmbnhpakJQY09uUnBVendlWFpQRUNSZWdqMURhT2IxcEhReEZRdlhNeGxMN3NqVDNhRlovWnplQUdJZFMyT05UenE2RkNxL0VXbDVNVDViVWkzS09BUT09Cg=="
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0THhMZE9Hcm5iTWhxR3lZVVM5SGtJb0syQXlYZ1R0MEEybGpBR1hDVlVFM2hRWC9QazdKSDJsek4wMWl1eWdOV0pMRHRPbldublRoWllLRloyYThhRHdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5MTkyMjc5CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjJfeDY0X2VuLVVTLm1zaQpTZlMwSWVJdjRZV29rV1FwTUtZUW9XQ0hqamJWRUtCenROZUtBZTR2ZjJrcE9UY1haME5BUnlVd05nOC9zNDFIMDY0QUpHeDRwVzczdENvbGFUMjNEUT09Cg==",
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.2/wsa-rpc-bridge_0.4.2_x64_en-US.msi"
+    },
+    "android-aarch64": {
+      "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.2/wsa-rpc-bridge_0.4.2_android_arm64.apk"
     }
   }
 }
