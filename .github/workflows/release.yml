@@ -77,7 +77,6 @@ jobs:
         run: mise run pipeline:update-json "${{ inputs.version }}"
 
       - name: Publish update.json to GitHub Pages
-        if: inputs.channel != 'beta'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
