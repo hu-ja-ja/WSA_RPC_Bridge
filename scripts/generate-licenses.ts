@@ -355,7 +355,7 @@ const main = (): void => {
   console.log('[1/3] Running cargo-about...');
   const tmpJson = join(tmpdir(), `cargo-about-${process.pid}.json`);
   try {
-    run('cargo', ['about', 'generate', '--format', 'json', '-o', tmpJson], SRC_TAURI, 300_000);
+    run('mise', ['exec', '--', 'cargo-about', 'generate', '--format', 'json', '-o', tmpJson], SRC_TAURI, 300_000);
     const rustEntries = buildCargoEntries(parseJson(readFileSync(tmpJson, 'utf-8'), 'cargo about'));
     console.log(`  -> ${rustEntries.length} Rust crates`);
 
