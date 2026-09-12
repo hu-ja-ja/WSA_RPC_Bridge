@@ -19,7 +19,7 @@ object AppInit {
         SignatureBridge.initContext(ctx)
         SignatureBridge.init()
         UpdateBridge.initContext(ctx)
-        UpdateBridge.init()
+        UpdateBridge.init(ctx)
         MediaBridge.init()
     }
 }

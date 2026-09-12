@@ -6301,6 +6301,7 @@ dependencies = [
  "libc",
  "log",
  "reqwest",
+ "rustls-platform-verifier",
  "serde",
  "serde_json",
  "sys-locale",

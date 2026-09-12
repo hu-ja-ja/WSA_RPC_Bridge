@@ -26,7 +26,7 @@ object UpdateBridge {
     private var appContext: Context? = null
 
     /** Rust側に JavaVM を渡すため、起動時に一度だけ呼ぶ。 */
-    external fun init()
+    external fun init(context: Context)
 
     @JvmStatic
     fun initContext(context: Context) {

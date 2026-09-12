@@ -13,9 +13,11 @@ static BRIDGE_CLASS: OnceLock<jni::objects::Global<jni::objects::JClass<'static>
 pub extern "system" fn Java_com_wsarpcbridge_app_UpdateBridge_init(
     mut unowned_env: jni::EnvUnowned,
     _this: jni::objects::JObject,
+    context: jni::objects::JObject,
 ) {
     unowned_env
         .with_env(|env| -> jni::errors::Result<()> {
+            rustls_platform_verifier::android::init_with_env(env, context)?;
             if let Ok(vm) = env.get_java_vm() {
                 let _ = JVM.set(vm);
             }
@@ -106,6 +108,7 @@ pub(crate) fn is_newer(current: &str, latest: &str) -> bool {
 
 pub async fn fetch_update_status(current: &str) -> Result<AndroidUpdateStatus, String> {
     let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
         .timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;

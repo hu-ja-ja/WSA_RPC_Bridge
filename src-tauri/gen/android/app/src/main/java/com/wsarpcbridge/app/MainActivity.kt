@@ -32,7 +32,7 @@ class MainActivity : TauriActivity() {
     SignatureBridge.init()
 
     UpdateBridge.initContext(this)
-    UpdateBridge.init()
+    UpdateBridge.init(this)
 
     DiscordBridge.init(this)
     MediaInfoService.createChannel(this)

@@ -26,6 +26,22 @@ const [appVersion] = createResource(async () => `v${await getVersion()}`)
 const repoUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge'
 const changelogUrl = 'https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/CHANGELOG.md'
 
+function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error('update check timed out')), milliseconds)
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        window.clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 export function UpdatesPanel() {
   const [updateState, setUpdateState] = createSignal<UpdateState>('idle')
   const [updateVersion, setUpdateVersion] = createSignal<string | null>(null)
@@ -47,7 +63,10 @@ export function UpdatesPanel() {
     setAutoAvailable(false)
     if (IS_ANDROID) {
       try {
-        const status = await invoke<AndroidUpdateStatus>('check_android_update')
+        const status = await withTimeout(
+          invoke<AndroidUpdateStatus>('check_android_update'),
+          25_000,
+        )
         if (!status.available) {
           setUpdateState('uptodate')
           return
