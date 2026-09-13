@@ -1,10 +1,10 @@
 {
   "version": "0.4.5",
   "notes": "### 変更\n\n- 依存関係の更新で生じていた不具合を修正\n",
-  "pub_date": "2026-09-13T05:34:07.615Z",
+  "pub_date": "2026-09-13T07:51:43.664Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0THcwWGxoN1hPc0NHQ21KL1RUZjJEbFhWTVp0MlhoS0VNSE9uRWhYQm1LaDRJNHNraFBsQTU4YTF4V2dGRm51SUI5enNMejg1cy9SN3R1Y0ZkanB1K2dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5Mjc3MzA1CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjVfeDY0X2VuLVVTLm1zaQpuR2ZxZzBQbXJvQXljYmZ4YldIWm0wMHJHZlhPQUhaRGtkb1RsdUFiM3daUFRWeEpKbWZrT3BnY0NEVTRlNllzM2F5bGRrZ0RqaWhLaUFrb1g0SHFDQT09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTK2xIenpyb2c0TDhEMDlCQTVLMnhldlJzeW5UZGx6SW9RVkNoZWJST3BmQTNNRmQvM2crOGsxOEhmWFNIeWpqeVVKeVBvUU5zRGladVZtOGxSS3VpT2lmZ1lzZVk3OXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5Mjg1NDk2CWZpbGU6d3NhLXJwYy1icmlkZ2VfMC40LjVfeDY0X2VuLVVTLm1zaQp0RG1JdUR6QS9SYUpMQ092bGV2N1B5Z01IMXZmRklKdi90L1NwT3YzOGd2REUwOHFwa1Z1MEVxRnJzK2JWbVlGYm5rLzNwbWJ3VlZHN3dETlN6aTJDZz09Cg==",
       "url": "https://github.com/hu-ja-ja/WSA_RPC_Bridge/releases/download/0.4.5/wsa-rpc-bridge_0.4.5_x64_en-US.msi"
     }
   }
