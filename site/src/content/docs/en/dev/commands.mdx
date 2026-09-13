@@ -7,48 +7,24 @@ Commands are defined as [mise](https://mise.jdx.dev/) tasks, and the tools mise 
 
 The `dev` / `build` / `tauri` tasks run through [Infisical](https://infisical.com/)'s `infisical run`. Infisical manages only release-signing secrets (`TAURI_SIGNING_PRIVATE_KEY`, Android keystore, etc.), which are not required for everyday development. If you are not logged in, use the [alternative commands](#alternative-commands-when-not-logged-in-to-infisical).
 
-## Command List
+## Find by Purpose
 
-| Command | Underlying command | Purpose |
-|---|---|---|
-| `mise run deps` | `pnpm install` | Install JS dependencies |
-| `mise run dev` | `infisical run -- pnpm tauri dev` | Run desktop in dev mode |
-| `mise run build` | `infisical run -- pnpm generate-licenses && infisical run -- pnpm tauri build` | Desktop release build |
-| `mise run lint` | `pnpm lint` (oxlint) | Frontend linting |
-| `mise run test` | `cargo test` (in src-tauri) | Rust unit tests |
-| `mise run android-test` | `./gradlew test` / `gradlew.bat test` (in src-tauri/gen/android, depending on OS) | Android unit tests (Robolectric) |
-| `mise run tauri` | `infisical run -- pnpm tauri` | Pass-through to the tauri CLI |
-| `mise run generate-licenses` | `pnpm generate-licenses` | Regenerate third-party licenses |
-| `mise run docs-dev` | `pnpm dev` (in site) | Docs site dev server |
-| `mise run docs-build` | `pnpm build` (in site) | Docs site build |
-| `pnpm preview` | `vite preview` | Serve built artifacts locally |
+Sections are grouped by purpose. Windows and Android variants sit side by side under each heading.
 
-## Passing Arguments
+| Purpose | Windows | Android | Details |
+|---|---|---|---|
+| Start development | `mise run dev` | `mise tauri android dev` | [Develop](#develop) |
+| Release build | `mise run build` | `mise tauri android build --apk -t aarch64` | [Build](#build) |
+| Lint / test | `mise run lint` / `test` / `android-test` (shared) | — | [Verify](#verify) |
+| Misc (licenses / docs / preview / generic tauri) | `mise run generate-licenses` / `docs-dev` / `docs-build` / `pnpm preview` (shared) | `mise tauri info` etc. | [Misc](#misc) |
 
-Pass arguments as `mise run <task> -- <args>` (everything after `--` is passed to the task's command). `mise run tauri ...` can be abbreviated to `mise tauri ...`.
+Argument passing, no-login alternatives, and CI mapping are grouped under [Notes](#notes).
 
-## Alternative Commands When Not Logged in to Infisical
+## Develop
 
-`dev` / `build` / `tauri` go through `infisical run`, so they fail when you are not logged in. In that case run pnpm directly. With `pnpm tauri ...`, arguments are passed straight to the tauri CLI without `--`.
+### Windows — Desktop development (`mise run dev`)
 
-| mise task | Alternative command |
-|---|---|
-| `mise run dev [args]` | `pnpm tauri dev [args]` |
-| `mise run build [args]` | `pnpm tauri build [args]` |
-| `mise tauri <subcommand> [args]` | `pnpm tauri <subcommand> [args]` |
-
-```bash
-pnpm tauri dev                              # Normal start
-pnpm tauri dev --release                    # Release mode
-pnpm tauri build --bundles msi              # Build MSI only
-pnpm tauri android build --apk -t aarch64   # Android APK (aarch64)
-```
-
-- `--` is only needed to pass arguments to the runner (cargo etc.): `pnpm tauri dev -- -- [runnerArgs]`
-- `deps` / `lint` / `test` / `android-test` / `generate-licenses` do not use infisical, so they work with `mise run` regardless of login state
-- **Note**: Builds without login have no signing key injected, so signed artifacts (signed APK / updater signature) are not produced. This does not affect running `dev` for development. If you need release signing, log in and use `mise run build`.
-
-## `mise run dev` — Desktop Development
+Underlying command: `infisical run -- pnpm tauri dev`
 
 ```bash
 mise run dev                 # Normal start (hot-reload enabled)
@@ -69,7 +45,21 @@ Key `tauri dev` arguments:
 | `-c, --config <path>` | Merge an extra config file |
 | `-- [runnerArgs] -- [appArgs]` | Separate with `--` to pass args to the app |
 
-## `mise run build` — Desktop Release Build
+### Android — Development on a device / emulator (`tauri android dev`)
+
+```bash
+mise tauri android dev                  # Run on a connected device/emulator
+mise tauri android dev -- -o            # Open Android Studio
+mise tauri android dev -- --host        # Expose on public address for real devices
+mise tauri android dev <device-id>      # Specify a device
+mise tauri android dev -- --release     # Release mode
+```
+
+## Build
+
+### Windows — Desktop release build (`mise run build`)
+
+Underlying command: `infisical run -- pnpm generate-licenses && infisical run -- pnpm tauri build`
 
 ```bash
 mise run build                    # Produce default bundles (MSI + NSIS on Windows)
@@ -92,60 +82,7 @@ Key `tauri build` arguments:
 | `-c, --config <path>` | Merge an extra config file |
 | `--ci` | Run without prompts |
 
-## `mise run lint` — Linting
-
-```bash
-mise run lint                     # Normal run
-mise run lint -- --fix            # Auto-fix
-mise run lint -- --quiet          # Hide warnings
-mise run lint -- -D correctness   # Select by category (-A allow / -W warn / -D error)
-mise run lint -- -f json          # Output format (default / json / junit / github, etc.)
-mise run lint -- --max-warnings 10
-mise run lint -- src/components/foo.tsx  # Limit to files/paths
-```
-
-## `mise run test` — Rust Tests
-
-```bash
-mise run test                        # Unit tests (parsers etc.)
-mise run test -- -- --ignored        # Integration tests requiring a real WSA device
-mise run test -- parser              # Filter by test name
-mise run test -- -- --nocapture      # Show println output
-```
-
-- The first `--` is consumed by mise and passed to the task. Arguments to cargo's test binary (like `--ignored`) also require cargo's own `--`, hence the doubled `-- --`.
-- The `--ignored` tests live in `src-tauri/tests/adb_test.rs` and require WSA running in developer mode with an ADB server (127.0.0.1:58526) responding.
-
-## `mise run android-test` — Android Unit Tests
-
-```bash
-mise run android-test                # All tests
-mise run android-test -- --tests "ClassName"  # Narrow down tests
-```
-
-- Runs `gradlew test` in `src-tauri/gen/android` (`gradlew.bat` on Windows, Robolectric).
-- **On a fresh checkout, `mise run tauri android init` is required first** (the gradle files and generated Kotlin code under `gen/android` are gitignored and don't exist). CI handles this with its own generation step.
-
-## `mise run tauri ...` — tauri CLI Pass-through
-
-```bash
-mise tauri info                    # Show environment info (Rust / Node / config)
-mise tauri android init            # Initialize the Android project (needed on fresh checkout)
-mise tauri icon <png>              # Generate icons
-mise tauri signer generate         # Generate a signing key for the updater
-```
-
-### `tauri android dev` — Android Development
-
-```bash
-mise tauri android dev                  # Run on a connected device/emulator
-mise tauri android dev -- -o            # Open Android Studio
-mise tauri android dev -- --host        # Expose on public address for real devices
-mise tauri android dev <device-id>      # Specify a device
-mise tauri android dev -- --release     # Release mode
-```
-
-### `tauri android build` — Building APK / AAB
+### Android — Building APK / AAB (`tauri android build`)
 
 ```bash
 mise tauri android build --apk                # Produce APK (all ABIs)
@@ -164,7 +101,64 @@ mise tauri android build -- -o                # Open Android Studio afterwards
 | `-o, --open` | Open Android Studio after building |
 | `--ci` | Run without prompts |
 
-## `mise run generate-licenses` — License Generation
+## Verify
+
+### `mise run lint` — Linting
+
+Underlying command: `pnpm lint` (oxlint)
+
+```bash
+mise run lint                     # Normal run
+mise run lint -- --fix            # Auto-fix
+mise run lint -- --quiet          # Hide warnings
+mise run lint -- -D correctness   # Select by category (-A allow / -W warn / -D error)
+mise run lint -- -f json          # Output format (default / json / junit / github, etc.)
+mise run lint -- --max-warnings 10
+mise run lint -- src/components/foo.tsx  # Limit to files/paths
+```
+
+### `mise run test` — Rust Tests
+
+Underlying command: `cargo test` (in src-tauri)
+
+```bash
+mise run test                        # Unit tests (parsers etc.)
+mise run test -- -- --ignored        # Integration tests requiring a real WSA device
+mise run test -- parser              # Filter by test name
+mise run test -- -- --nocapture      # Show println output
+```
+
+- The first `--` is consumed by mise and passed to the task. Arguments to cargo's test binary (like `--ignored`) also require cargo's own `--`, hence the doubled `-- --`.
+- The `--ignored` tests live in `src-tauri/tests/adb_test.rs` and require WSA running in developer mode with an ADB server (127.0.0.1:58526) responding.
+
+### `mise run android-test` — Android Unit Tests
+
+Underlying command: `./gradlew test` / `gradlew.bat test` (in src-tauri/gen/android, depending on OS)
+
+```bash
+mise run android-test                # All tests
+mise run android-test -- --tests "ClassName"  # Narrow down tests
+```
+
+- Runs `gradlew test` in `src-tauri/gen/android` (`gradlew.bat` on Windows, Robolectric).
+- **On a fresh checkout, `mise run tauri android init` is required first** (the gradle files and generated Kotlin code under `gen/android` are gitignored and don't exist). CI handles this with its own generation step.
+
+## Misc
+
+### `mise run tauri ...` — tauri CLI Pass-through
+
+Underlying command: `infisical run -- pnpm tauri`
+
+```bash
+mise tauri info                    # Show environment info (Rust / Node / config)
+mise tauri android init            # Initialize the Android project (needed on fresh checkout)
+mise tauri icon <png>              # Generate icons
+mise tauri signer generate         # Generate a signing key for the updater
+```
+
+### `mise run generate-licenses` — License Generation
+
+Underlying command: `pnpm generate-licenses`
 
 ```bash
 mise run generate-licenses
@@ -172,7 +166,7 @@ mise run generate-licenses
 
 - `scripts/generate-licenses.ts` collects JS and Rust (cargo-about) dependencies and regenerates the data for the in-app licenses tab. It also runs automatically via `beforeDevCommand` / `beforeBuildCommand` of `tauri dev` / `tauri build`.
 
-## `mise run docs-dev` / `docs-build` — Documentation Site
+### `mise run docs-dev` / `docs-build` — Documentation Site
 
 ```bash
 mise run docs-dev              # Dev server (http://localhost:4321)
@@ -182,7 +176,9 @@ mise run docs-build            # Build static site + link check (site/dist)
 - `site/` is built with [Astro Starlight](https://starlight.astro.build/) (Japanese at the root, English under `/en/`).
 - Deployment builds with `BASE_PATH=/WSA_RPC_Bridge/docs/` (to serve from the GitHub Pages subpath). The `docs-build` task uses this value by default; override it via the environment variable.
 
-## `pnpm preview` — Inspecting Build Artifacts
+### `pnpm preview` — Inspecting Build Artifacts
+
+Underlying command: `vite preview`
 
 ```bash
 pnpm preview                    # Serve dist on a local server
@@ -190,7 +186,38 @@ pnpm preview -- --port 8080     # Specify port
 pnpm preview -- --open          # Open browser automatically
 ```
 
-## Correspondence with CI
+Run `pnpm` directly, not as `mise run <task> -- <args>`.
+
+## Notes
+
+### Passing Arguments
+
+Pass arguments as `mise run <task> -- <args>` (everything after `--` is passed to the task's command). `mise run tauri ...` can be abbreviated to `mise tauri ...`.
+
+### Alternative Commands When Not Logged in to Infisical
+
+`dev` / `build` / `tauri` go through `infisical run`, so they fail when you are not logged in. In that case run pnpm directly. With `pnpm tauri ...`, arguments are passed straight to the tauri CLI without `--`.
+
+| mise task | Alternative command |
+|---|---|
+| `mise run dev [args]` | `pnpm tauri dev [args]` |
+| `mise run build [args]` | `pnpm tauri build [args]` |
+| `mise tauri <subcommand> [args]` | `pnpm tauri <subcommand> [args]` |
+
+```bash
+pnpm tauri dev                              # Normal start
+pnpm tauri dev --release                    # Release mode
+pnpm tauri build --bundles msi              # Build MSI only
+pnpm tauri android build --apk -t aarch64   # Android APK (aarch64)
+```
+
+- `--` is only needed to pass arguments to the runner (cargo etc.): `pnpm tauri dev -- -- [runnerArgs]`
+- `deps` / `lint` / `test` / `android-test` / `generate-licenses` do not use infisical, so they work with `mise run` regardless of login state
+- **Note**: Builds without login have no signing key injected, so signed artifacts (signed APK / updater signature) are not produced. This does not affect running `dev` for development. If you need release signing, log in and use `mise run build`.
+
+Installing dependencies (`mise run deps` / underlying `pnpm install`) also bypasses infisical, so it works as-is.
+
+### Correspondence with CI
 
 To verify locally what CI does, [ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/ci.yml) runs the following in order:
 
