@@ -55,8 +55,9 @@ The `dev` / `build` / `tauri` tasks go through [Infisical](https://infisical.com
 ## CI
 
 - **ci.yml** — lint / build / test / android-test on push to main and PRs
-- **release.yml** — manual releases via `workflow_dispatch`. Builds APK (aarch64) + MSI and deploys `update.json` / `update-android.json` to the Pages root. See the [release policy](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
+- **release.yml** — manual releases via `workflow_dispatch`. Builds APK (aarch64) + MSI and deploys `update.json` / `update-android.json` to the Pages root
 - **docs.yml** — deploys the documentation site to `/docs/` on Pages when site/ changes
+- See [Actions overview](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/en/dev/actions) ([Pipeline](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/en/dev/actions/pipeline))
 
 ## Documentation Site (site/)
 

@@ -55,8 +55,9 @@ mise run generate-licenses  # サードパーティライセンスの再生成
 ## CI
 
 - **ci.yml** — main への push / PR で lint / build / test / android-test を実行
-- **release.yml** — `workflow_dispatch` から手動リリース。APK (aarch64) + MSI をビルドし、`update.json` / `update-android.json` を Pages ルートへデプロイ。詳細は [リリース方針](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
+- **release.yml** — `workflow_dispatch` から手動リリース。APK (aarch64) + MSI をビルドし、`update.json` / `update-android.json` を Pages ルートへデプロイ
 - **docs.yml** — site/ の変更でドキュメントサイトを Pages の `/docs/` へデプロイ
+- 詳細は [Actions 概要](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/actions) ([Pipeline](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/actions/pipeline)) を参照
 
 ## ドキュメントサイト (site/)
 
