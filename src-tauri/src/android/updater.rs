@@ -109,22 +109,27 @@ pub(crate) fn is_newer(current: &str, latest: &str) -> bool {
     b > a
 }
 
+/// 原因切り分けのため全チェーンを含める。to_string() だけでは根本原因が消える。
+fn err_full(e: impl std::fmt::Debug) -> String {
+    format!("{e:?}")
+}
+
 pub async fn fetch_update_status(current: &str) -> Result<AndroidUpdateStatus, String> {
     let client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(10))
         .timeout(std::time::Duration::from_secs(20))
         .build()
-        .map_err(|e| e.to_string())?;
+        .map_err(err_full)?;
     let manifest: UpdateManifest = client
         .get(UPDATE_URL)
         .send()
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(err_full)?
         .error_for_status()
-        .map_err(|e| e.to_string())?
+        .map_err(err_full)?
         .json()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(err_full)?;
     let latest = manifest.version.unwrap_or_default();
     let url = manifest.url;
     Ok(AndroidUpdateStatus {

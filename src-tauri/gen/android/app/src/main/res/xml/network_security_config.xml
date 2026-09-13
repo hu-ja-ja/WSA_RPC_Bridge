@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 証明書の失効確認は平文で行われるため、確認先のみ許可する。全体の既定は不許可のまま。 -->
+<network-security-config>
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="true">lencr.org</domain>
+    <domain includeSubdomains="true">pki.goog</domain>
+    <domain includeSubdomains="true">amazontrust.com</domain>
+  </domain-config>
+</network-security-config>
