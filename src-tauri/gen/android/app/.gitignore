@@ -5,3 +5,4 @@
 /proguard-tauri.pro
 /tauri.properties
 /libs/discord_partner_sdk.aar
+/libs/rustls-platform-verifier.aar

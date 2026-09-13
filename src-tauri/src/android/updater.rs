@@ -17,7 +17,10 @@ pub extern "system" fn Java_com_wsarpcbridge_app_UpdateBridge_init(
 ) {
     unowned_env
         .with_env(|env| -> jni::errors::Result<()> {
-            rustls_platform_verifier::android::init_with_env(env, context)?;
+            rustls_platform_verifier::android::init_with_env(env, context).map_err(|e| {
+                log::error!("tls verifier init failed: {e}");
+                e
+            })?;
             if let Ok(vm) = env.get_java_vm() {
                 let _ = JVM.set(vm);
             }

@@ -154,7 +154,7 @@ const cmdAndroidCodegen = (): Effect.Effect<void, CargoError | ArtifactsError> =
         );
       }
     }
-    yield* Effect.try({
+    const verifierVersion = yield* Effect.try({
       try: () => {
         cpSync(join(dirname(tauri.manifest_path), 'mobile', 'android-codegen'), generated, { recursive: true });
         cpSync(join(dirname(wry.manifest_path), 'src', 'android', 'kotlin'), generated, { recursive: true });
@@ -175,19 +175,23 @@ const cmdAndroidCodegen = (): Effect.Effect<void, CargoError | ArtifactsError> =
         const verifier = meta.packages.find((p) => p.name === 'rustls-platform-verifier-android');
         if (!verifier) throw new Error('rustls-platform-verifier-android package not found');
         const verifierVersions = join(dirname(verifier.manifest_path), 'maven', 'rustls', 'rustls-platform-verifier');
-        const verifierVersion = readdirSync(verifierVersions).find((name) =>
-          existsSync(join(verifierVersions, name, `rustls-platform-verifier-${name}.aar`)),
-        );
-        if (!verifierVersion) throw new Error('rustls platform verifier AAR not found');
+        const found = readdirSync(verifierVersions)
+          .sort()
+          .find((name) =>
+            existsSync(join(verifierVersions, name, `rustls-platform-verifier-${name}.aar`)),
+          );
+        if (!found) throw new Error('rustls platform verifier AAR not found');
         const appLibs = join(ANDROID_PROJECT, 'app', 'libs');
         mkdirSync(appLibs, { recursive: true });
         cpSync(
-          join(verifierVersions, verifierVersion, `rustls-platform-verifier-${verifierVersion}.aar`),
+          join(verifierVersions, found, `rustls-platform-verifier-${found}.aar`),
           join(appLibs, 'rustls-platform-verifier.aar'),
         );
+        return found;
       },
       catch: () => new ArtifactsError({ message: 'kotlin template expansion failed' }),
     });
+    yield* Effect.logInfo(`rustls platform verifier ${verifierVersion}`);
     // rust-cache 復元時に build.rs が up-to-date のままにならないよう再実行を強制
     yield* runCommand('cargo', ['clean', '-p', root.name, '--manifest-path', join(SRC_TAURI, 'Cargo.toml')], env);
     yield* runCommand('cargo', ['check', '--manifest-path', join(SRC_TAURI, 'Cargo.toml')], env);
