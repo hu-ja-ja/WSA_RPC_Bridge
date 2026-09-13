@@ -141,7 +141,7 @@ mise run android-test -- --tests "クラス名"  # テストを絞り込み
 ```
 
 - `src-tauri/gen/android` で `gradlew test` を実行します (Windows では `gradlew.bat`、Robolectric)。
-- **fresh checkout では事前に `mise run tauri android init` が必要**です (`gen/android` の gradle ファイルと生成 Kotlin コードが gitignore されていて存在しないため)。CI は独自の生成ステップで対応しています。
+- **fresh checkout では事前に `mise run pipeline:codegen` が必要**です (`gen/android` の生成 Kotlin コード・gradle 設定・`libs/rustls-platform-verifier.aar` が git 管理外のため。`gen/android` 本体は管理済みなので `android init` は不要)。
 
 ## その他
 
@@ -151,7 +151,7 @@ mise run android-test -- --tests "クラス名"  # テストを絞り込み
 
 ```bash
 mise tauri info                    # 環境情報 (Rust / Node / 設定) の確認
-mise tauri android init            # Android プロジェクトを初期化 (fresh checkout 時に必要)
+mise tauri android init            # Android プロジェクトを初期化 (作り直す場合のみ。通常は pipeline:codegen を使う)
 mise tauri icon <png>              # アイコン生成
 mise tauri signer generate         # アップデーター用署名キー生成
 ```

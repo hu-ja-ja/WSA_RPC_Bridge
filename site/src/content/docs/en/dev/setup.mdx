@@ -17,7 +17,10 @@ Tools are managed with [mise](https://mise.jdx.dev/).
 
 ## Setup
 
+If mise itself is not installed yet, follow the [mise getting started guide](https://mise.jdx.dev/getting-started.html). Then run clone through dependency installation.
+
 ```pwsh
+git clone https://github.com/hu-ja-ja/WSA_RPC_Bridge.git
 mise trust        # First time only
 mise install      # Installs Node / pnpm / Rust / Perl / Java
 mise run deps     # Installs JS dependencies
@@ -30,6 +33,29 @@ mise run dev      # Tauri + Vite dev (desktop)
 ```
 
 On startup, `build.beforeDevCommand` (`pnpm generate-licenses && pnpm dev`) runs first: license generation → Vite dev server (`http://localhost:5173`).
+
+## First Build
+
+### Desktop
+
+```pwsh
+mise run build    # Release build (MSI + NSIS on Windows)
+```
+
+Artifacts go to `src-tauri/target/release/bundle/msi/`. For a quick check, `pnpm tauri build --no-bundle` is enough. If you are not logged in to Infisical, run `pnpm tauri ...` directly (see the [Command Reference](../commands/)).
+
+### Android
+
+The Android SDK / NDK resolve from `SDK_ROOT` / `NDK_VERSION` in `mise.toml`. If missing, install them via Android Studio or the cmdline-tools (`sdkmanager --licenses`, then install the NDK).
+
+```pwsh
+mise run pipeline:codegen                    # First time only (generates Kotlin code, gradle config, verifier AAR)
+mise tauri android build --apk -t aarch64    # Build the APK
+```
+
+- `gen/android` itself is tracked in git, so `android init` is not needed. `pipeline:codegen` fills in what a fresh checkout lacks (generated Kotlin under `generated/`, `tauri.*.gradle*`, `libs/rustls-platform-verifier.aar`).
+- Dev builds work without `discord_partner_sdk.aar`, which cannot be committed for licensing reasons (optional dependency, invoked via reflection). See the [release policy](../release/) for release-time retrieval.
+- If Gradle stops responding, run `gradlew.bat` directly in `src-tauri/gen/android`.
 
 ## Project Layout
 

@@ -17,7 +17,10 @@ description: 開発環境のセットアップ手順
 
 ## セットアップ
 
+mise 本体が未導入の場合は [mise の導入手順](https://mise.jdx.dev/getting-started.html) に従ってください。その後、clone から依存導入までを通します。
+
 ```pwsh
+git clone https://github.com/hu-ja-ja/WSA_RPC_Bridge.git
 mise trust        # 初回のみ
 mise install      # Node / pnpm / Rust / Perl / Java を導入
 mise run deps     # JS 依存をインストール
@@ -30,6 +33,29 @@ mise run dev      # Tauri + Vite dev (デスクトップ版)
 ```
 
 起動時、`build.beforeDevCommand` (`pnpm generate-licenses && pnpm dev`) が先に実行され、ライセンス生成 → Vite dev server (`http://localhost:5173`) が立ち上がります。
+
+## 初回ビルド
+
+### デスクトップ
+
+```pwsh
+mise run build    # リリースビルド (Windows では MSI + NSIS)
+```
+
+成果物は `src-tauri/target/release/bundle/msi/` に出力されます。軽く通すだけなら `pnpm tauri build --no-bundle` でも確認できます。Infisical 未ログイン時は `pnpm tauri ...` を直接実行してください (詳細は [コマンドリファレンス](../commands/))。
+
+### Android
+
+Android SDK / NDK は `mise.toml` の `SDK_ROOT` / `NDK_VERSION` から解決されます。未導入の場合は Android Studio または cmdline-tools (`sdkmanager --licenses` 後に NDK を導入) で用意してください。
+
+```pwsh
+mise run pipeline:codegen                    # 初回のみ (生成 Kotlin・gradle 設定・検証用 aar を生成)
+mise tauri android build --apk -t aarch64    # APK を生成
+```
+
+- `gen/android` 本体は git 管理済みのため、`android init` は不要です。fresh checkout で不足する生成物 (`generated/` Kotlin・`tauri.*.gradle*`・`libs/rustls-platform-verifier.aar`) は `pipeline:codegen` が補います。
+- 規約上リポジトリに置けない `discord_partner_sdk.aar` が無くても dev ビルドは通ります (任意依存 + リフレクション呼び出しのため)。リリース時の取得は [リリース方針](../release/) を参照してください。
+- gradle が応答しなくなった場合は `src-tauri/gen/android` で `gradlew.bat` を直接実行してください。
 
 ## プロジェクト構成
 

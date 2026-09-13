@@ -141,7 +141,7 @@ mise run android-test -- --tests "ClassName"  # Narrow down tests
 ```
 
 - Runs `gradlew test` in `src-tauri/gen/android` (`gradlew.bat` on Windows, Robolectric).
-- **On a fresh checkout, `mise run tauri android init` is required first** (the gradle files and generated Kotlin code under `gen/android` are gitignored and don't exist). CI handles this with its own generation step.
+- **On a fresh checkout, `mise run pipeline:codegen` is required first** (the generated Kotlin code, gradle config, and `libs/rustls-platform-verifier.aar` under `gen/android` are not tracked in git. `gen/android` itself is tracked, so `android init` is not needed).
 
 ## Misc
 
@@ -151,7 +151,7 @@ Underlying command: `infisical run -- pnpm tauri`
 
 ```bash
 mise tauri info                    # Show environment info (Rust / Node / config)
-mise tauri android init            # Initialize the Android project (needed on fresh checkout)
+mise tauri android init            # Initialize the Android project (only when recreating it; normally use pipeline:codegen)
 mise tauri icon <png>              # Generate icons
 mise tauri signer generate         # Generate a signing key for the updater
 ```
