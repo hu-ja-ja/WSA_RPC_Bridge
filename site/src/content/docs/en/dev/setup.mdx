@@ -53,8 +53,8 @@ mise run pipeline:codegen                    # First time only (generates Kotlin
 mise tauri android build --apk -t aarch64    # Build the APK
 ```
 
-- `gen/android` itself is tracked in git, so `android init` is not needed. `pipeline:codegen` fills in what a fresh checkout lacks (generated Kotlin under `generated/`, `tauri.*.gradle*`, `libs/rustls-platform-verifier.aar`).
-- Dev builds work without `discord_partner_sdk.aar`, which cannot be committed for licensing reasons (optional dependency, invoked via reflection). See the [release policy](../release/) for release-time retrieval.
+- `gen/android` itself is tracked in git, so `android init` is not needed. `pipeline:codegen` fills in what a fresh checkout lacks (generated Kotlin under `generated/`, `tauri.*.gradle*`, `libs/rustls-platform-verifier.aar`; see [Pipeline](../actions/pipeline/)).
+- Dev builds work without `discord_partner_sdk.aar`, which cannot be committed for licensing reasons (optional dependency, invoked via reflection). See the [release](../actions/) for release-time retrieval.
 - If Gradle stops responding, run `gradlew.bat` directly in `src-tauri/gen/android`.
 
 ## Project Layout

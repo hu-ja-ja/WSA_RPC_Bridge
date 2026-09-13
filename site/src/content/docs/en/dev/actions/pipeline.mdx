@@ -1,0 +1,31 @@
+---
+title: Pipeline Script
+description: Command reference for scripts/pipeline.ts
+---
+
+`scripts/pipeline.ts` is the glue between Actions and local reproduction. Effect-based: expected failures are tagged errors mapped to exit 1. Run via `mise run pipeline:<cmd>`.
+
+| Command | Input | Output | Used in |
+|---|---|---|---|
+| `android-codegen` | — | Generated Kotlin, gradle config, `rustls-platform-verifier.aar` | CI `android-test`, first local checkout |
+| `sync-version <version>` | version arg (`v` prefix allowed) | Updated `tauri.conf.json` / `Cargo.toml` | Start of release |
+| `download-sdk` | env `SDK_URL` | `app/libs/discord_partner_sdk.aar` | Release (before the Android build) |
+| `keystore` | env `ANDROID_KEYSTORE_BASE64` etc. | `$RUNNER_TEMP/release.keystore` + handoff via `GITHUB_ENV` | Release (before signing) |
+| `release-notes <version>` | CHANGELOG.md | `.release-notes.md` | Release |
+| `update-json <version>` | MSI/APK, `.sig`, env `GITHUB_REPOSITORY` | `update.json` / `update-android.json` (+ `$RUNNER_TEMP/pages/`) | Release |
+| `checksums` | MSI/APK, env `KEYSTORE_FILE` etc. | MSI `.sha256`, `apk-signing-fingerprint.txt` | Release |
+
+## android-codegen
+
+`gen/android` itself is tracked, but `tauri.*.gradle*`, `generated/` Kotlin, and `libs/rustls-platform-verifier.aar` are git-ignored. The command resolves tauri / wry locations via `cargo metadata` and expands `{{package}}` templates to restore them. Tests: `mise run pipeline:test` (`node --test scripts/pipeline.test.ts`).
+
+## download-sdk / keystore
+
+- `download-sdk` retries only transient failures (408/429/5xx, network errors) with exponential backoff, 4 times. Files under 10MB or without `AndroidManifest.xml` fail validation without retry.
+- `keystore` checks the Base64 magic and verifies the password with `keytool -list`, failing early on broken secrets instead of at build time. It needs `GITHUB_ENV`, so it is CI-only.
+
+## release-notes / update-json / checksums
+
+- `release-notes` extracts the `## [version]` section, with a fallback body when absent.
+- `update-json` renames the APK to `wsa-rpc-bridge_<version>_android_arm64.apk` and splits desktop (`platforms.windows-x86_64` requires both `signature` and `url`) from Android. It appends a bilingual download guide to `.release-notes.md`.
+- `checksums` writes MSI SHA-256 files and the APK signing certificate's SHA-256 fingerprint (parsed from `keytool -list -v`). Without an APK or keystore (e.g. locally), it warns and skips.

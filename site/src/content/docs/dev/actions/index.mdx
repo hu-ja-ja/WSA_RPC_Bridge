@@ -1,0 +1,83 @@
+---
+title: 概要
+description: GitHub Actions ワークフローと支援スクリプトの全体像
+---
+
+`.github/workflows/` の 3 ワークフローで CI / リリース / ドキュメントを自動化します。環境構築は `.github/actions/setup` に、リリース手順の実体は `scripts/pipeline.ts` (`mise run pipeline:*`、詳細は [Pipeline](./pipeline/)) に切り出しています。
+
+## 構成
+
+| ワークフロー | トリガー | 役割 |
+|---|---|---|
+| [ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/ci.yml) | `push: main` / `pull_request: main` | lint / build / test / android-test |
+| [release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) | `workflow_dispatch` (手動) | APK + MSI ビルド、リリース作成、`update.json` デプロイ |
+| [docs.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/docs.yml) | `push: main` (`site/**`) / 手動 | ドキュメントサイトを Pages の `/docs/` へデプロイ |
+
+```text
+scripts/release.ps1 (SDK_URL を使い捨て secret として登録)
+  → release.yml (pipeline:* 経由でビルド・署名・リリース作成)
+  → secret 削除
+```
+
+手元の再現は `mise run pipeline:<cmd>` で行えます。
+
+## 共通の約束
+
+- `release` と `docs` は `concurrency.group: github-pages` を共有し、Pages デプロイを直列化します (`cancel-in-progress: false`)。CI のみ PR ごとに古い実行をキャンセルします。
+- 権限は CI が `contents: read`、release / docs が `contents: write` です。
+- 署名用 Secrets が無い環境では署名済み成果物は作れません (開発用の `dev` 実行には影響しません)。
+
+| Secret | 用途 |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` (+ `_PASSWORD`) | MSI ビルドと updater 署名 |
+| `ANDROID_KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` | APK のリリース署名 (`pipeline:keystore` が復元) |
+| `SDK_URL` | Social SDK の期限付き URL。`release.ps1` が登録 → 実行後に削除する使い捨て |
+
+## CI
+
+| ジョブ | runner | 内容 |
+|---|---|---|
+| `test` | `windows-latest` | `deps` → `generate-licenses` → `docs-deps` → `lint` → `pnpm tauri build` (署名鍵あり) → `test` |
+| `android-test` | `ubuntu-latest` | Linux 依存の導入 → `pipeline:codegen` → `android-test` → Gradle daemon 停止 |
+
+- `docs-deps` は type-aware lint が `site/` の tsconfig まで解決するために必要です。
+- `android-test` の前には `mise run pipeline:codegen` が必須です (生成 Kotlin・gradle 設定・`rustls-platform-verifier.aar` は git 管理外)。
+- `setup` には `rust: 'true'` / `android: 'true'` を渡し、Rust・Gradle キャッシュを有効化しています。
+
+## リリース
+
+Actions タブからの単体起動には使い捨て secret が無いため失敗します。必ず `pwsh scripts/release.ps1` を使ってください。
+
+1. ポータルで Social SDK のダウンロード URL を生成する (約 1 時間で失効)
+2. `pwsh scripts/release.ps1` を実行し、`version` (例 `0.4.0` → そのままタグ名)・`channel` (`release` / `beta`、空は `release`) を入力し、期限付き URL をクリップボードに入れて Enter を押す (貼り付け不要、引数・履歴・ログに残らない。`gh auth login` 済みであること)
+3. ワークフローが `pipeline:*` 経由で実行する: バージョン同期 → SDK 取得 (`libs/discord_partner_sdk.aar`) → APK (`aarch64`) + MSI ビルド → リリース本文生成 → チェックサム → `update.json` デプロイ → リリース作成 (`beta` はプレリリース・latestにしない)
+
+Social SDK の取り扱い:
+
+- **公開リポジトリに SDK バイナリをコミットしない。** 単体での公開は再配布に該当します (アプリへの同梱のみ許諾)。**期限付き URL も恒久保管しない** (private repo 等への永続化は迂回行為)。
+- 毎回ポータルで新規生成し、取得 → 即ビルド → 同梱して公開します。SDK は Discord CDN → CI → 配布アプリ のみを通ります。
+- URL は平文の入力欄では渡しません (実行画面・ログに残るため)。
+
+その他:
+
+- `CHANGELOG.md` を手書きで維持し、該当 `## [version]` 節をリリース本文に使います (GitHub UI での記入不要)。
+- 成果物は Windows が MSI + `.sig` + `.sha256`、Android が APK (`aarch64` のみ) + `apk-signing-fingerprint.txt` (アプリの概要画面と照合して真正性を確認)。
+- Android ビルドは `ubuntu-latest` で先に実行します (1 時間 URL の失効対策)。`ANDROID_HOME` は `mise.toml` の `NDK_VERSION` から解決し、Rust ターゲットは tauri CLI が追加します。
+
+## ドキュメント
+
+トリガー: `push: main` (paths: `site/**`、workflow 自身) / `workflow_dispatch`。
+
+`.github/actions/setup` (`js: 'false'`) → `docs-deps` → `docs-build` (`BASE_PATH=/WSA_RPC_Bridge/docs/` で `site/dist` にビルド) → `site/dist` を `destination_dir: docs` にデプロイ (`keep_files: true` のため Pages ルートの `update.json` 系は残ります)。
+
+## 共通セットアップ
+
+[setup](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/actions/setup/action.yml) は mise の用意とキャッシュ復元のみを行う composite action です。
+
+| input | 既定 | 用途 |
+|---|---|---|
+| `js` | `'true'` | pnpm store キャッシュ + `mise run deps` (Linux では `cargo-about` も導入) |
+| `rust` | `'false'` | `Swatinem/rust-cache` (`shared-key` でジョブ横断共有) |
+| `android` | `'false'` | Gradle キャッシュ (`~/.gradle/caches`、`~/.gradle/wrapper`) |
+
+JDK / SDK / NDK 自体は runner image と mise env (`mise.toml` の `NDK_VERSION` / `SDK_ROOT`) から解決し、ここでは入れません。

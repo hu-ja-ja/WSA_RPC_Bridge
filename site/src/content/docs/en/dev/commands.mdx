@@ -141,7 +141,7 @@ mise run android-test -- --tests "ClassName"  # Narrow down tests
 ```
 
 - Runs `gradlew test` in `src-tauri/gen/android` (`gradlew.bat` on Windows, Robolectric).
-- **On a fresh checkout, `mise run pipeline:codegen` is required first** (the generated Kotlin code, gradle config, and `libs/rustls-platform-verifier.aar` under `gen/android` are not tracked in git. `gen/android` itself is tracked, so `android init` is not needed).
+- **On a fresh checkout, `mise run pipeline:codegen` is required first** (the generated Kotlin code, gradle config, and `libs/rustls-platform-verifier.aar` under `gen/android` are not tracked in git. `gen/android` itself is tracked, so `android init` is not needed. See [Pipeline](../actions/pipeline/)).
 
 ## Misc
 
@@ -229,7 +229,7 @@ To verify locally what CI does, [ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bri
 6. `mise run test`
 7. `mise run android-test` (in a separate job, via `mise run pipeline:codegen`)
 
-Build commands used by releases ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [Release Policy](../release/)):
+Build commands used by releases ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [Release](../actions/)):
 
 ```bash
 pnpm tauri android build --apk --target aarch64   # Android APK (aarch64)
@@ -238,5 +238,5 @@ pnpm tauri build --bundles msi                    # Windows MSI
 
 ## Related Documents
 
-- [Release Policy](../release/)
+- [Release](../actions/)
 - [Development Setup](../setup/)

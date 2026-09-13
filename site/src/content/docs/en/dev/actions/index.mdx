@@ -1,0 +1,83 @@
+---
+title: Overview
+description: Overview of GitHub Actions workflows and helper scripts
+---
+
+3 workflows under `.github/workflows/` automate CI / release / docs. Environment setup lives in `.github/actions/setup`, and the release implementation lives in `scripts/pipeline.ts` (via `mise run pipeline:*`; see [Pipeline](./pipeline/)).
+
+## Layout
+
+| Workflow | Trigger | Role |
+|---|---|---|
+| [ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/ci.yml) | `push: main` / `pull_request: main` | lint / build / test / android-test |
+| [release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) | `workflow_dispatch` (manual) | Build APK + MSI, create the release, deploy `update.json` |
+| [docs.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/docs.yml) | `push: main` (`site/**`) / manual | Deploy the docs site to `/docs/` on Pages |
+
+```text
+scripts/release.ps1 (registers SDK_URL as a single-use secret)
+  → release.yml (builds, signs, and releases via pipeline:*)
+  → secret deleted
+```
+
+Reproduce steps locally with `mise run pipeline:<cmd>`.
+
+## Shared Rules
+
+- `release` and `docs` share `concurrency.group: github-pages` to serialize Pages deployments (`cancel-in-progress: false`). Only CI cancels stale runs per PR.
+- Permissions: CI uses `contents: read`; release / docs use `contents: write`.
+- Without signing secrets, signed artifacts cannot be built (unaffected `dev` runs do not need them).
+
+| Secret | Purpose |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` (+ `_PASSWORD`) | MSI build and updater signature |
+| `ANDROID_KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` | APK release signing (restored by `pipeline:keystore`) |
+| `SDK_URL` | Expiring Social SDK URL. Single-use: registered by `release.ps1`, deleted afterwards |
+
+## CI
+
+| Job | Runner | Steps |
+|---|---|---|
+| `test` | `windows-latest` | `deps` → `generate-licenses` → `docs-deps` → `lint` → `pnpm tauri build` (with signing keys) → `test` |
+| `android-test` | `ubuntu-latest` | Install Linux deps → `pipeline:codegen` → `android-test` → stop the Gradle daemon |
+
+- `docs-deps` is needed because type-aware lint resolves tsconfigs under `site/` too.
+- `mise run pipeline:codegen` is required before `android-test` (generated Kotlin, gradle config, and `rustls-platform-verifier.aar` are git-ignored).
+- The `setup` action runs with `rust: 'true'` / `android: 'true'` to enable Rust and Gradle caches.
+
+## Release
+
+A standalone dispatch from the Actions tab fails without the single-use secret. Always use `pwsh scripts/release.ps1`.
+
+1. Generate the Social SDK download URL in the portal (expires in about 1 hour)
+2. Run `pwsh scripts/release.ps1` and enter `version` (e.g. `0.4.0` → used verbatim as the tag) and `channel` (`release` / `beta`, empty means `release`), then copy the expiring URL to the clipboard and press Enter (no pasting needed; never stored in arguments, history, or logs; requires `gh auth login`)
+3. The workflow runs via `pipeline:*`: sync version → fetch SDK (`libs/discord_partner_sdk.aar`) → build APK (`aarch64`) + MSI → generate release body → checksums → deploy `update.json` → create the release (`beta` is a prerelease, never latest)
+
+Handling of the Social SDK:
+
+- **Never commit SDK binaries to a public repository.** Publishing them standalone counts as redistribution (only bundling into the app is licensed). **Never store the expiring URL permanently** either (persisting it in a private repo circumvents expiry).
+- Generate a fresh URL each time: fetch → build immediately → bundle and publish. The SDK only travels Discord CDN → CI → distributed app.
+- Never pass the URL as a plaintext input (input values persist in the run view and logs).
+
+Other notes:
+
+- Keep `CHANGELOG.md` handwritten; the `## [version]` section becomes the release body (no need to write it in the GitHub UI).
+- Artifacts: Windows MSI + `.sig` + `.sha256`; Android APK (`aarch64` only) + `apk-signing-fingerprint.txt` (compare with the app's About screen to verify authenticity).
+- The Android build runs first on `ubuntu-latest` to beat the 1-hour URL expiry. `ANDROID_HOME` comes from `NDK_VERSION` in `mise.toml`; Rust targets are added by the tauri CLI.
+
+## Docs
+
+Triggers: `push: main` (paths: `site/**`, the workflow itself) / `workflow_dispatch`.
+
+`.github/actions/setup` (`js: 'false'`) → `docs-deps` → `docs-build` (build into `site/dist` with `BASE_PATH=/WSA_RPC_Bridge/docs/`) → deploy `site/dist` to `destination_dir: docs` (`keep_files: true`, so `update.json` files at the Pages root survive).
+
+## Shared Setup
+
+[setup](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/actions/setup/action.yml) is a composite action that only prepares mise and restores caches.
+
+| Input | Default | Purpose |
+|---|---|---|
+| `js` | `'true'` | pnpm store cache + `mise run deps` (plus `cargo-about` on Linux) |
+| `rust` | `'false'` | `Swatinem/rust-cache` (shared lineage across jobs) |
+| `android` | `'false'` | Gradle cache (`~/.gradle/caches`, `~/.gradle/wrapper`) |
+
+The JDK / SDK / NDK themselves come from the runner image and mise env (`NDK_VERSION` / `SDK_ROOT` in `mise.toml`), not from here.

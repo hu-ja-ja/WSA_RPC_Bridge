@@ -59,7 +59,14 @@ export default defineConfig({
             { slug: "dev/setup" },
             { slug: "dev/commands" },
             { slug: "dev/architecture" },
-            { slug: "dev/release" },
+          ],
+        },
+        {
+          label: "Actions",
+          translations: { en: "Actions" },
+          items: [
+            { slug: "dev/actions" },
+            { slug: "dev/actions/pipeline" },
           ],
         },
         {

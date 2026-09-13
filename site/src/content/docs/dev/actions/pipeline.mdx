@@ -1,0 +1,31 @@
+---
+title: Pipeline スクリプト
+description: scripts/pipeline.ts のコマンドリファレンス
+---
+
+`scripts/pipeline.ts` は Actions と手元再現の接着層です。Effect ベースで、想定内失敗は tagged error として exit 1 に落とします。実行は `mise run pipeline:<cmd>` 経由です。
+
+| コマンド | 入力 | 出力 | 使う場所 |
+|---|---|---|---|
+| `android-codegen` | — | 生成 Kotlin・gradle 設定・`rustls-platform-verifier.aar` | CI `android-test`、手元初回 |
+| `sync-version <version>` | 引数 version (`v` 接頭辞可) | `tauri.conf.json` / `Cargo.toml` 更新 | Release 先頭 |
+| `download-sdk` | env `SDK_URL` | `app/libs/discord_partner_sdk.aar` | Release (Android ビルド前) |
+| `keystore` | env `ANDROID_KEYSTORE_BASE64` 等 | `$RUNNER_TEMP/release.keystore` + `GITHUB_ENV` へ受渡し | Release (署名前) |
+| `release-notes <version>` | CHANGELOG.md | `.release-notes.md` | Release |
+| `update-json <version>` | MSI/APK、`.sig`、env `GITHUB_REPOSITORY` | `update.json` / `update-android.json` (+ `$RUNNER_TEMP/pages/`) | Release |
+| `checksums` | MSI/APK、env `KEYSTORE_FILE` 等 | MSI `.sha256`、`apk-signing-fingerprint.txt` | Release |
+
+## android-codegen
+
+`gen/android` 本体は git 管理済みですが、`tauri.*.gradle*`・`generated/` Kotlin・`libs/rustls-platform-verifier.aar` は gitignore のため fresh checkout にはありません。`cargo metadata` から tauri / wry の場所を解決し、template の `{{package}}` 等を展開して復元します。テストは `mise run pipeline:test` (`node --test scripts/pipeline.test.ts`)。
+
+## download-sdk / keystore
+
+- `download-sdk` は失敗時 (408/429/5xx・ネットワーク例外) のみ指数バックオフで 4 回 retry します。10MB 未満や `AndroidManifest.xml` 不在は検証失敗として retry しません。
+- `keystore` は Base64 のマジック確認と `keytool -list` でパスワード検証まで行い、壊れた秘密値をビルド前に落とします。`GITHUB_ENV` が無い手元実行では失敗するため、CI 専用です。
+
+## release-notes / update-json / checksums
+
+- `release-notes` は `## [version]` 節を抜き出し、無ければフォールバック文を書きます。
+- `update-json` は APK を `wsa-rpc-bridge_<version>_android_arm64.apk` にリネームし、デスクトップ用 (`platforms.windows-x86_64` に `signature` + `url` 必須) と Android 用にファイルを分けます。`.release-notes.md` 末尾に日英ダウンロード案内を追記します。
+- `checksums` は MSI の SHA-256 と APK 署名証明書の SHA-256 フィンガープリント (`keytool -list -v` から抽出) を作ります。APK・keystore が無い手元実行では警告してスキップします。

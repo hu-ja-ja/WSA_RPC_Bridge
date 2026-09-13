@@ -141,7 +141,7 @@ mise run android-test -- --tests "クラス名"  # テストを絞り込み
 ```
 
 - `src-tauri/gen/android` で `gradlew test` を実行します (Windows では `gradlew.bat`、Robolectric)。
-- **fresh checkout では事前に `mise run pipeline:codegen` が必要**です (`gen/android` の生成 Kotlin コード・gradle 設定・`libs/rustls-platform-verifier.aar` が git 管理外のため。`gen/android` 本体は管理済みなので `android init` は不要)。
+- **fresh checkout では事前に `mise run pipeline:codegen` が必要**です (`gen/android` の生成 Kotlin コード・gradle 設定・`libs/rustls-platform-verifier.aar` が git 管理外のため。`gen/android` 本体は管理済みなので `android init` は不要。詳細は [Pipeline](../actions/pipeline/))。
 
 ## その他
 
@@ -229,7 +229,7 @@ pnpm tauri android build --apk -t aarch64   # Android APK (aarch64)
 6. `mise run test`
 7. `mise run android-test` (別ジョブで `mise run pipeline:codegen` を経由)
 
-リリース ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [リリース方針](../release/)) で使われるビルドコマンド:
+リリース ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [リリース](../actions/)) で使われるビルドコマンド:
 
 ```bash
 pnpm tauri android build --apk --target aarch64   # Android APK (aarch64)
@@ -238,5 +238,5 @@ pnpm tauri build --bundles msi                    # Windows MSI
 
 ## 関連ドキュメント
 
-- [リリース方針](../release/)
+- [リリース](../actions/)
 - [環境構築](../setup/)

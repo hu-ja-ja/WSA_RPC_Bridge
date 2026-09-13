@@ -53,8 +53,8 @@ mise run pipeline:codegen                    # 初回のみ (生成 Kotlin・gra
 mise tauri android build --apk -t aarch64    # APK を生成
 ```
 
-- `gen/android` 本体は git 管理済みのため、`android init` は不要です。fresh checkout で不足する生成物 (`generated/` Kotlin・`tauri.*.gradle*`・`libs/rustls-platform-verifier.aar`) は `pipeline:codegen` が補います。
-- 規約上リポジトリに置けない `discord_partner_sdk.aar` が無くても dev ビルドは通ります (任意依存 + リフレクション呼び出しのため)。リリース時の取得は [リリース方針](../release/) を参照してください。
+- `gen/android` 本体は git 管理済みのため、`android init` は不要です。fresh checkout で不足する生成物 (`generated/` Kotlin・`tauri.*.gradle*`・`libs/rustls-platform-verifier.aar`) は `pipeline:codegen` が補います (詳細は [Pipeline](../actions/pipeline/))。
+- 規約上リポジトリに置けない `discord_partner_sdk.aar` が無くても dev ビルドは通ります (任意依存 + リフレクション呼び出しのため)。リリース時の取得は [リリース](../actions/) を参照してください。
 - gradle が応答しなくなった場合は `src-tauri/gen/android` で `gradlew.bat` を直接実行してください。
 
 ## プロジェクト構成
