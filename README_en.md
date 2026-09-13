@@ -13,7 +13,7 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 
 |       Windows       |                            Android                            |
 | :-----------------: | :-----------------------------------------------------------: |
-| ![GUI](img\GUI.png) | <img src="img\Android_GUI.png" alt="Android GUI" width="30%"> |
+| ![GUI](img/GUI.png) | <img src="img/Android_GUI.png" alt="Android GUI" width="30%"> |
 
 ## Tech Stack
 
@@ -29,7 +29,6 @@ An app (Windows desktop / Android) that retrieves media playback information pla
 ```
 src/                  SolidJS frontend (Vite SPA)
 src-tauri/            Rust / Tauri app + Android (gen/android)
-docs/                 Legacy Markdown docs. Migrated to site/
 site/                 Documentation site (Astro Starlight). Deployed to /docs/ on GitHub Pages
 scripts/              Build helper scripts (license generation, etc.)
 .github/workflows/    CI / release / documentation automation
@@ -56,7 +55,7 @@ The `dev` / `build` / `tauri` tasks go through [Infisical](https://infisical.com
 ## CI
 
 - **ci.yml** — lint / build / test / android-test on push to main and PRs
-- **release.yml** — manual releases via `workflow_dispatch`. Builds APK (aarch64) + MSI and deploys `update.json` to the Pages root. See the [release policy](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
+- **release.yml** — manual releases via `workflow_dispatch`. Builds APK (aarch64) + MSI and deploys `update.json` / `update-android.json` to the Pages root. See the [release policy](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
 - **docs.yml** — deploys the documentation site to `/docs/` on Pages when site/ changes
 
 ## Documentation Site (site/)

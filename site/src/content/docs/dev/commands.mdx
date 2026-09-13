@@ -13,10 +13,10 @@ description: mise タスクと tauri CLI の全コマンド・引数リファレ
 |---|---|---|
 | `mise run deps` | `pnpm install` | JS 依存のインストール |
 | `mise run dev` | `infisical run -- pnpm tauri dev` | デスクトップ版を開発モードで起動 |
-| `mise run build` | `infisical run -- pnpm tauri build` | デスクトップ版リリースビルド |
+| `mise run build` | `infisical run -- pnpm generate-licenses && infisical run -- pnpm tauri build` | デスクトップ版リリースビルド |
 | `mise run lint` | `pnpm lint` (oxlint) | フロントエンドの静的解析 |
 | `mise run test` | `cargo test` (src-tauri 内) | Rust ユニットテスト |
-| `mise run android-test` | `gradlew.bat test` (src-tauri/gen/android 内) | Android ユニットテスト (Robolectric) |
+| `mise run android-test` | `./gradlew test` / `gradlew.bat test` (src-tauri/gen/android 内、OS により切替) | Android ユニットテスト (Robolectric) |
 | `mise run tauri` | `infisical run -- pnpm tauri` | tauri CLI へのパススルー |
 | `mise run generate-licenses` | `pnpm generate-licenses` | サードパーティライセンスの再生成 |
 | `mise run docs-dev` | `pnpm dev` (site 内) | ドキュメントサイトの開発サーバー |
@@ -72,8 +72,8 @@ mise run dev -- --no-watch   # ファイル監視を無効化
 ## `mise run build` — デスクトップ版のリリースビルド
 
 ```bash
-mise run build                    # MSI + NSIS を生成
-mise run build -- --bundles msi   # MSI のみ
+mise run build                    # 既定バンドルを生成 (Windows では MSI + NSIS)
+mise run build -- --bundles msi   # MSI のみ (リリースと同じ)
 mise run build -- --no-bundle     # バンドルなし (バイナリのみ)
 mise run build -- -d              # デバッグビルド
 mise run build -- -t aarch64-pc-windows-msvc  # クロスコンパイル
@@ -123,7 +123,7 @@ mise run android-test                # 全テスト
 mise run android-test -- --tests "クラス名"  # テストを絞り込み
 ```
 
-- `src-tauri/gen/android` で `gradlew.bat test` を実行します (Robolectric)。
+- `src-tauri/gen/android` で `gradlew test` を実行します (Windows では `gradlew.bat`、Robolectric)。
 - **fresh checkout では事前に `mise run tauri android init` が必要**です (`gen/android` の gradle ファイルと生成 Kotlin コードが gitignore されていて存在しないため)。CI は独自の生成ステップで対応しています。
 
 ## `mise run tauri ...` — tauri CLI パススルー
@@ -196,10 +196,11 @@ pnpm preview -- --open          # ブラウザで自動オープン
 
 1. `mise run deps`
 2. `mise run generate-licenses`
-3. `mise run lint`
-4. `mise run build`
-5. `mise run test`
-6. `mise run android-test` (前述の gradle 生成ステップを経由)
+3. `mise run docs-deps` (type-aware lint が site/ の tsconfig も解決するため)
+4. `mise run lint`
+5. `pnpm tauri build` (署名鍵あり)
+6. `mise run test`
+7. `mise run android-test` (別ジョブで `mise run pipeline:codegen` を経由)
 
 リリース ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [リリース方針](../release/)) で使われるビルドコマンド:
 

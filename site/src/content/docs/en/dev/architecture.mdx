@@ -21,7 +21,7 @@ src-tauri/
   src/
     adb/                      ADB client and dumpsys parser
     apk_label/                App name resolution by pulling APKs (+disk cache)
-    artwork/                  ArtworkResolver plugin group (Niconico etc.)
+    artwork/                  ArtworkResolver plugin group (Niconico, YouTube, etc.)
     android/discord.rs        C FFI wrapper for the Discord Social SDK
     commands/app.rs           IPC commands exposed to the frontend
     tray.rs, config.rs ...    Tray / settings / i18n / shutdown handling
@@ -35,7 +35,7 @@ scripts/                      Build helper scripts (license generation, etc.)
 ## Main Data Flows
 
 - **Desktop**: the `adb` module parses `dumpsys media_session` → frontend fetches via the IPC command `get_media_info` every 5 seconds → updates Discord IPC only on change
-- **Android**: Kotlin-side events (notification posted/removed + a 30-second safety timer) flow into Rust through the JNI `MediaBridge.updateMediaInfo` and are delivered to the frontend as the Tauri event `media-updated` (no polling)
+- **Android**: Kotlin-side events (notification posted/removed + a 30-second safety timer) flow into Rust through the JNI `MediaBridge.updateMediaInfo` and are delivered to the frontend as the Tauri event `media-updated` (normally event-driven, with a 30-second safety polling interval as backup)
 
 ## IPC Command List
 
@@ -50,9 +50,11 @@ Tauri commands callable from the frontend (`commands/app.rs`):
 | `get_discord_status` | Common | Get Discord connection status |
 | `get_rpc_enabled` / `set_rpc_enabled` | Android | Persist the RPC toggle |
 | `get_settings` / `update_settings` | Common | Read/write settings |
-| `list_media_apps` | Android | List apps for the whitelist |
-| `get_notification_access_status` / `open_notification_access_settings` | Android | Check & open notification access permission |
-| `get_signing_fingerprint` | Android | Get the APK signing fingerprint |
+| `list_media_apps` | Android (empty-array stub on desktop) | List apps for the whitelist |
+| `get_notification_access_status` / `open_notification_access_settings` | Android (success-path stubs on desktop) | Check & open notification access permission |
+| `get_signing_fingerprint` | Android (`None` on desktop) | Get the APK signing fingerprint |
+| `check_android_update` / `download_android_update` / `install_android_update` | Android | Check, download, and install Android updates |
+| `get_install_permission_status` / `open_install_permission_settings` | Android | Check & open the unknown-apps install permission |
 
 ## Key External Dependencies
 

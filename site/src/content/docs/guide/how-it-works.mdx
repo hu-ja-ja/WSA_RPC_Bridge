@@ -29,7 +29,7 @@ description: WSA RPC Bridge の内部動作と Discord へ送信されるデー�
 ## Android 版
 
 1. **メディアセッションの監視** — 通知アクセス権限 (`NotificationListenerService`) を使って `MediaSessionManager` のアクティブセッションを取得します。**ホワイトリスト登録済みアプリのみ**を対象とし、再生中のセッションを優先します
-2. **端末内での処理** — 取得した情報は JNI 経由で Rust 側へ渡され、UI へはイベント配信されます (ポーリングなし)
+2. **端末内での処理** — 取得した情報は JNI 経由で Rust 側へ渡され、UI へはイベント配信されます (通常はイベント駆動で、30 秒間隔の保険ポーリングを併用)
 3. **常駐** — フォアグラウンドサービス (種別 `mediaPlayback`) がプロセスを維持します。設定で常駐通知の ON/OFF が可能です
 4. **Discord へ送信** — Discord Social SDK (同梱ライブラリー) で端末上の Discord アプリに直接接続し、Rich Presence を更新します。本アプリで Discord にログインする必要はありません
 
@@ -56,7 +56,9 @@ Rich Presence を有効にしている場合のみ、以下が送信されます
 
 対応アプリのプラグイン構造 (`ArtworkResolver`) により、再生中のアプリに応じてサムネイル URL を解決します。
 
-- 現在の対応: ボカコレ (`jp.nicovideo.nicobox`) — 曲タイトルをニコニコの検索 API に送信し、一致する動画のサムネイル URL を取得
+- 現在の対応:
+  - ボカコレ (`jp.nicovideo.nicobox`) — 曲タイトルをニコニコの検索 API に送信し、一致する動画のサムネイル URL を取得
+  - YouTube / YouTube Music 系 (`com.google.android.youtube`、`com.google.android.apps.youtube.music`、`app.morphe.android.youtube`、`app.morphe.android.apps.youtube.music`) — タイトルとアーティスト名をもとにした検索クエリを YouTube の検索 API (`www.youtube.com/youtubei/v1/search`) に送信し、一致する動画のサムネイル URL (`i.ytimg.com`) を取得
 - 画像本体はダウンロード・保存せず、URL のみを一時保持して Discord へ渡します
 - この通信は対応アプリの再生中にのみ発生し、詳細は [プライバシーポリシー](../../legal/privacy/) に記載しています
 
@@ -67,5 +69,6 @@ Rich Presence を有効にしている場合のみ、以下が送信されます
 | 設定 | `%APPDATA%\wsa-rpc-bridge\config.json` | 内部ストレージ |
 | ホワイトリスト | ― (機能なし・全セッション対象) | 内部ストレージ |
 | APK 名解決キャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | ― |
+| 動作ログ | `%LOCALAPPDATA%\com.wsarpcbridge.app\logs` (`rust.log` / `webview.log`) | アプリ内部ストレージ (`files/logs`) |
 
 テレメトリ・クラッシュレポートの自動送信・広告は存在しません。

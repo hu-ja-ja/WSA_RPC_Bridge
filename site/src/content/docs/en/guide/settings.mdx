@@ -9,7 +9,7 @@ All settings are available from the **Settings** tab in the sidebar. Settings ar
 
 ### Enable Discord Rich Presence
 
-- When ON, detected media information is sent to Discord (default: ON)
+- When ON, detected media information is sent to Discord (default: OFF)
 - While OFF, media detection itself continues and still appears on the in-app dashboard
 - See [How It Works](../how-it-works/#data-sent-to-discord) for details on what is sent to Discord
 
@@ -49,7 +49,7 @@ Also, if a new version is available at launch, an OS notification informs you. T
 
 ### Persistent Notification
 
-When ON, the app runs as a foreground service and shows a persistent notification containing the "currently playing track" (default: ON).
+When ON, the app runs as a foreground service and shows a persistent notification containing the "currently playing track" (default: OFF).
 
 - Keeps the process alive so detection is less likely to drop during long playback sessions
 - A button on the notification toggles **Discord RPC on/off** directly
@@ -76,4 +76,4 @@ Selects which apps' media can be detected.
 | Windows | `%APPDATA%\wsa-rpc-bridge\config.json` |
 | Android | App internal storage (SharedPreferences) |
 
-Local Windows data (such as the APK name resolution cache) is stored under `%LOCALAPPDATA%\wsa-rpc-bridge\`. It is not removed automatically on uninstall, so delete it manually if no longer needed. See the [Privacy Policy](../../legal/privacy/) for details.
+Local Windows data (such as the APK name resolution cache) is stored under `%LOCALAPPDATA%\wsa-rpc-bridge\`, and operation logs under `%LOCALAPPDATA%\com.wsarpcbridge.app\logs\` (`rust.log` / `webview.log`). Neither is removed automatically on uninstall, so delete them manually if no longer needed. See the [Privacy Policy](../../legal/privacy/) for details.

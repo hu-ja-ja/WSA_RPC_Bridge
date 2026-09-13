@@ -6,7 +6,7 @@ description: WSA RPC Bridge のプライバシーポリシー
 # プライバシーポリシー
 
 制定日: 2026年8月5日
-改定日: 2026年9月12日
+改定日: 2026年9月13日
 
 ## 1. はじめに
 
@@ -30,6 +30,8 @@ WSA RPC Bridge (以下「本アプリ」) は、WSA (Windows Subsystem for Andro
 - アカウント作成・ログイン
 - クラッシュレポートの自動送信
 - ログの外部送信
+
+動作ログは端末内のみに保存され、外部へ送信されることはありません (下記 5. 参照)。
 
 ## 3. コア機能
 
@@ -91,6 +93,7 @@ WSA RPC Bridge (以下「本アプリ」) は、WSA (Windows Subsystem for Andro
 | 連携先アプリ | 目的 | 送信されるデータ | 送信先 | 送信タイミング |
 |---|---|---|---|---|
 | ボカコレ (`jp.nicovideo.nicobox`) | サムネイル画像の取得 | メディアタイトル (曲名・動画タイトル) | ニコニコ検索 API (snapshot.search.nicovideo.jp) | 再生中のみ |
+| YouTube / YouTube Music 系 (`com.google.android.youtube`、`com.google.android.apps.youtube.music`、`app.morphe.android.youtube`、`app.morphe.android.apps.youtube.music`) | サムネイル画像の取得 | メディアタイトルとアーティスト名をもとにした検索クエリ | YouTube 検索 API (www.youtube.com/youtubei/v1/search) | 再生中のみ |
 
 取得したサムネイルは画像ファイルとして保存されず、URL のみがアプリ内のメモリ上に一時保持され、Discord Rich Presence に送信されます。画像本体は本アプリでは取得・保存せず、Discord 側で取得・表示されます。
 
@@ -106,7 +109,9 @@ WSA RPC Bridge (以下「本アプリ」) は、WSA (Windows Subsystem for Andro
 |---|---|---|---|
 | Windows 版 | 設定ファイル | `%APPDATA%\wsa-rpc-bridge\config.json` | アプリの設定 (自動起動、キャッシュ設定など) |
 | Windows 版 | APK キャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | アプリ名解決用の一時ファイル |
+| Windows 版 | 動作ログ | `%LOCALAPPDATA%\com.wsarpcbridge.app\logs` (`rust.log` / `webview.log`、各最大 5MB×5 世代) | マスク化されたメディア情報 (タイトルは先頭 2 文字+文字数のみ)・エラー記録。外部への送信なし |
 | Android 版 | 設定・ホワイトリスト | アプリ内部ストレージ (SharedPreferences) | アプリの設定、メディア検出対象のホワイトリスト |
+| Android 版 | 動作ログ | アプリ内部ストレージ (`files/logs`) | 内容は Windows 版と同様。外部への送信なし |
 
 Windows 版のデータはアプリをアンインストールしても自動的には削除されません。削除する場合は、上記の `wsa-rpc-bridge` フォルダを手動で削除してください。
 

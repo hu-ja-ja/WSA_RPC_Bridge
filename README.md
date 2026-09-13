@@ -29,7 +29,6 @@ WSA (Windows Subsystem for Android) や Android デバイスで再生されて�
 ```
 src/                  SolidJS フロントエンド (Vite SPA)
 src-tauri/            Rust / Tauri 本体 + Android (gen/android)
-docs/                 ※ 旧 Markdown ドキュメント。現在は site/ に移行
 site/                 ドキュメントサイト (Astro Starlight)。GitHub Pages の /docs/ にデプロイ
 scripts/              ビルド支援スクリプト (ライセンス生成など)
 .github/workflows/     CI / リリース / ドキュメントの自動化
@@ -56,7 +55,7 @@ mise run generate-licenses  # サードパーティライセンスの再生成
 ## CI
 
 - **ci.yml** — main への push / PR で lint / build / test / android-test を実行
-- **release.yml** — `workflow_dispatch` から手動リリース。APK (aarch64) + MSI をビルドし、`update.json` を Pages ルートへデプロイ。詳細は [リリース方針](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
+- **release.yml** — `workflow_dispatch` から手動リリース。APK (aarch64) + MSI をビルドし、`update.json` / `update-android.json` を Pages ルートへデプロイ。詳細は [リリース方針](https://hu-ja-ja.github.io/WSA_RPC_Bridge/docs/dev/release)
 - **docs.yml** — site/ の変更でドキュメントサイトを Pages の `/docs/` へデプロイ
 
 ## ドキュメントサイト (site/)

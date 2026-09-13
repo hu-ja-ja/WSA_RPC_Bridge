@@ -9,7 +9,7 @@ description: WSA RPC Bridge の全設定項目リファレンス
 
 ### Discord Rich Presence を有効にする
 
-- ON にすると、検出したメディア情報を Discord へ送信します (既定: ON)
+- ON にすると、検出したメディア情報を Discord へ送信します (既定: OFF)
 - OFF の間もメディアの検出自体は継続し、アプリ内のダッシュボードには表示されます
 - Discord へ送られるデータの詳細は [しくみ](../how-it-works/#discord-に送られるデータ) を参照
 
@@ -49,7 +49,7 @@ Windows ログイン時にアプリを自動で起動します。設定変更は
 
 ### 常駐通知
 
-ON にするとフォアグラウンドサービスとして常駐し、「再生中の曲名」を内容とした常駐通知を表示します (既定: ON)。
+ON にするとフォアグラウンドサービスとして常駐し、「再生中の曲名」を内容とした常駐通知を表示します (既定: OFF)。
 
 - プロセスの生存が保証され、長時間の再生でも検出が途切れにくくなります
 - 通知上のボタンで **Discord RPC の ON/OFF** を直接切り替えられます
@@ -76,4 +76,4 @@ ON にするとフォアグラウンドサービスとして常駐し、「再�
 | Windows | `%APPDATA%\wsa-rpc-bridge\config.json` |
 | Android | アプリ内部ストレージ (SharedPreferences) |
 
-Windows 版のローカルデータ (APK 名解決キャッシュなど) は `%LOCALAPPDATA%\wsa-rpc-bridge\` に保存されます。アンインストールしても自動削除されないため、手動で削除してください。詳しくは [プライバシーポリシー](../../legal/privacy/) を参照してください。
+Windows 版のローカルデータ (APK 名解決キャッシュなど) は `%LOCALAPPDATA%\wsa-rpc-bridge\` に、動作ログは `%LOCALAPPDATA%\com.wsarpcbridge.app\logs\` (`rust.log` / `webview.log`) に保存されます。いずれもアンインストールでは自動削除されないため、手動で削除してください。詳しくは [プライバシーポリシー](../../legal/privacy/) を参照してください。

@@ -21,7 +21,7 @@ src-tauri/
   src/
     adb/                      ADB クライアントと dumpsys パーサー
     apk_label/                APK 引き取りによるアプリ名解決 (+ディスクキャッシュ)
-    artwork/                  ArtworkResolver プラグイン群 (ニコニコ等)
+    artwork/                  ArtworkResolver プラグイン群 (ニコニコ・YouTube 等)
     android/discord.rs        Discord Social SDK の C FFI ラッパー
     commands/app.rs           フロントエンドへ公開する IPC コマンド
     tray.rs, config.rs ...    トレイ / 設定 / i18n / シャットダウン対応
@@ -35,7 +35,7 @@ scripts/                      ビルド支援スクリプト (ライセンス生
 ## 主要なデータフロー
 
 - **デスクトップ**: `adb` モジュールが `dumpsys media_session` を解析 → IPC コマンド `get_media_info` でフロントエンドが 5 秒間隔で取得 → 変化時のみ Discord IPC へ更新
-- **Android**: Kotlin 側のイベント (通知投稿/削除 + 30 秒の安全タイマー) が JNI `MediaBridge.updateMediaInfo` で Rust へ流れ、Tauri イベント `media-updated` としてフロントエンドへ配信される (ポーリングなし)
+- **Android**: Kotlin 側のイベント (通知投稿/削除 + 30 秒の安全タイマー) が JNI `MediaBridge.updateMediaInfo` で Rust へ流れ、Tauri イベント `media-updated` としてフロントエンドへ配信される (通常はイベント駆動で、30 秒間隔の保険ポーリングを併用)
 
 ## IPC コマンド一覧
 
@@ -50,9 +50,11 @@ scripts/                      ビルド支援スクリプト (ライセンス生
 | `get_discord_status` | 共通 | Discord 接続状態の取得 |
 | `get_rpc_enabled` / `set_rpc_enabled` | Android | RPC トグルの永続化 |
 | `get_settings` / `update_settings` | 共通 | 設定の読み書き |
-| `list_media_apps` | Android | ホワイトリスト用アプリ一覧 |
-| `get_notification_access_status` / `open_notification_access_settings` | Android | 通知アクセス権限の確認・誘導 |
-| `get_signing_fingerprint` | Android | APK 署名フィンガープリントの取得 |
+| `list_media_apps` | Android (デスクトップでは空配列のスタブ) | ホワイトリスト用アプリ一覧 |
+| `get_notification_access_status` / `open_notification_access_settings` | Android (デスクトップでは正常系のスタブ) | 通知アクセス権限の確認・誘導 |
+| `get_signing_fingerprint` | Android (デスクトップでは `None`) | APK 署名フィンガープリントの取得 |
+| `check_android_update` / `download_android_update` / `install_android_update` | Android | Android 版の更新確認・取得・導入 |
+| `get_install_permission_status` / `open_install_permission_settings` | Android | 不明アプリ導入権限の確認・誘導 |
 
 ## 主な外部依存
 

@@ -29,7 +29,7 @@ This page explains the flow from media detection to display in Discord, and what
 ## Android Version
 
 1. **Media session monitoring** — Uses notification access permission (`NotificationListenerService`) to obtain active sessions from `MediaSessionManager`. Only **whitelisted apps** are targeted, preferring sessions that are actively playing
-2. **On-device processing** — Retrieved information is passed to the Rust side via JNI and delivered to the UI as events (no polling)
+2. **On-device processing** — Retrieved information is passed to the Rust side via JNI and delivered to the UI as events (normally event-driven, with a 30-second safety polling interval as backup)
 3. **Keep-alive** — A foreground service (type `mediaPlayback`) keeps the process alive. The persistent notification can be toggled in settings
 4. **Send to Discord** — Connects directly to the Discord app on the device using the Discord Social SDK (bundled library) and updates Rich Presence. You never log in to Discord from this app
 
@@ -56,7 +56,9 @@ Only when Rich Presence is enabled is the following sent:
 
 Through the plugin structure for supported apps (`ArtworkResolver`), the thumbnail URL is resolved depending on the playing app.
 
-- Currently supported: Vocalo Collection (`jp.nicovideo.nicobox`) — sends the track title to Niconico's search API and retrieves the thumbnail URL of the matching video
+- Currently supported:
+  - Vocalo Collection (`jp.nicovideo.nicobox`) — sends the track title to Niconico's search API and retrieves the thumbnail URL of the matching video
+  - YouTube / YouTube Music family (`com.google.android.youtube`, `com.google.android.apps.youtube.music`, `app.morphe.android.youtube`, `app.morphe.android.apps.youtube.music`) — sends search queries derived from the title and artist names to YouTube's search API (`www.youtube.com/youtubei/v1/search`) and retrieves the thumbnail URL (`i.ytimg.com`) of the matching video
 - The image itself is never downloaded or saved; only the URL is held temporarily in memory and passed to Discord
 - This request occurs only while a supported app is playing; details are described in the [Privacy Policy](../../legal/privacy/)
 
@@ -67,5 +69,6 @@ Through the plugin structure for supported apps (`ArtworkResolver`), the thumbna
 | Settings | `%APPDATA%\wsa-rpc-bridge\config.json` | Internal storage |
 | Whitelist | ― (feature not present; all sessions are targeted) | Internal storage |
 | APK name resolution cache | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | ― |
+| Operation logs | `%LOCALAPPDATA%\com.wsarpcbridge.app\logs` (`rust.log` / `webview.log`) | App internal storage (`files/logs`) |
 
 There is no telemetry, automatic crash reporting, or advertising.

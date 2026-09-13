@@ -13,10 +13,10 @@ The `dev` / `build` / `tauri` tasks run through [Infisical](https://infisical.co
 |---|---|---|
 | `mise run deps` | `pnpm install` | Install JS dependencies |
 | `mise run dev` | `infisical run -- pnpm tauri dev` | Run desktop in dev mode |
-| `mise run build` | `infisical run -- pnpm tauri build` | Desktop release build |
+| `mise run build` | `infisical run -- pnpm generate-licenses && infisical run -- pnpm tauri build` | Desktop release build |
 | `mise run lint` | `pnpm lint` (oxlint) | Frontend linting |
 | `mise run test` | `cargo test` (in src-tauri) | Rust unit tests |
-| `mise run android-test` | `gradlew.bat test` (in src-tauri/gen/android) | Android unit tests (Robolectric) |
+| `mise run android-test` | `./gradlew test` / `gradlew.bat test` (in src-tauri/gen/android, depending on OS) | Android unit tests (Robolectric) |
 | `mise run tauri` | `infisical run -- pnpm tauri` | Pass-through to the tauri CLI |
 | `mise run generate-licenses` | `pnpm generate-licenses` | Regenerate third-party licenses |
 | `mise run docs-dev` | `pnpm dev` (in site) | Docs site dev server |
@@ -72,8 +72,8 @@ Key `tauri dev` arguments:
 ## `mise run build` — Desktop Release Build
 
 ```bash
-mise run build                    # Produce MSI + NSIS
-mise run build -- --bundles msi   # MSI only
+mise run build                    # Produce default bundles (MSI + NSIS on Windows)
+mise run build -- --bundles msi   # MSI only (same as releases)
 mise run build -- --no-bundle     # No bundling (binary only)
 mise run build -- -d              # Debug build
 mise run build -- -t aarch64-pc-windows-msvc  # Cross-compile
@@ -123,7 +123,7 @@ mise run android-test                # All tests
 mise run android-test -- --tests "ClassName"  # Narrow down tests
 ```
 
-- Runs `gradlew.bat test` in `src-tauri/gen/android` (Robolectric).
+- Runs `gradlew test` in `src-tauri/gen/android` (`gradlew.bat` on Windows, Robolectric).
 - **On a fresh checkout, `mise run tauri android init` is required first** (the gradle files and generated Kotlin code under `gen/android` are gitignored and don't exist). CI handles this with its own generation step.
 
 ## `mise run tauri ...` — tauri CLI Pass-through
@@ -196,10 +196,11 @@ To verify locally what CI does, [ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bri
 
 1. `mise run deps`
 2. `mise run generate-licenses`
-3. `mise run lint`
-4. `mise run build`
-5. `mise run test`
-6. `mise run android-test` (via the gradle generation step mentioned above)
+3. `mise run docs-deps` (type-aware lint also resolves tsconfigs under site/)
+4. `mise run lint`
+5. `pnpm tauri build` (with signing keys)
+6. `mise run test`
+7. `mise run android-test` (in a separate job, via `mise run pipeline:codegen`)
 
 Build commands used by releases ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [Release Policy](../release/)):
 

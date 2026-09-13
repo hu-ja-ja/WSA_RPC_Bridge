@@ -9,7 +9,7 @@ Releases are generated from GitHub Actions' `workflow_dispatch`.
 
 1. Generate the Social SDK download URL in the Discord Developer Portal (a GCS signed URL that expires in about 1 hour)
 2. Run `pwsh scripts/release.ps1` locally and enter the following interactively:
-   - `version`: the app version (e.g. `0.4.0`) → released as tag `v{version}`
+   - `version`: the app version (e.g. `0.4.0`) → released as a tag with exactly that name
    - `channel`: `release` / `beta` (empty defaults to `release`; `beta` is a prerelease)
    - `SDK URL`: copy the expiring URL above to the clipboard, then press Enter (no pasting needed; shown on screen, but never stored in arguments, history, or logs; avoid operating while screen sharing)
    - The script registers the URL as a single-use secret → dispatches the workflow → waits → deletes the secret
@@ -48,8 +48,8 @@ Releases are generated from GitHub Actions' `workflow_dispatch`.
 
 ## Android Environment on CI
 
-- `ANDROID_HOME` is preinstalled on windows-latest.
-- The NDK is installed with sdkmanager (`yes | sdkmanager --licenses` → `ndk;29.0.13846066`).
+- Runs on `ubuntu-latest`. `ANDROID_HOME` is resolved from `NDK_VERSION` in `mise.toml` (the `Setup Android SDK + NDK` step).
+- The NDK is installed with sdkmanager (`yes | sdkmanager --licenses` → `ndk;${NDK_VERSION}`; the authoritative version lives in `mise.toml`).
 - Rust Android targets are added automatically by the tauri CLI.
 - The Android build runs first to beat the 1-hour URL expiry.
 
