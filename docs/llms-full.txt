@@ -6,6 +6,120 @@
 
 ---
 
+# 概要
+
+`.github/workflows/` の 3 ワークフローで CI / リリース / ドキュメントを自動化します。環境構築は `.github/actions/setup` に、リリース手順の実体は `scripts/pipeline.ts` (`mise run pipeline:*`、詳細は [Pipeline](./pipeline/)) に切り出しています。
+
+## 構成
+
+| ワークフロー | トリガー | 役割 |
+|---|---|---|
+| [ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/ci.yml) | `push: main` / `pull_request: main` | lint / build / test / android-test |
+| [release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) | `workflow_dispatch` (手動) | APK + MSI ビルド、リリース作成、`update.json` デプロイ |
+| [docs.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/docs.yml) | `push: main` (`site/**`) / 手動 | ドキュメントサイトを Pages の `/docs/` へデプロイ |
+
+```text
+scripts/release.ps1 (SDK_URL を使い捨て secret として登録)
+  → release.yml (pipeline:* 経由でビルド・署名・リリース作成)
+  → secret 削除
+```
+
+手元の再現は `mise run pipeline:<cmd>` で行えます。
+
+## 共通の約束
+
+- `release` と `docs` は `concurrency.group: github-pages` を共有し、Pages デプロイを直列化します (`cancel-in-progress: false`)。CI のみ PR ごとに古い実行をキャンセルします。
+- 権限は CI が `contents: read`、release / docs が `contents: write` です。
+- 署名用 Secrets が無い環境では署名済み成果物は作れません (開発用の `dev` 実行には影響しません)。
+
+| Secret | 用途 |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` (+ `_PASSWORD`) | MSI ビルドと updater 署名 |
+| `ANDROID_KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD` | APK のリリース署名 (`pipeline:keystore` が復元) |
+| `SDK_URL` | Social SDK の期限付き URL。`release.ps1` が登録 → 実行後に削除する使い捨て |
+
+## CI
+
+| ジョブ | runner | 内容 |
+|---|---|---|
+| `test` | `windows-latest` | `deps` → `generate-licenses` → `docs-deps` → `lint` → `pnpm tauri build` (署名鍵あり) → `test` |
+| `android-test` | `ubuntu-latest` | Linux 依存の導入 → `pipeline:codegen` → `android-test` → Gradle daemon 停止 |
+
+- `docs-deps` は type-aware lint が `site/` の tsconfig まで解決するために必要です。
+- `android-test` の前には `mise run pipeline:codegen` が必須です (生成 Kotlin・gradle 設定・`rustls-platform-verifier.aar` は git 管理外)。
+- `setup` には `rust: 'true'` / `android: 'true'` を渡し、Rust・Gradle キャッシュを有効化しています。
+
+## リリース
+
+Actions タブからの単体起動には使い捨て secret が無いため失敗します。必ず `pwsh scripts/release.ps1` を使ってください。
+
+1. ポータルで Social SDK のダウンロード URL を生成する (約 1 時間で失効)
+2. `pwsh scripts/release.ps1` を実行し、`version` (例 `0.4.0` → そのままタグ名)・`channel` (`release` / `beta`、空は `release`) を入力し、期限付き URL をクリップボードに入れて Enter を押す (貼り付け不要、引数・履歴・ログに残らない。`gh auth login` 済みであること)
+3. ワークフローが `pipeline:*` 経由で実行する: バージョン同期 → SDK 取得 (`libs/discord_partner_sdk.aar`) → APK (`aarch64`) + MSI ビルド → リリース本文生成 → チェックサム → `update.json` デプロイ → リリース作成 (`beta` はプレリリース・latestにしない)
+
+Social SDK の取り扱い:
+
+- **公開リポジトリに SDK バイナリをコミットしない。** 単体での公開は再配布に該当します (アプリへの同梱のみ許諾)。**期限付き URL も恒久保管しない** (private repo 等への永続化は迂回行為)。
+- 毎回ポータルで新規生成し、取得 → 即ビルド → 同梱して公開します。SDK は Discord CDN → CI → 配布アプリ のみを通ります。
+- URL は平文の入力欄では渡しません (実行画面・ログに残るため)。
+
+その他:
+
+- `CHANGELOG.md` を手書きで維持し、該当 `## [version]` 節をリリース本文に使います (GitHub UI での記入不要)。
+- 成果物は Windows が MSI + `.sig` + `.sha256`、Android が APK (`aarch64` のみ) + `apk-signing-fingerprint.txt` (アプリの概要画面と照合して真正性を確認)。
+- Android ビルドは `ubuntu-latest` で先に実行します (1 時間 URL の失効対策)。`ANDROID_HOME` は `mise.toml` の `NDK_VERSION` から解決し、Rust ターゲットは tauri CLI が追加します。
+
+## ドキュメント
+
+トリガー: `push: main` (paths: `site/**`、workflow 自身) / `workflow_dispatch`。
+
+`.github/actions/setup` (`js: 'false'`) → `docs-deps` → `docs-build` (`BASE_PATH=/WSA_RPC_Bridge/docs/` で `site/dist` にビルド) → `site/dist` を `destination_dir: docs` にデプロイ (`keep_files: true` のため Pages ルートの `update.json` 系は残ります)。
+
+## 共通セットアップ
+
+[setup](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/actions/setup/action.yml) は mise の用意とキャッシュ復元のみを行う composite action です。
+
+| input | 既定 | 用途 |
+|---|---|---|
+| `js` | `'true'` | pnpm store キャッシュ + `mise run deps` (Linux では `cargo-about` も導入) |
+| `rust` | `'false'` | `Swatinem/rust-cache` (`shared-key` でジョブ横断共有) |
+| `android` | `'false'` | Gradle キャッシュ (`~/.gradle/caches`、`~/.gradle/wrapper`) |
+
+JDK / SDK / NDK 自体は runner image と mise env (`mise.toml` の `NDK_VERSION` / `SDK_ROOT`) から解決し、ここでは入れません。
+
+---
+
+# Pipeline スクリプト
+
+`scripts/pipeline.ts` は Actions と手元再現の接着層です。Effect ベースで、想定内失敗は tagged error として exit 1 に落とします。実行は `mise run pipeline:<cmd>` 経由です。
+
+| コマンド | 入力 | 出力 | 使う場所 |
+|---|---|---|---|
+| `android-codegen` | — | 生成 Kotlin・gradle 設定・`rustls-platform-verifier.aar` | CI `android-test`、手元初回 |
+| `sync-version <version>` | 引数 version (`v` 接頭辞可) | `tauri.conf.json` / `Cargo.toml` 更新 | Release 先頭 |
+| `download-sdk` | env `SDK_URL` | `app/libs/discord_partner_sdk.aar` | Release (Android ビルド前) |
+| `keystore` | env `ANDROID_KEYSTORE_BASE64` 等 | `$RUNNER_TEMP/release.keystore` + `GITHUB_ENV` へ受渡し | Release (署名前) |
+| `release-notes <version>` | CHANGELOG.md | `.release-notes.md` | Release |
+| `update-json <version>` | MSI/APK、`.sig`、env `GITHUB_REPOSITORY` | `update.json` / `update-android.json` (+ `$RUNNER_TEMP/pages/`) | Release |
+| `checksums` | MSI/APK、env `KEYSTORE_FILE` 等 | MSI `.sha256`、`apk-signing-fingerprint.txt` | Release |
+
+## android-codegen
+
+`gen/android` 本体は git 管理済みですが、`tauri.*.gradle*`・`generated/` Kotlin・`libs/rustls-platform-verifier.aar` は gitignore のため fresh checkout にはありません。`cargo metadata` から tauri / wry の場所を解決し、template の `{{package}}` 等を展開して復元します。テストは `mise run pipeline:test` (`node --test scripts/pipeline.test.ts`)。
+
+## download-sdk / keystore
+
+- `download-sdk` は失敗時 (408/429/5xx・ネットワーク例外) のみ指数バックオフで 4 回 retry します。10MB 未満や `AndroidManifest.xml` 不在は検証失敗として retry しません。
+- `keystore` は Base64 のマジック確認と `keytool -list` でパスワード検証まで行い、壊れた秘密値をビルド前に落とします。`GITHUB_ENV` が無い手元実行では失敗するため、CI 専用です。
+
+## release-notes / update-json / checksums
+
+- `release-notes` は `## [version]` 節を抜き出し、無ければフォールバック文を書きます。
+- `update-json` は APK を `wsa-rpc-bridge_<version>_android_arm64.apk` にリネームし、デスクトップ用 (`platforms.windows-x86_64` に `signature` + `url` 必須) と Android 用にファイルを分けます。`.release-notes.md` 末尾に日英ダウンロード案内を追記します。
+- `checksums` は MSI の SHA-256 と APK 署名証明書の SHA-256 フィンガープリント (`keytool -list -v` から抽出) を作ります。APK・keystore が無い手元実行では警告してスキップします。
+
+---
+
 # アーキテクチャ概要
 
 ## レイヤー構成
@@ -26,7 +140,7 @@ src-tauri/
   src/
     adb/                      ADB クライアントと dumpsys パーサー
     apk_label/                APK 引き取りによるアプリ名解決 (+ディスクキャッシュ)
-    artwork/                  ArtworkResolver プラグイン群 (ニコニコ等)
+    artwork/                  ArtworkResolver プラグイン群 (ニコニコ・YouTube 等)
     android/discord.rs        Discord Social SDK の C FFI ラッパー
     commands/app.rs           フロントエンドへ公開する IPC コマンド
     tray.rs, config.rs ...    トレイ / 設定 / i18n / シャットダウン対応
@@ -40,7 +154,7 @@ scripts/                      ビルド支援スクリプト (ライセンス生
 ## 主要なデータフロー
 
 - **デスクトップ**: `adb` モジュールが `dumpsys media_session` を解析 → IPC コマンド `get_media_info` でフロントエンドが 5 秒間隔で取得 → 変化時のみ Discord IPC へ更新
-- **Android**: Kotlin 側のイベント (通知投稿/削除 + 30 秒の安全タイマー) が JNI `MediaBridge.updateMediaInfo` で Rust へ流れ、Tauri イベント `media-updated` としてフロントエンドへ配信される (ポーリングなし)
+- **Android**: Kotlin 側のイベント (通知投稿/削除 + 30 秒の安全タイマー) が JNI `MediaBridge.updateMediaInfo` で Rust へ流れ、Tauri イベント `media-updated` としてフロントエンドへ配信される (通常はイベント駆動で、30 秒間隔の保険ポーリングを併用)
 
 ## IPC コマンド一覧
 
@@ -55,15 +169,17 @@ scripts/                      ビルド支援スクリプト (ライセンス生
 | `get_discord_status` | 共通 | Discord 接続状態の取得 |
 | `get_rpc_enabled` / `set_rpc_enabled` | Android | RPC トグルの永続化 |
 | `get_settings` / `update_settings` | 共通 | 設定の読み書き |
-| `list_media_apps` | Android | ホワイトリスト用アプリ一覧 |
-| `get_notification_access_status` / `open_notification_access_settings` | Android | 通知アクセス権限の確認・誘導 |
-| `get_signing_fingerprint` | Android | APK 署名フィンガープリントの取得 |
+| `list_media_apps` | Android (デスクトップでは空配列のスタブ) | ホワイトリスト用アプリ一覧 |
+| `get_notification_access_status` / `open_notification_access_settings` | Android (デスクトップでは正常系のスタブ) | 通知アクセス権限の確認・誘導 |
+| `get_signing_fingerprint` | Android (デスクトップでは `None`) | APK 署名フィンガープリントの取得 |
+| `check_android_update` / `download_android_update` / `install_android_update` | Android | Android 版の更新確認・取得・導入 |
+| `get_install_permission_status` / `open_install_permission_settings` | Android | 不明アプリ導入権限の確認・誘導 |
 
 ## 主な外部依存
 
 - [adb_client](https://github.com/cocool97/adb_client) — ADB プロトコル
 - [discord-rich-presence](https://github.com/vionya/discord-rich-presence) — デスクトップの Discord IPC
-- Discord Social SDK (Android) — 規約上リポジトリにコミットしないため、CI が都度ダウンロードする ([リリース方針](../release/) 参照)
+- Discord Social SDK (Android) — 規約上リポジトリにコミットしないため、CI が都度ダウンロードする ([リリース](../actions/) 参照)
 
 設計思想や詳細実装はソースコード内のコメントも参照してください。
 
@@ -75,48 +191,24 @@ scripts/                      ビルド支援スクリプト (ライセンス生
 
 `dev` / `build` / `tauri` タスクは [Infisical](https://infisical.com/) の `infisical run` を経由して実行されます。Infisical が管理しているのはリリース署名用の秘密鍵 (`TAURI_SIGNING_PRIVATE_KEY`、Android keystore など) のみで、通常の開発では必須ではありません。未ログインの場合は [代替コマンド](#infisical-未ログイン時の代替コマンド) を利用してください。
 
-## コマンド一覧
+## やりたいことから探す
 
-| コマンド | 実体 | 用途 |
-|---|---|---|
-| `mise run deps` | `pnpm install` | JS 依存のインストール |
-| `mise run dev` | `infisical run -- pnpm tauri dev` | デスクトップ版を開発モードで起動 |
-| `mise run build` | `infisical run -- pnpm tauri build` | デスクトップ版リリースビルド |
-| `mise run lint` | `pnpm lint` (oxlint) | フロントエンドの静的解析 |
-| `mise run test` | `cargo test` (src-tauri 内) | Rust ユニットテスト |
-| `mise run android-test` | `gradlew.bat test` (src-tauri/gen/android 内) | Android ユニットテスト (Robolectric) |
-| `mise run tauri` | `infisical run -- pnpm tauri` | tauri CLI へのパススルー |
-| `mise run generate-licenses` | `pnpm generate-licenses` | サードパーティライセンスの再生成 |
-| `mise run docs-dev` | `pnpm dev` (site 内) | ドキュメントサイトの開発サーバー |
-| `mise run docs-build` | `pnpm build` (site 内) | ドキュメントサイトのビルド |
-| `pnpm preview` | `vite preview` | ビルド成果物のローカル確認 |
+目的別に読む節をまとめています。Windows 版と Android 版は各節内で見出し分けしています。
 
-## 引数の渡し方
+| やりたいこと | Windows | Android | 詳細 |
+|---|---|---|---|
+| 開発起動する | `mise run dev` | `mise tauri android dev` | [開発する](#開発する) |
+| リリースビルドする | `mise run build` | `mise tauri android build --apk -t aarch64` | [ビルドする](#ビルドする) |
+| 静的解析・テストする | `mise run lint` / `test` / `android-test` (共通) | — | [検証する](#検証する) |
+| その他 (ライセンス / ドキュメント / プレビュー / tauri 汎用) | `mise run generate-licenses` / `docs-dev` / `docs-build` / `pnpm preview` (共通) | `mise tauri info` 等 | [その他](#その他) |
 
-`mise run <task> -- <args>` の形式で引数を渡せます (`--` 以降がタスクのコマンドにそのまま渡ります)。`mise run tauri ...` は `mise tauri ...` と略記できます。
+引数の渡し方・未ログイン時の代替・CI との対応は [補足](#補足) にまとめています。
 
-## Infisical 未ログイン時の代替コマンド
+## 開発する
 
-`dev` / `build` / `tauri` は `infisical run` を挟むため、ログインしていないと失敗します。その場合は pnpm を直接実行してください。`pnpm tauri ...` は `--` 不要で引数がそのまま tauri CLI に渡ります。
+### Windows — デスクトップ版の開発 (`mise run dev`)
 
-| mise タスク | 代替コマンド |
-|---|---|
-| `mise run dev [引数]` | `pnpm tauri dev [引数]` |
-| `mise run build [引数]` | `pnpm tauri build [引数]` |
-| `mise tauri <サブコマンド> [引数]` | `pnpm tauri <サブコマンド> [引数]` |
-
-```bash
-pnpm tauri dev                              # 通常起動
-pnpm tauri dev --release                    # リリースモード
-pnpm tauri build --bundles msi              # MSI のみビルド
-pnpm tauri android build --apk -t aarch64   # Android APK (aarch64)
-```
-
-- runner (cargo など) へ引数を渡す場合のみ `--` が必要: `pnpm tauri dev -- -- [runnerArgs]`
-- `deps` / `lint` / `test` / `android-test` / `generate-licenses` は infisical を使わないため、ログイン状態に関係なく `mise run` で実行できます
-- **注意**: 未ログインビルドには署名用秘密鍵が注入されないため、署名済みの成果物 (署名付き APK / アップデーター署名) は生成されません。開発用の `dev` 実行には影響しません。リリース署名が必要な場合はログインして `mise run build` を使ってください。
-
-## `mise run dev` — デスクトップ版の開発
+実体: `infisical run -- pnpm tauri dev`
 
 ```bash
 mise run dev                 # 通常起動 (hot-reload 有効)
@@ -137,11 +229,25 @@ mise run dev -- --no-watch   # ファイル監視を無効化
 | `-c, --config <path>` | 追加設定ファイルをマージ |
 | `-- [runnerArgs] -- [appArgs]` | `--` で区切ってアプリに引数を渡す |
 
-## `mise run build` — デスクトップ版のリリースビルド
+### Android — 実機・エミュレータでの開発 (`tauri android dev`)
 
 ```bash
-mise run build                    # MSI + NSIS を生成
-mise run build -- --bundles msi   # MSI のみ
+mise tauri android dev                  # 接続中のデバイス/エミュレータで実行
+mise tauri android dev -- -o            # Android Studio を開く
+mise tauri android dev -- --host        # 実機向けに公開アドレスを使う
+mise tauri android dev <device-id>      # デバイスを指定
+mise tauri android dev -- --release     # リリースモード
+```
+
+## ビルドする
+
+### Windows — デスクトップ版のリリースビルド (`mise run build`)
+
+実体: `infisical run -- pnpm generate-licenses && infisical run -- pnpm tauri build`
+
+```bash
+mise run build                    # 既定バンドルを生成 (Windows では MSI + NSIS)
+mise run build -- --bundles msi   # MSI のみ (リリースと同じ)
 mise run build -- --no-bundle     # バンドルなし (バイナリのみ)
 mise run build -- -d              # デバッグビルド
 mise run build -- -t aarch64-pc-windows-msvc  # クロスコンパイル
@@ -160,60 +266,7 @@ mise run build -- -t aarch64-pc-windows-msvc  # クロスコンパイル
 | `-c, --config <path>` | 追加設定ファイルをマージ |
 | `--ci` | プロンプトを出さず実行 |
 
-## `mise run lint` — 静的解析
-
-```bash
-mise run lint                     # 通常実行
-mise run lint -- --fix            # 自動修正
-mise run lint -- --quiet          # warning を非表示
-mise run lint -- -D correctness   # カテゴリ単位で指定 (-A 許可 / -W 警告 / -D エラー)
-mise run lint -- -f json          # 出力形式 (default / json / junit / github など)
-mise run lint -- --max-warnings 10
-mise run lint -- src/components/foo.tsx  # ファイル/パスを指定
-```
-
-## `mise run test` — Rust テスト
-
-```bash
-mise run test                        # ユニットテスト (パーサーなど)
-mise run test -- -- --ignored        # WSA 実機が必要な結合テスト
-mise run test -- parser              # テスト名でフィルタ
-mise run test -- -- --nocapture      # println 出力を表示
-```
-
-- 1 つ目の `--` は mise が取り除いてタスクへ渡します。`cargo test` のテストバイナリへの引数 (`--ignored` など) は cargo 自身の `--` も必要なので `-- --` と 2 重になります。
-- `--ignored` のテストは `src-tauri/tests/adb_test.rs` で、WSA が開発者モードで起動し ADB サーバー (127.0.0.1:58526) が応答する環境が必要です。
-
-## `mise run android-test` — Android ユニットテスト
-
-```bash
-mise run android-test                # 全テスト
-mise run android-test -- --tests "クラス名"  # テストを絞り込み
-```
-
-- `src-tauri/gen/android` で `gradlew.bat test` を実行します (Robolectric)。
-- **fresh checkout では事前に `mise run tauri android init` が必要**です (`gen/android` の gradle ファイルと生成 Kotlin コードが gitignore されていて存在しないため)。CI は独自の生成ステップで対応しています。
-
-## `mise run tauri ...` — tauri CLI パススルー
-
-```bash
-mise tauri info                    # 環境情報 (Rust / Node / 設定) の確認
-mise tauri android init            # Android プロジェクトを初期化 (fresh checkout 時に必要)
-mise tauri icon <png>              # アイコン生成
-mise tauri signer generate         # アップデーター用署名キー生成
-```
-
-### `tauri android dev` — Android 版の開発
-
-```bash
-mise tauri android dev                  # 接続中のデバイス/エミュレータで実行
-mise tauri android dev -- -o            # Android Studio を開く
-mise tauri android dev -- --host        # 実機向けに公開アドレスを使う
-mise tauri android dev <device-id>      # デバイスを指定
-mise tauri android dev -- --release     # リリースモード
-```
-
-### `tauri android build` — APK / AAB のビルド
+### Android — APK / AAB のビルド (`tauri android build`)
 
 ```bash
 mise tauri android build --apk                # APK を生成 (全 ABI)
@@ -232,7 +285,64 @@ mise tauri android build -- -o                # 完了後 Android Studio を開�
 | `-o, --open` | ビルド後に Android Studio を開く |
 | `--ci` | プロンプトを出さず実行 |
 
-## `mise run generate-licenses` — ライセンス生成
+## 検証する
+
+### `mise run lint` — 静的解析
+
+実体: `pnpm lint` (oxlint)
+
+```bash
+mise run lint                     # 通常実行
+mise run lint -- --fix            # 自動修正
+mise run lint -- --quiet          # warning を非表示
+mise run lint -- -D correctness   # カテゴリ単位で指定 (-A 許可 / -W 警告 / -D エラー)
+mise run lint -- -f json          # 出力形式 (default / json / junit / github など)
+mise run lint -- --max-warnings 10
+mise run lint -- src/components/foo.tsx  # ファイル/パスを指定
+```
+
+### `mise run test` — Rust テスト
+
+実体: `cargo test` (src-tauri 内)
+
+```bash
+mise run test                        # ユニットテスト (パーサーなど)
+mise run test -- -- --ignored        # WSA 実機が必要な結合テスト
+mise run test -- parser              # テスト名でフィルタ
+mise run test -- -- --nocapture      # println 出力を表示
+```
+
+- 1 つ目の `--` は mise が取り除いてタスクへ渡します。`cargo test` のテストバイナリへの引数 (`--ignored` など) は cargo 自身の `--` も必要なので `-- --` と 2 重になります。
+- `--ignored` のテストは `src-tauri/tests/adb_test.rs` で、WSA が開発者モードで起動し ADB サーバー (127.0.0.1:58526) が応答する環境が必要です。
+
+### `mise run android-test` — Android ユニットテスト
+
+実体: `./gradlew test` / `gradlew.bat test` (src-tauri/gen/android 内、OS により切替)
+
+```bash
+mise run android-test                # 全テスト
+mise run android-test -- --tests "クラス名"  # テストを絞り込み
+```
+
+- `src-tauri/gen/android` で `gradlew test` を実行します (Windows では `gradlew.bat`、Robolectric)。
+- **fresh checkout では事前に `mise run pipeline:codegen` が必要**です (`gen/android` の生成 Kotlin コード・gradle 設定・`libs/rustls-platform-verifier.aar` が git 管理外のため。`gen/android` 本体は管理済みなので `android init` は不要。詳細は [Pipeline](../actions/pipeline/))。
+
+## その他
+
+### `mise run tauri ...` — tauri CLI パススルー
+
+実体: `infisical run -- pnpm tauri`
+
+```bash
+mise tauri info                    # 環境情報 (Rust / Node / 設定) の確認
+mise tauri android init            # Android プロジェクトを初期化 (作り直す場合のみ。通常は pipeline:codegen を使う)
+mise tauri icon <png>              # アイコン生成
+mise tauri signer generate         # アップデーター用署名キー生成
+```
+
+### `mise run generate-licenses` — ライセンス生成
+
+実体: `pnpm generate-licenses`
 
 ```bash
 mise run generate-licenses
@@ -240,7 +350,7 @@ mise run generate-licenses
 
 - `scripts/generate-licenses.ts` が JS と Rust (cargo-about) の依存を収集し、アプリ内ライセンスタブのデータを再生成します。`tauri dev` / `tauri build` の `beforeDevCommand` / `beforeBuildCommand` でも自動実行されます。
 
-## `mise run docs-dev` / `docs-build` — ドキュメントサイト
+### `mise run docs-dev` / `docs-build` — ドキュメントサイト
 
 ```bash
 mise run docs-dev              # 開発サーバー (http://localhost:4321)
@@ -250,7 +360,9 @@ mise run docs-build            # 静的サイトをビルド + リンク検証 (
 - `site/` は [Astro Starlight](https://starlight.astro.build/) で構築されています。
 - デプロイ時は `BASE_PATH=/WSA_RPC_Bridge/docs/` を設定してビルドします (GitHub Pages のサブパス配下で配信するため)。`docs-build` タスクは既定でこの値を使い、環境変数で上書きできます。
 
-## `pnpm preview` — ビルド成果の確認
+### `pnpm preview` — ビルド成果の確認
+
+実体: `vite preview`
 
 ```bash
 pnpm preview                    # dist をローカルサーバーで配信
@@ -258,18 +370,50 @@ pnpm preview -- --port 8080     # ポート指定
 pnpm preview -- --open          # ブラウザで自動オープン
 ```
 
-## CI との対応
+`mise run <task> -- <args>` の形式ではありません。`pnpm` を直接実行してください。
+
+## 補足
+
+### 引数の渡し方
+
+`mise run <task> -- <args>` の形式で引数を渡せます (`--` 以降がタスクのコマンドにそのまま渡ります)。`mise run tauri ...` は `mise tauri ...` と略記できます。
+
+### Infisical 未ログイン時の代替コマンド
+
+`dev` / `build` / `tauri` は `infisical run` を挟むため、ログインしていないと失敗します。その場合は pnpm を直接実行してください。`pnpm tauri ...` は `--` 不要で引数がそのまま tauri CLI に渡ります。
+
+| mise タスク | 代替コマンド |
+|---|---|
+| `mise run dev [引数]` | `pnpm tauri dev [引数]` |
+| `mise run build [引数]` | `pnpm tauri build [引数]` |
+| `mise tauri <サブコマンド> [引数]` | `pnpm tauri <サブコマンド> [引数]` |
+
+```bash
+pnpm tauri dev                              # 通常起動
+pnpm tauri dev --release                    # リリースモード
+pnpm tauri build --bundles msi              # MSI のみビルド
+pnpm tauri android build --apk -t aarch64   # Android APK (aarch64)
+```
+
+- runner (cargo など) へ引数を渡す場合のみ `--` が必要: `pnpm tauri dev -- -- [runnerArgs]`
+- `deps` / `lint` / `test` / `android-test` / `generate-licenses` は infisical を使わないため、ログイン状態に関係なく `mise run` で実行できます
+- **注意**: 未ログインビルドには署名用秘密鍵が注入されないため、署名済みの成果物 (署名付き APK / アップデーター署名) は生成されません。開発用の `dev` 実行には影響しません。リリース署名が必要な場合はログインして `mise run build` を使ってください。
+
+依存インストール (`mise run deps` / 実体 `pnpm install`) も infisical を使わないため、そのまま実行できます。
+
+### CI との対応
 
 ローカルで CI 相当の検証を行う場合、[ci.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/ci.yml) は以下を順に実行しています:
 
 1. `mise run deps`
 2. `mise run generate-licenses`
-3. `mise run lint`
-4. `mise run build`
-5. `mise run test`
-6. `mise run android-test` (前述の gradle 生成ステップを経由)
+3. `mise run docs-deps` (type-aware lint が site/ の tsconfig も解決するため)
+4. `mise run lint`
+5. `pnpm tauri build` (署名鍵あり)
+6. `mise run test`
+7. `mise run android-test` (別ジョブで `mise run pipeline:codegen` を経由)
 
-リリース ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [リリース方針](../release/)) で使われるビルドコマンド:
+リリース ([release.yml](https://github.com/hu-ja-ja/WSA_RPC_Bridge/blob/main/.github/workflows/release.yml) / [リリース](../actions/)) で使われるビルドコマンド:
 
 ```bash
 pnpm tauri android build --apk --target aarch64   # Android APK (aarch64)
@@ -278,66 +422,8 @@ pnpm tauri build --bundles msi                    # Windows MSI
 
 ## 関連ドキュメント
 
-- [リリース方針](../release/)
+- [リリース](../actions/)
 - [環境構築](../setup/)
-
----
-
-# リリース方針
-
-GitHub Actions の `workflow_dispatch` からリリースを生成します。
-
-## リリースフロー
-
-1. Discord Developer Portal で Social SDK のダウンロード URL を生成する (約 1 時間で失効する GCS 署名付き URL)
-2. 手元で `pwsh scripts/release.ps1` を実行し、対話で以下を入力する:
-   - `version`: アプリのバージョン (例 `0.4.0`) → タグ `v{version}` としてリリース
-   - `channel`: `release` / `beta` (未入力は `release`。`beta` はプレリリース扱い)
-   - `SDK URL`: 上記の期限付き URL をクリップボードにコピーしてから Enter を押す (貼り付け操作は不要。画面に表示されるが、引数・履歴・ログには残らない。画面共有中は操作しないこと)
-   - スクリプトが URL を使い捨ての秘密値として登録 → ワークフロー起動 → 終了待機 → 秘密値を削除する
-   - 事前に `gh` へ権限のあるアカウントでログインしておくこと (`gh auth login` → `gh auth status` で確認)
-3. ワークフローが以下を実行する:
-   - バージョンを `tauri.conf.json` / `Cargo.toml` に同期
-   - 使い捨ての秘密値から Social SDK を取得し `src-tauri/gen/android/app/libs/discord_partner_sdk.aar` へ配置
-   - Android APK (`aarch64`) + Windows MSI をビルド
-   - CHANGELOG.md から該当バージョンのセクションを抽出し、リリース本文とする (セクションが無い場合はコミット一覧でフォールバック)
-   - リリースを自動作成し、成果物を添付 (`beta` はプレリリース・latestにしない)
-    - `update.json` を GitHub Pages にデプロイ (デスクトップのアップデーター用)
-
-## Social SDK の取り扱い
-
-- **公開リポジトリに SDK バイナリをコミットしない。** 利用規約 2.b は SDK 自体の再配布・コピーを禁止しています。アプリへの同梱は規約 2.a でライセンス付与されていますが、単体での公開は再配布に該当します。
-- **期限付き URL を恒久保管しない。** ポータルが発行する失効 URL を迂回してバイナリを private repo などに永続化しないでください。
-- 毎回ポータルで新しく URL を生成し、取得 → 即ビルド → アプリに同梱して公開します。SDK は Discord CDN → CI → 配布アプリ の流れのみを通り、どこにも残りません。
-- 期限付き URL は `scripts/release.ps1` が使い捨ての秘密値として登録し、実行後に削除します。平文の入力欄では渡しません (入力欄の値は実行画面・ログに残るため)。Actions タブからの単体起動には秘密値がないため失敗します。
-
-## 変更ログ
-
-- `CHANGELOG.md` を手書きで維持します (追加/変更/削除 のセクション形式)。
-- ワークフローは該当バージョンの `## [version]` セクションを抽出してリリース本文に使うため、GitHub UI で本文を書く必要はありません。
-
-## 成果物
-
-- Windows: MSI + `.sig` + `.sha256`
-- Android: APK (`aarch64` のみ。エミュレータ向け ABI が必要になったら増やす)
-- APK はリリース署名キーで署名され、署名証明書の SHA-256 フィンガープリントが `apk-signing-fingerprint.txt` として添付されます。アプリの「アプリ概要」画面に表示されるフィンガープリントと照合することで、配布 APK の真正性を確認できます。
-
-## Android リリース署名キー
-
-- GitHub リポジトリの Secrets に以下を設定する
-  - `ANDROID_KEYSTORE_BASE64`: release keystore を Base64 化したもの
-  - `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
-
-## CI の Android 環境
-
-- windows-latest の `ANDROID_HOME` は標準搭載です。
-- NDK を sdkmanager でインストールします (`yes | sdkmanager --licenses` → `ndk;29.0.13846066`)。
-- Rust の Android ターゲットは tauri CLI が自動で追加します。
-- 1 時間 URL の失効対策として Android ビルドを先に実行します。
-
-## 注意
-
-- 旧 `release.yml` の `on: release: [published]` トリガーを残すと、新フローが作ったリリースで再ビルドが走るため、**置き換え時に削除します**。
 
 ---
 
@@ -357,7 +443,10 @@ GitHub Actions の `workflow_dispatch` からリリースを生成します。
 
 ## セットアップ
 
+mise 本体が未導入の場合は [mise の導入手順](https://mise.jdx.dev/getting-started.html) に従ってください。その後、clone から依存導入までを通します。
+
 ```pwsh
+git clone https://github.com/hu-ja-ja/WSA_RPC_Bridge.git
 mise trust        # 初回のみ
 mise install      # Node / pnpm / Rust / Perl / Java を導入
 mise run deps     # JS 依存をインストール
@@ -370,6 +459,29 @@ mise run dev      # Tauri + Vite dev (デスクトップ版)
 ```
 
 起動時、`build.beforeDevCommand` (`pnpm generate-licenses && pnpm dev`) が先に実行され、ライセンス生成 → Vite dev server (`http://localhost:5173`) が立ち上がります。
+
+## 初回ビルド
+
+### デスクトップ
+
+```pwsh
+mise run build    # リリースビルド (Windows では MSI + NSIS)
+```
+
+成果物は `src-tauri/target/release/bundle/msi/` に出力されます。軽く通すだけなら `pnpm tauri build --no-bundle` でも確認できます。Infisical 未ログイン時は `pnpm tauri ...` を直接実行してください (詳細は [コマンドリファレンス](../commands/))。
+
+### Android
+
+Android SDK / NDK は `mise.toml` の `SDK_ROOT` / `NDK_VERSION` から解決されます。未導入の場合は Android Studio または cmdline-tools (`sdkmanager --licenses` 後に NDK を導入) で用意してください。
+
+```pwsh
+mise run pipeline:codegen                    # 初回のみ (生成 Kotlin・gradle 設定・検証用 aar を生成)
+mise tauri android build --apk -t aarch64    # APK を生成
+```
+
+- `gen/android` 本体は git 管理済みのため、`android init` は不要です。fresh checkout で不足する生成物 (`generated/` Kotlin・`tauri.*.gradle*`・`libs/rustls-platform-verifier.aar`) は `pipeline:codegen` が補います (詳細は [Pipeline](../actions/pipeline/))。
+- 規約上リポジトリに置けない `discord_partner_sdk.aar` が無くても dev ビルドは通ります (任意依存 + リフレクション呼び出しのため)。リリース時の取得は [リリース](../actions/) を参照してください。
+- gradle が応答しなくなった場合は `src-tauri/gen/android` で `gradlew.bat` を直接実行してください。
 
 ## プロジェクト構成
 
@@ -462,7 +574,7 @@ UI は Android システムの WebView (Tauri) で描画されます。Android 7
 ## Android 版
 
 1. **メディアセッションの監視** — 通知アクセス権限 (`NotificationListenerService`) を使って `MediaSessionManager` のアクティブセッションを取得します。**ホワイトリスト登録済みアプリのみ**を対象とし、再生中のセッションを優先します
-2. **端末内での処理** — 取得した情報は JNI 経由で Rust 側へ渡され、UI へはイベント配信されます (ポーリングなし)
+2. **端末内での処理** — 取得した情報は JNI 経由で Rust 側へ渡され、UI へはイベント配信されます (通常はイベント駆動で、30 秒間隔の保険ポーリングを併用)
 3. **常駐** — フォアグラウンドサービス (種別 `mediaPlayback`) がプロセスを維持します。設定で常駐通知の ON/OFF が可能です
 4. **Discord へ送信** — Discord Social SDK (同梱ライブラリー) で端末上の Discord アプリに直接接続し、Rich Presence を更新します。本アプリで Discord にログインする必要はありません
 
@@ -489,7 +601,9 @@ Rich Presence を有効にしている場合のみ、以下が送信されます
 
 対応アプリのプラグイン構造 (`ArtworkResolver`) により、再生中のアプリに応じてサムネイル URL を解決します。
 
-- 現在の対応: ボカコレ (`jp.nicovideo.nicobox`) — 曲タイトルをニコニコの検索 API に送信し、一致する動画のサムネイル URL を取得
+- 現在の対応:
+  - ボカコレ (`jp.nicovideo.nicobox`) — 曲タイトルをニコニコの検索 API に送信し、一致する動画のサムネイル URL を取得
+  - YouTube / YouTube Music 系 (`com.google.android.youtube`、`com.google.android.apps.youtube.music`、`app.morphe.android.youtube`、`app.morphe.android.apps.youtube.music`) — タイトルとアーティスト名をもとにした検索クエリを YouTube の検索 API (`www.youtube.com/youtubei/v1/search`) に送信し、一致する動画のサムネイル URL (`i.ytimg.com`) を取得
 - 画像本体はダウンロード・保存せず、URL のみを一時保持して Discord へ渡します
 - この通信は対応アプリの再生中にのみ発生し、詳細は [プライバシーポリシー](../../legal/privacy/) に記載しています
 
@@ -500,6 +614,7 @@ Rich Presence を有効にしている場合のみ、以下が送信されます
 | 設定 | `%APPDATA%\wsa-rpc-bridge\config.json` | 内部ストレージ |
 | ホワイトリスト | ― (機能なし・全セッション対象) | 内部ストレージ |
 | APK 名解決キャッシュ | `%LOCALAPPDATA%\wsa-rpc-bridge\ApkCache` | ― |
+| 動作ログ | `%LOCALAPPDATA%\com.wsarpcbridge.app\logs` (`rust.log` / `webview.log`) | アプリ内部ストレージ (`files/logs`) |
 
 テレメトリ・クラッシュレポートの自動送信・広告は存在しません。
 
@@ -513,7 +628,7 @@ Rich Presence を有効にしている場合のみ、以下が送信されます
 
 ### Discord Rich Presence を有効にする
 
-- ON にすると、検出したメディア情報を Discord へ送信します (既定: ON)
+- ON にすると、検出したメディア情報を Discord へ送信します (既定: OFF)
 - OFF の間もメディアの検出自体は継続し、アプリ内のダッシュボードには表示されます
 - Discord へ送られるデータの詳細は [しくみ](../how-it-works/#discord-に送られるデータ) を参照
 
@@ -553,7 +668,7 @@ Windows ログイン時にアプリを自動で起動します。設定変更は
 
 ### 常駐通知
 
-ON にするとフォアグラウンドサービスとして常駐し、「再生中の曲名」を内容とした常駐通知を表示します (既定: ON)。
+ON にするとフォアグラウンドサービスとして常駐し、「再生中の曲名」を内容とした常駐通知を表示します (既定: OFF)。
 
 - プロセスの生存が保証され、長時間の再生でも検出が途切れにくくなります
 - 通知上のボタンで **Discord RPC の ON/OFF** を直接切り替えられます
@@ -580,7 +695,7 @@ ON にするとフォアグラウンドサービスとして常駐し、「再�
 | Windows | `%APPDATA%\wsa-rpc-bridge\config.json` |
 | Android | アプリ内部ストレージ (SharedPreferences) |
 
-Windows 版のローカルデータ (APK 名解決キャッシュなど) は `%LOCALAPPDATA%\wsa-rpc-bridge\` に保存されます。アンインストールしても自動削除されないため、手動で削除してください。詳しくは [プライバシーポリシー](../../legal/privacy/) を参照してください。
+Windows 版のローカルデータ (APK 名解決キャッシュなど) は `%LOCALAPPDATA%\wsa-rpc-bridge\` に、動作ログは `%LOCALAPPDATA%\com.wsarpcbridge.app\logs\` (`rust.log` / `webview.log`) に保存されます。いずれもアンインストールでは自動削除されないため、手動で削除してください。詳しくは [プライバシーポリシー](../../legal/privacy/) を参照してください。
 
 ---
 
@@ -637,7 +752,7 @@ OS の省電力機能によりバックグラウンド処理が停止した可�
 
 ### アンインストールしてもデータが残る (Windows)
 
-`%APPDATA%\wsa-rpc-bridge\` (設定) と `%LOCALAPPDATA%\wsa-rpc-bridge\` (キャッシュ) は自動削除されません。不要な場合は手動で削除してください。
+`%APPDATA%\wsa-rpc-bridge\` (設定)・`%LOCALAPPDATA%\wsa-rpc-bridge\` (キャッシュ)・`%LOCALAPPDATA%\com.wsarpcbridge.app\logs\` (動作ログ) は自動削除されません。不要な場合は手動で削除してください。
 
 ---
 
