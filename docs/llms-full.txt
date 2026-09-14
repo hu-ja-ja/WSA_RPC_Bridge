@@ -81,7 +81,7 @@ Social SDK の取り扱い:
 
 | input | 既定 | 用途 |
 |---|---|---|
-| `js` | `'true'` | pnpm store キャッシュ + `mise run deps` (Linux では `cargo-about` も導入) |
+| `js` | `'true'` | pnpm store キャッシュ + `mise run deps` |
 | `rust` | `'false'` | `Swatinem/rust-cache` (`shared-key` でジョブ横断共有) |
 | `android` | `'false'` | Gradle キャッシュ (`~/.gradle/caches`、`~/.gradle/wrapper`) |
 
@@ -448,9 +448,11 @@ mise 本体が未導入の場合は [mise の導入手順](https://mise.jdx.dev/
 ```pwsh
 git clone https://github.com/hu-ja-ja/WSA_RPC_Bridge.git
 mise trust        # 初回のみ
-mise install      # Node / pnpm / Rust / Perl / Java を導入
+mise install      # Node / pnpm / Rust / Perl / Java を導入 (mise.lock で固定)
 mise run deps     # JS 依存をインストール
 ```
+
+ツール versions (`mise.toml` の `[tools]`) を変えたら `mise lock` で `mise.lock` を更新してください (CI は lock 固定で入るため、更新漏れは失敗します)。
 
 ## 開発サーバーの起動
 
