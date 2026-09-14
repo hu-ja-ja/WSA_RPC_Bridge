@@ -6,7 +6,7 @@ java = "21"
 rust = { version = "1.97", components = ["rust-analyzer"], targets = ["aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android"] }
 "github:StrawberryPerl/Perl-Dist-Strawberry" = { version = "SP_54231_64bit", matching = "portable", bin_path = "perl/bin", os = ["windows"] }
 "aqua:skaji/relocatable-perl" = { version = "latest", os = ["linux", "macos"] }
-"cargo:cargo-about" = "0.9.1"
+"github:EmbarkStudios/cargo-about" = "0.9.1"
 
 [tasks.dev]
 description = "Tauri + Vite dev server"
@@ -93,9 +93,6 @@ description = "Build the Astro Starlight docs site for GitHub Pages /docs (BASE_
 dir = "site"
 env = { BASE_PATH = "{{ get_env(name='BASE_PATH', default='/WSA_RPC_Bridge/docs/') }}" }
 run = "pnpm build"
-
-[settings]
-cargo.binstall_native = true
 
 [env]
 NDK_VERSION = "29.0.14206865"
