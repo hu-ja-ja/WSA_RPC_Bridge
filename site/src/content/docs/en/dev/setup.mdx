@@ -22,9 +22,11 @@ If mise itself is not installed yet, follow the [mise getting started guide](htt
 ```pwsh
 git clone https://github.com/hu-ja-ja/WSA_RPC_Bridge.git
 mise trust        # First time only
-mise install      # Installs Node / pnpm / Rust / Perl / Java
+mise install      # Installs Node / pnpm / Rust / Perl / Java (pinned by mise.lock)
 mise run deps     # Installs JS dependencies
 ```
+
+After changing tool versions (`[tools]` in `mise.toml`), run `mise lock` to update `mise.lock` (CI installs locked, so a stale lock fails).
 
 ## Starting the Dev Server
 

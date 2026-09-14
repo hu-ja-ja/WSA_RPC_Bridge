@@ -41,15 +41,23 @@ run = "pnpm install"
 
 [tasks.generate-licenses]
 description = "Regenerate third-party licenses"
+sources = ["package.json", "pnpm-lock.yaml", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "src-tauri/about.toml", "scripts/generate-licenses.ts"]
+outputs = ["src/generated/licenses.ts"]
 run = "pnpm generate-licenses"
 
 [tasks."pipeline:codegen"]
 description = "Generate Android codegen files ignored by git (gradle settings + kotlin templates)"
+sources = ["src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "src-tauri/tauri.conf.json", "src-tauri/build.rs"]
+# NB: app/libs/*.aar is also generated here but excluded: cpSync preserves the
+# registry mtime (years old), which would defeat the newer-than-sources check
+# forever. The aar version is derived from Cargo.lock (a source), so dep
+# updates still trigger a rerun.
+outputs = ["src-tauri/gen/android/tauri.settings.gradle", "src-tauri/gen/android/app/tauri.build.gradle.kts", "src-tauri/gen/android/app/src/main/java/**/generated/*"]
 run = "node scripts/pipeline.ts android-codegen"
 
 [tasks."pipeline:sync-version"]
 description = "Sync release version into tauri.conf.json and Cargo.toml"
-usage = 'arg "<version>"'
+usage = 'arg "<version>" help="Release version like 0.4.0 (a leading v is stripped)"'
 run = "node scripts/pipeline.ts sync-version \"{{usage.version}}\""
 
 [tasks."pipeline:download-sdk"]
@@ -62,20 +70,23 @@ run = "node scripts/pipeline.ts keystore"
 
 [tasks."pipeline:notes"]
 description = "Extract release notes for a version from CHANGELOG.md"
-usage = 'arg "<version>"'
+usage = 'arg "<version>" help="Release version like 0.4.0 (a leading v is stripped)"'
 run = "node scripts/pipeline.ts release-notes \"{{usage.version}}\""
 
 [tasks."pipeline:update-json"]
 description = "Generate update.json + update-android.json (and rename the APK) for a version"
-usage = 'arg "<version>"'
+usage = 'arg "<version>" help="Release version like 0.4.0 (a leading v is stripped)"'
 run = "node scripts/pipeline.ts update-json \"{{usage.version}}\""
 
 [tasks."pipeline:checksums"]
 description = "Generate MSI sha256 files and the APK signing fingerprint"
+sources = ["src-tauri/target/release/bundle/msi/*.msi", "src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk"]
+outputs = ["src-tauri/target/release/bundle/msi/*.msi.sha256"]
 run = "node scripts/pipeline.ts checksums"
 
 [tasks."pipeline:test"]
 description = "Run pipeline.ts unit tests"
+sources = ["scripts/pipeline.ts", "scripts/pipeline.test.ts"]
 run = "node --test scripts/pipeline.test.ts"
 
 [tasks.docs-deps]
@@ -91,6 +102,8 @@ run = "pnpm dev"
 [tasks.docs-build]
 description = "Build the Astro Starlight docs site for GitHub Pages /docs (BASE_PATH overridable)"
 dir = "site"
+sources = ["src/**/*", "public/**/*", "scripts/**/*", "astro.config.mjs", "package.json", "pnpm-lock.yaml", "tsconfig.json"]
+outputs = ["dist"]
 env = { BASE_PATH = "{{ get_env(name='BASE_PATH', default='/WSA_RPC_Bridge/docs/') }}" }
 run = "pnpm build"
 
