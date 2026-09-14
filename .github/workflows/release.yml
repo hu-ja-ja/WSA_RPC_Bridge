@@ -26,7 +26,7 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -69,7 +69,7 @@ jobs:
         run: ./gradlew --stop
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apk
           path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
@@ -78,7 +78,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -97,7 +97,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Upload MSI
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: msi
           path: |
@@ -112,18 +112,18 @@ jobs:
       group: github-pages
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
       - name: Download APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: apk
           path: src-tauri/gen/android/app/build/outputs/apk/universal/release/
 
       - name: Download MSI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: msi
           path: src-tauri/target/release/bundle/msi/
@@ -154,7 +154,7 @@ jobs:
           destination_dir: .
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.version }}
           body_path: .release-notes.md

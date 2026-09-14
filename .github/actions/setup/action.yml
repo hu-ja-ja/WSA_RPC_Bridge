@@ -15,7 +15,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: jdx/mise-action@v3
+    - uses: jdx/mise-action@v4
 
     - if: runner.os == 'Linux'
       name: Install cargo-about
@@ -29,7 +29,7 @@ runs:
       run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
     - if: inputs.js == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
@@ -51,7 +51,7 @@ runs:
         workspaces: src-tauri -> target
 
     - if: inputs.android == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           ~/.gradle/caches
