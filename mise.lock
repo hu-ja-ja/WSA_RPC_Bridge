@@ -41,77 +41,90 @@ url_api = "https://api.github.com/repos/skaji/relocatable-perl/releases/assets/4
 provenance = "github-attestations"
 
 [[tools."github:EmbarkStudios/cargo-about"]]
-version = "0.9.1"
+version = "0.9.3"
 backend = "github:EmbarkStudios/cargo-about"
 
 [tools."github:EmbarkStudios/cargo-about"."platforms.linux-arm64"]
-checksum = "sha256:d13ff19fedb566f859831c0b71c22120e7c598c7753d5f1018dd7353c6ced02a"
-url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.1/cargo-about-0.9.1-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/461985054"
+checksum = "sha256:eb4d9ff6ebd2518152a8308729431a04b3836e71d2bd5ead7aea69f91a71162e"
+checksum_source = "mise-versions"
+url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/677829692"
 
 [tools."github:EmbarkStudios/cargo-about"."platforms.linux-arm64-musl"]
-checksum = "sha256:d13ff19fedb566f859831c0b71c22120e7c598c7753d5f1018dd7353c6ced02a"
-url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.1/cargo-about-0.9.1-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/461985054"
+checksum = "sha256:eb4d9ff6ebd2518152a8308729431a04b3836e71d2bd5ead7aea69f91a71162e"
+checksum_source = "mise-versions"
+url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/677829692"
 
 [tools."github:EmbarkStudios/cargo-about"."platforms.linux-x64"]
-checksum = "sha256:c0e7dc6f5d74b0beec5c0053d39ab24514c717d19acd91886907a22457ea9e98"
-url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.1/cargo-about-0.9.1-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/461984931"
+checksum = "sha256:3ad1e94ea1e63d69d1961f4fb15ccbbe9575d906111f96d2cb4dce6df48f71b4"
+checksum_source = "mise-versions"
+url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/677828105"
 
 [tools."github:EmbarkStudios/cargo-about"."platforms.linux-x64-musl"]
-checksum = "sha256:c0e7dc6f5d74b0beec5c0053d39ab24514c717d19acd91886907a22457ea9e98"
-url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.1/cargo-about-0.9.1-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/461984931"
+checksum = "sha256:3ad1e94ea1e63d69d1961f4fb15ccbbe9575d906111f96d2cb4dce6df48f71b4"
+checksum_source = "mise-versions"
+url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/677828105"
 
 [tools."github:EmbarkStudios/cargo-about"."platforms.macos-arm64"]
-checksum = "sha256:6a38fe166d17a674269d4373256c0b6bd93acc2553e12de0517cb9ecc73c9c02"
-url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.1/cargo-about-0.9.1-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/461984679"
+checksum = "sha256:45520df8680978a6e7c4023ace0e3f311c73efc208cd68e5a7f4ed4822fa0349"
+checksum_source = "mise-versions"
+url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/677829608"
 
 [tools."github:EmbarkStudios/cargo-about"."platforms.windows-x64"]
-checksum = "sha256:318893aff6b9efd60f70470f5827b9577ae20a805cf9732d5612862a78508581"
-url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.1/cargo-about-0.9.1-x86_64-pc-windows-msvc.tar.gz"
-url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/461986502"
+checksum = "sha256:9e2942533ef1c592c4a70bdb384cae1550a3f5fc9ae40379b6662e3d2f16fe02"
+checksum_source = "mise-versions"
+url = "https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-x86_64-pc-windows-msvc.tar.gz"
+url_api = "https://api.github.com/repos/EmbarkStudios/cargo-about/releases/assets/677833098"
 
 [[tools."github:Infisical/cli"]]
-version = "0.43.121"
+version = "0.44.11"
 backend = "github:Infisical/cli"
 
 [tools."github:Infisical/cli"."platforms.linux-arm64"]
-checksum = "sha256:6d2b25936447ba1b97aa9ae6d3a07b2de68780fcf4238a06fbdf2a1fa0b07082"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505765687"
+checksum = "sha256:6279c9465a1af0a06e108fca9ee4df618f898cbc5d5d9d404befc3ec4a5332c3"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690930344"
 
 [tools."github:Infisical/cli"."platforms.linux-arm64-musl"]
-checksum = "sha256:6d2b25936447ba1b97aa9ae6d3a07b2de68780fcf4238a06fbdf2a1fa0b07082"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505765687"
+checksum = "sha256:6279c9465a1af0a06e108fca9ee4df618f898cbc5d5d9d404befc3ec4a5332c3"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690930344"
 
 [tools."github:Infisical/cli"."platforms.linux-x64"]
-checksum = "sha256:0b4f6d13e742c6e6cb67a2f67560aa508308aef277a82360263f56fcbee33be8"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505765688"
+checksum = "sha256:d5f7ea6b9e9238e150695dafe6f06c0baa06a6e1dd942d12896c797c386a8092"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690930349"
 
 [tools."github:Infisical/cli"."platforms.linux-x64-musl"]
-checksum = "sha256:0b4f6d13e742c6e6cb67a2f67560aa508308aef277a82360263f56fcbee33be8"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505765688"
+checksum = "sha256:d5f7ea6b9e9238e150695dafe6f06c0baa06a6e1dd942d12896c797c386a8092"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690930349"
 
 [tools."github:Infisical/cli"."platforms.macos-arm64"]
-checksum = "sha256:996b3dbc2e4e7d89861d70588bc7e6fec7d3593c460aafddc7f043e6963baa22"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505759719"
+checksum = "sha256:6d7e6053fc25f2e238cbcd3cfb3868522f424c9f34a07d5137933660a2b40f9e"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690923526"
 
 [tools."github:Infisical/cli"."platforms.macos-x64"]
-checksum = "sha256:56a65b4cbb13c2515a3d3fc204a9a0f07f5cab0414747ea4af0c837736fdd291"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505759721"
+checksum = "sha256:971417075e35db5b72df28d28a4c7b7ae5b8f89f2eff6518c69ba164254d3fc0"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690923529"
 
 [tools."github:Infisical/cli"."platforms.windows-x64"]
-checksum = "sha256:88578aa080da8f4cf96ff9c0821624350d1fe122ac59dd2917c6991ecb874101"
-url = "https://github.com/Infisical/cli/releases/download/v0.43.121/cli_0.43.121_windows_amd64.zip"
-url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/505765684"
+checksum = "sha256:21d9fe4000003cae8c159ecbdced5303f11930db7511b55bfb34984dbab0b957"
+checksum_source = "mise-versions"
+url = "https://github.com/Infisical/cli/releases/download/v0.44.11/cli_0.44.11_windows_amd64.zip"
+url_api = "https://api.github.com/repos/Infisical/cli/releases/assets/690930359"
 
 [[tools."github:StrawberryPerl/Perl-Dist-Strawberry"]]
 version = "SP_54231_64bit"
@@ -156,102 +169,92 @@ url = "https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/
 url_api = "https://api.github.com/repos/StrawberryPerl/Perl-Dist-Strawberry/releases/assets/517728145"
 
 [[tools.java]]
-version = "21.0.2"
+version = "21.0.13+9.0.LTS"
 backend = "core:java"
 
 [tools.java.options]
-shorthand_vendor = "openjdk"
+shorthand_vendor = "temurin"
 
 [tools.java."platforms.linux-arm64"]
-checksum = "sha256:08db1392a48d4eb5ea5315cf8f18b89dbaf36cda663ba882cf03c704c9257ec2"
-url = "https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_linux-aarch64_bin.tar.gz"
+checksum = "sha256:e3522e707fc7dbe2a72c30746b1e7068301a0213ecd213d4491f35a14eb55578"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_aarch64_linux_hotspot_21.0.13_9.tar.gz"
+
+[tools.java."platforms.linux-arm64-musl"]
+checksum = "sha256:a41f2d7b886ed318db51543cd045d94dd35179f66df302e6c3fd48a41a6dd9f5"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_aarch64_alpine-linux_hotspot_21.0.13_9.tar.gz"
 
 [tools.java."platforms.linux-x64"]
-checksum = "sha256:a2def047a73941e01a73739f92755f86b895811afb1f91243db214cff5bdac3f"
-url = "https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_linux-x64_bin.tar.gz"
+checksum = "sha256:d7f5d5cf865a2902b70ff549b97586a7d3f234e016f041ab447ea740c7d66d1c"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.13_9.tar.gz"
+
+[tools.java."platforms.linux-x64-musl"]
+checksum = "sha256:dc453842ee3f24710258f42a95bdfe5c2bfc0ca9d70c12f950ead82aee0c8361"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_alpine-linux_hotspot_21.0.13_9.tar.gz"
 
 [tools.java."platforms.macos-arm64"]
-checksum = "sha256:b3d588e16ec1e0ef9805d8a696591bd518a5cea62567da8f53b5ce32d11d22e4"
-url = "https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_macos-aarch64_bin.tar.gz"
+checksum = "sha256:bf036b35b071bfb2f54f2c0af8ee8d88afa95ee6eb3dce02c0f94cfc2524d04a"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.13_9.tar.gz"
 
 [tools.java."platforms.macos-x64"]
-checksum = "sha256:8fd09e15dc406387a0aba70bf5d99692874e999bf9cd9208b452b5d76ac922d3"
-url = "https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_macos-x64_bin.tar.gz"
+checksum = "sha256:9aa1d1c17ae5467a022679e7e0af5c00797d94ac462ed1a46f4db07a8a34a6dd"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_mac_hotspot_21.0.13_9.tar.gz"
 
 [tools.java."platforms.windows-x64"]
-checksum = "sha256:b6c17e747ae78cdd6de4d7532b3164b277daee97c007d3eaa2b39cca99882664"
-url = "https://download.java.net/java/GA/jdk21.0.2/f2283984656d49d69e91c558476027ac/13/GPL/openjdk-21.0.2_windows-x64_bin.zip"
+checksum = "sha256:a4dbaa05fca4bd89d84584e58c459bd732efebb1722af80ab13c6516832004f9"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.13_9.zip"
 
 [[tools.node]]
-version = "22.23.2"
+version = "22.23.4"
 backend = "core:node"
 
 [tools.node."platforms.linux-arm64"]
-checksum = "sha256:013b59cfd2819703a6f4a14ab891fc46fc2a4e3f5bcd92de3fb4929b43e35b30"
-url = "https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-arm64.tar.gz"
+checksum = "sha256:f7a1e486dbc8b286847815b477d4fb5e9fb963ed4489c3e1588853d685f589f9"
+url = "https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-arm64.tar.gz"
 
 [tools.node."platforms.linux-arm64-musl"]
-checksum = "sha256:b7a1a2b1c7c76e47550f17764676939840e0a64b4d04bdd375a4ac14bccaa8d8"
-url = "https://unofficial-builds.nodejs.org/download/release/v22.23.2/node-v22.23.2-linux-arm64-musl.tar.gz"
+checksum = "sha256:78acbffed1d4095e8b4db55eb8b43ae928b2d41d14ab2ade9ee46a1ca6e677df"
+url = "https://unofficial-builds.nodejs.org/download/release/v22.23.4/node-v22.23.4-linux-arm64-musl.tar.gz"
 
 [tools.node."platforms.linux-x64"]
-checksum = "sha256:b294a556e639d64338823920e5866c21c02741742d2e1529ee1a225c1ec9252a"
-url = "https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.gz"
+checksum = "sha256:b8492284c76a54baf58d61668dd0e41ee0fc98adabf9503d30f05d08f55b4406"
+url = "https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.gz"
 
 [tools.node."platforms.linux-x64-musl"]
-checksum = "sha256:396e11ee609eb2e5cb990f045c4d037aa47b2c247f3cecb01c5c162e33ffa9af"
-url = "https://unofficial-builds.nodejs.org/download/release/v22.23.2/node-v22.23.2-linux-x64-musl.tar.gz"
+checksum = "sha256:117eae38a39e45d534f1a18c2217709dc0b09835f61689af490137de231eb42c"
+url = "https://unofficial-builds.nodejs.org/download/release/v22.23.4/node-v22.23.4-linux-x64-musl.tar.gz"
 
 [tools.node."platforms.macos-arm64"]
-checksum = "sha256:61130f394c1630d211dd50aecc4353d379480f36d3ac913cd85dbba1aed585c6"
-url = "https://nodejs.org/dist/v22.23.2/node-v22.23.2-darwin-arm64.tar.gz"
+checksum = "sha256:c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428"
+url = "https://nodejs.org/dist/v22.23.4/node-v22.23.4-darwin-arm64.tar.gz"
 
 [tools.node."platforms.macos-x64"]
-checksum = "sha256:58e99022c2ff89395576cc7fd4d98cea24bb68081475d5f88b801ee8729fb026"
-url = "https://nodejs.org/dist/v22.23.2/node-v22.23.2-darwin-x64.tar.gz"
+checksum = "sha256:efcc2b0db6f94bf53eddb038fe2b370277a042bd29e4f19b8f8e23598795b819"
+url = "https://nodejs.org/dist/v22.23.4/node-v22.23.4-darwin-x64.tar.gz"
 
 [tools.node."platforms.windows-x64"]
-checksum = "sha256:1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97"
-url = "https://nodejs.org/dist/v22.23.2/node-v22.23.2-win-x64.zip"
+checksum = "sha256:cbc74b5e0982c9dbb41525fd8fb5dcd32fbee237863f7829072f4639a1ce5f20"
+url = "https://nodejs.org/dist/v22.23.4/node-v22.23.4-win-x64.zip"
 
 [[tools.pnpm]]
-version = "11.15.1"
+version = "11.28.10"
 backend = "aqua:pnpm/pnpm"
 
 [tools.pnpm."platforms.linux-arm64"]
-checksum = "sha256:361e385867146972d0635a41a1871cb44c9c23f65acce78a5f1ca1d44ac0afcd"
-url = "https://github.com/pnpm/pnpm/releases/download/v11.15.1/pnpm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/482780455"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-arm64-musl"]
-checksum = "sha256:5e293db656ee6a54387945572e06f08245140a7427c8e67b821d56471f373b77"
-url = "https://github.com/pnpm/pnpm/releases/download/v11.15.1/pnpm-linux-arm64-musl.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/482780459"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-x64"]
-checksum = "sha256:0c1373b6390f6b89ff8b896d3647c9826577ddc49173a2f732da69b36569f9e0"
-url = "https://github.com/pnpm/pnpm/releases/download/v11.15.1/pnpm-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/482780457"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-x64-musl"]
-checksum = "sha256:593039435b88cb4e15c60c18ba032a1ae6a28159287199f20aacc44ad553a094"
-url = "https://github.com/pnpm/pnpm/releases/download/v11.15.1/pnpm-linux-x64-musl.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/482780453"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.macos-arm64"]
-checksum = "sha256:4ff53ecc9de8df115d4efef60eab77f91be4f8237cdaca078351a22e707d1849"
-url = "https://github.com/pnpm/pnpm/releases/download/v11.15.1/pnpm-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/482780456"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.windows-x64"]
-checksum = "sha256:e9179d727211d5556e969fccfa36f828392892c54728a711c9da1cc3093f7900"
-url = "https://github.com/pnpm/pnpm/releases/download/v11.15.1/pnpm-win32-x64.zip"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/482780452"
 provenance = "github-attestations"
 
 [[tools.rust]]
