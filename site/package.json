@@ -2,7 +2,7 @@
   "name": "wsa-rpc-bridge-docs",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.15.1",
+  "packageManager": "pnpm@11.28.10",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/build-llms.mjs && node scripts/check-links.mjs",
