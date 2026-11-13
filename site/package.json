@@ -2,7 +2,7 @@
   "name": "wsa-rpc-bridge-docs",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.15.1",
+  "packageManager": "pnpm@11.28.12",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/build-llms.mjs && node scripts/check-links.mjs",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
-    "@astrojs/starlight": "^0.42.0",
+    "@astrojs/starlight": "^0.43.0",
     "astro": "^7.3.2",
     "sharp": "^0.35.3"
   }
